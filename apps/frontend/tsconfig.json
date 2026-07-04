@@ -1,0 +1,39 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@ygo/contracts": [
+        "../../packages/contracts/src/index.ts"
+      ],
+      "@ygo/contracts/*": [
+        "../../packages/contracts/src/*"
+      ],
+      "@ygo/domain": [
+        "../../packages/domain/src/index.ts"
+      ],
+      "@ygo/domain/*": [
+        "../../packages/domain/src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.mts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

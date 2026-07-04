@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": ["node"],
+    "paths": {
+      "@/*": ["../frontend/src/*"],
+      "@ygo/contracts": ["../../packages/contracts/src/index.ts"],
+      "@ygo/contracts/*": ["../../packages/contracts/src/*"],
+      "@ygo/domain": ["../../packages/domain/src/index.ts"],
+      "@ygo/domain/*": ["../../packages/domain/src/*"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "prisma/**/*.ts",
+    "../frontend/src/lib/**/*.ts",
+    "../../packages/contracts/src/**/*.ts",
+    "../../packages/domain/src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "../../packages/**/*.test.ts"
+  ]
+}

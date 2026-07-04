@@ -1,0 +1,47 @@
+<svg width="512" height="836" viewBox="0 0 512 836" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="836" rx="34" fill="#080A0E"/>
+  <rect x="10" y="10" width="492" height="816" rx="28" fill="url(#bg)"/>
+  <rect x="24" y="24" width="464" height="788" rx="22" fill="url(#foil)"/>
+  <rect x="38" y="38" width="436" height="760" rx="18" stroke="#F4E5D1" stroke-opacity="0.18" stroke-width="2"/>
+  <g opacity="0.9">
+    <circle cx="256" cy="330" r="138" fill="url(#coreGlow)"/>
+    <circle cx="256" cy="330" r="128" stroke="#D9C5AC" stroke-opacity="0.36" stroke-width="4"/>
+    <circle cx="256" cy="330" r="92" stroke="#D9C5AC" stroke-opacity="0.24" stroke-width="2"/>
+    <path d="M256 236L280 304L352 304L294 346L316 416L256 372L196 416L218 346L160 304L232 304L256 236Z" fill="url(#sigil)" fill-opacity="0.82"/>
+    <circle cx="256" cy="330" r="26" fill="#101723" stroke="#E8D7C2" stroke-opacity="0.28" stroke-width="2"/>
+  </g>
+  <g opacity="0.8">
+    <rect x="92" y="542" width="328" height="2" rx="1" fill="url(#rule)"/>
+    <rect x="112" y="584" width="288" height="2" rx="1" fill="url(#rule)"/>
+  </g>
+  <text x="256" y="516" text-anchor="middle" fill="#E8D7C2" font-family="Georgia, 'Times New Roman', serif" font-size="34" letter-spacing="8">DUEL CONSOLE</text>
+  <text x="256" y="567" text-anchor="middle" fill="#BEA88D" font-family="Arial, sans-serif" font-size="18" letter-spacing="7">CHRONOLOGISCHE SERIE</text>
+  <defs>
+    <linearGradient id="bg" x1="67" y1="37" x2="452" y2="816" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#101722"/>
+      <stop offset="0.5" stop-color="#0A0E14"/>
+      <stop offset="1" stop-color="#16100C"/>
+    </linearGradient>
+    <linearGradient id="foil" x1="54" y1="62" x2="456" y2="774" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#182230"/>
+      <stop offset="0.28" stop-color="#0E1219"/>
+      <stop offset="0.64" stop-color="#18130F"/>
+      <stop offset="1" stop-color="#0E1016"/>
+    </linearGradient>
+    <radialGradient id="coreGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 330) rotate(90) scale(164)">
+      <stop stop-color="#24374C"/>
+      <stop offset="0.48" stop-color="#121922" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#0B0D12" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sigil" x1="184" y1="250" x2="324" y2="404" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0DDC4"/>
+      <stop offset="0.45" stop-color="#B89B78"/>
+      <stop offset="1" stop-color="#E8D4BB"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="92" y1="543" x2="420" y2="543" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#D9C5AC"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>

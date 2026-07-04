@@ -1,0 +1,1075 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("API_DATABASE_URL")
+}
+
+enum Region {
+  TCG
+  OCG
+  GLOBAL
+  CUSTOM
+}
+
+enum CardKind {
+  MONSTER
+  SPELL
+  TRAP
+  TOKEN
+}
+
+enum OwnershipSource {
+  PACK_OPENING
+  TRADE
+  ADMIN_IMPORT
+  MANUAL_GRANT
+}
+
+enum EntryLockState {
+  AVAILABLE
+  RESERVED
+  TRADED
+}
+
+enum DeckSection {
+  MAIN
+  EXTRA
+  SIDE
+}
+
+enum CollectionLayoutMode {
+  BINDER
+  GRID
+}
+
+enum CollectionSortMode {
+  MOST_COPIES
+  NEWEST_ACQUIRED
+  ALPHABETICAL
+  RARITY
+}
+
+enum TradeStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum DuelRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  SCHEDULED
+  COMPLETED
+}
+
+enum TournamentStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentParticipantStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  DROPPED
+}
+
+enum TournamentRoundStatus {
+  PENDING
+  PAIRED
+  COMPLETED
+}
+
+enum TournamentMatchStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  BYE
+  CANCELLED
+}
+
+enum ErrataPolicy {
+  USE_LATEST_TEXT
+  LOCK_TO_SNAPSHOT_TEXT
+  BAN_ON_ERRATA
+}
+
+enum FormatType {
+  PROGRESSION
+  CUSTOM
+  HISTORICAL
+  OPEN
+}
+
+enum SetProductType {
+  CORE_BOOSTER
+  BOOSTER
+  DECK
+  TIN
+  PROMO
+  SPECIAL
+  UNKNOWN
+}
+
+enum RunStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum RunRole {
+  OWNER
+  ORGANIZER
+  PLAYER
+}
+
+enum CreditLedgerSource {
+  STARTING_BALANCE
+  PACK_PURCHASE
+  DISPLAY_PURCHASE
+  DUEL_REWARD
+  TOURNAMENT_REWARD
+  ORGANIZER_ADJUSTMENT
+  MANUAL_GRANT
+}
+
+enum PackOpeningBatchType {
+  SINGLE_PACK
+  DISPLAY
+  REWARD
+}
+
+enum HistoryEventType {
+  WORLD_CHAMPIONSHIP
+  NATIONALS
+  TOURNAMENT_PACK_PERIOD
+  SET_RELEASE
+  CUSTOM
+}
+
+enum RewardGrantStatus {
+  PENDING
+  CLAIMED
+  CANCELLED
+}
+
+enum RunProgressionStatus {
+  LOCKED
+  READY
+  APPLIED
+}
+
+enum RunProgressionUnlockType {
+  SET
+  PROMO_SOURCE
+  HISTORY_EVENT
+  REWARD
+}
+
+enum PromoSourceType {
+  PACK_REWARD
+  PROMO_CHOICE
+  FIXED_PROMO_GRANT
+  PRIZE_PROMO
+}
+
+enum PromoClaimMode {
+  CHOOSE
+  RANDOM
+  FIXED
+  ORGANIZER_ONLY
+}
+
+model User {
+  id                         String                 @id @default(cuid())
+  duelistId                  String                 @unique
+  email                      String?                @unique
+  passwordHash               String
+  displayName                String
+  avatarKey                  String                 @default("apprentice-sigil")
+  bio                        String?
+  favoriteEra                String?
+  isPublic                   Boolean                @default(true)
+  showcaseBinderId           String?
+  activeRunId                String?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  showcaseBinder             CollectionBinder?      @relation("ShowcaseBinder", fields: [showcaseBinderId], references: [id], onDelete: SetNull)
+  activeRun                  PlayGroupRun?          @relation("ActiveRun", fields: [activeRunId], references: [id], onDelete: SetNull)
+  sessions                   Session[]
+  ownedRuns                  PlayGroupRun[]         @relation("RunOwner")
+  runMemberships             RunMembership[]
+  creditWallets              CreditWallet[]
+  creditLedgerEntries        CreditLedgerEntry[]
+  rewardGrants               RewardGrant[]          @relation("RewardGrantRecipient")
+  rewardGrantedActions       RewardGrant[]          @relation("RewardGrantGrantedBy")
+  promoAccessUnlockActions   RunPromoAccess[]       @relation("RunPromoAccessUnlockedBy")
+  promoClaims                PromoClaim[]
+  packOpeningBatches         PackOpeningBatch[]
+  packOpenings               PackOpening[]
+  collectionEntries          CollectionEntry[]
+  decks                      Deck[]
+  deckExports                DeckExport[]
+  friendshipsSent            Friendship[]           @relation("FriendshipRequester")
+  friendshipsRecvd           Friendship[]           @relation("FriendshipAddressee")
+  tradesProposed             Trade[]                @relation("TradeProposer")
+  tradesReceived             Trade[]                @relation("TradeResponder")
+  tradesCancelled            Trade[]                @relation("TradeCancelledBy")
+  tradesRejected             Trade[]                @relation("TradeRejectedBy")
+  tradeVersionsSent          TradeVersion[]         @relation("TradeVersionSender")
+  tradeVersionsReceived      TradeVersion[]         @relation("TradeVersionRecipient")
+  duelRequestsSent           DuelRequest[]          @relation("DuelRequester")
+  duelRequestsReceived       DuelRequest[]          @relation("DuelOpponent")
+  tournamentsHosted          Tournament[]           @relation("TournamentHost")
+  tournamentParticipations   TournamentParticipant[]
+  tournamentInviteActions    TournamentParticipant[] @relation("TournamentParticipantInviter")
+  tournamentMatchesAsPlayerOne TournamentMatch[]    @relation("TournamentMatchPlayerOne")
+  tournamentMatchesAsPlayerTwo TournamentMatch[]    @relation("TournamentMatchPlayerTwo")
+  tournamentMatchWins        TournamentMatch[]      @relation("TournamentMatchWinner")
+  collectionBinders          CollectionBinder[]     @relation("BinderOwner")
+  collectionPresets          CollectionPreset[]
+}
+
+model PlayGroupRun {
+  id                  String                 @id @default(cuid())
+  ownerId             String
+  name                String
+  description         String?
+  status              RunStatus              @default(ACTIVE)
+  historyCursor       DateTime?
+  defaultPackPrice    Int                    @default(100)
+  defaultDisplaySize  Int                    @default(24)
+  startingCredits     Int                    @default(2400)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  owner               User                   @relation("RunOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  activeForUsers      User[]                 @relation("ActiveRun")
+  memberships         RunMembership[]
+  wallets             CreditWallet[]
+  ledgerEntries       CreditLedgerEntry[]
+  setUnlocks          RunSetUnlock[]
+  progressionCheckpoints RunProgressionCheckpoint[]
+  progressionUnlocks  RunProgressionUnlock[]
+  promoAccesses       RunPromoAccess[]
+  promoClaims         PromoClaim[]
+  historyEvents       HistoryEvent[]
+  rewardGrants        RewardGrant[]
+  openingBatches      PackOpeningBatch[]
+  packOpenings        PackOpening[]
+  collectionEntries   CollectionEntry[]
+  decks               Deck[]
+  trades              Trade[]
+  duelRequests        DuelRequest[]
+  tournaments         Tournament[]
+  collectionBinders   CollectionBinder[]
+
+  @@index([ownerId, createdAt])
+  @@index([status, createdAt])
+}
+
+model RunMembership {
+  id        String       @id @default(cuid())
+  runId     String
+  userId    String
+  role      RunRole      @default(PLAYER)
+  joinedAt  DateTime     @default(now())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  run       PlayGroupRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, userId])
+  @@index([userId, joinedAt])
+}
+
+model CreditWallet {
+  id        String       @id @default(cuid())
+  runId     String
+  userId    String
+  balance   Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  run       PlayGroupRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, userId])
+  @@index([userId, updatedAt])
+}
+
+model CreditLedgerEntry {
+  id             String             @id @default(cuid())
+  runId          String
+  userId         String
+  amount         Int
+  balanceAfter   Int
+  source         CreditLedgerSource
+  referenceId    String?
+  idempotencyKey String?            @unique
+  note           String?
+  createdAt      DateTime           @default(now())
+  run            PlayGroupRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([runId, userId, createdAt])
+  @@index([referenceId])
+}
+
+model RunSetUnlock {
+  id              String       @id @default(cuid())
+  runId           String
+  setId           String
+  isUnlocked      Boolean      @default(true)
+  packPrice       Int?
+  displaySize     Int?
+  rewardOnly      Boolean      @default(false)
+  unlockedAt      DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  run             PlayGroupRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  set             CardSet      @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, setId])
+  @@index([setId, unlockedAt])
+}
+
+model RunProgressionCheckpoint {
+  id                   String                 @id @default(cuid())
+  runId                String
+  sequence             Int
+  title                String
+  description          String?
+  unlockDate           DateTime?
+  requiredTournamentId String?
+  status               RunProgressionStatus   @default(LOCKED)
+  appliedAt            DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  run                  PlayGroupRun           @relation(fields: [runId], references: [id], onDelete: Cascade)
+  requiredTournament   Tournament?            @relation(fields: [requiredTournamentId], references: [id], onDelete: SetNull)
+  unlocks              RunProgressionUnlock[]
+  promoAccesses        RunPromoAccess[]
+
+  @@unique([runId, sequence])
+  @@index([runId, status, sequence])
+  @@index([requiredTournamentId])
+}
+
+model RunProgressionUnlock {
+  id             String                   @id @default(cuid())
+  checkpointId   String
+  runId          String
+  type           RunProgressionUnlockType
+  setId          String?
+  promoSourceId  String?
+  historyEventId String?
+  rewardConfig   Json?
+  createdAt      DateTime                 @default(now())
+  checkpoint     RunProgressionCheckpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  run            PlayGroupRun             @relation(fields: [runId], references: [id], onDelete: Cascade)
+  set            CardSet?                 @relation(fields: [setId], references: [id], onDelete: SetNull)
+  promoSource    PromoSource?             @relation(fields: [promoSourceId], references: [id], onDelete: SetNull)
+  historyEvent   HistoryEvent?            @relation(fields: [historyEventId], references: [id], onDelete: SetNull)
+
+  @@index([checkpointId, type])
+  @@index([runId, type])
+  @@index([setId])
+  @@index([promoSourceId])
+}
+
+model PromoSource {
+  id                 String                  @id @default(cuid())
+  setId              String?
+  code               String                  @unique
+  name               String
+  description        String?
+  sourceType         PromoSourceType         @default(PROMO_CHOICE)
+  claimMode          PromoClaimMode          @default(CHOOSE)
+  availableFrom      DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  set                CardSet?                @relation(fields: [setId], references: [id], onDelete: SetNull)
+  cards              PromoSourceCard[]
+  runAccesses        RunPromoAccess[]
+  claims             PromoClaim[]
+  progressionUnlocks RunProgressionUnlock[]
+
+  @@index([availableFrom])
+  @@index([sourceType, claimMode])
+  @@index([setId])
+}
+
+model PromoSourceCard {
+  id            String      @id @default(cuid())
+  promoSourceId String
+  setCardId     String
+  cardId        String
+  sortOrder     Int         @default(0)
+  promoSource   PromoSource @relation(fields: [promoSourceId], references: [id], onDelete: Cascade)
+  setCard       SetCard     @relation(fields: [setCardId], references: [id], onDelete: Cascade)
+  card          Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([promoSourceId, setCardId])
+  @@index([cardId])
+  @@index([setCardId])
+}
+
+model RunPromoAccess {
+  id                 String                    @id @default(cuid())
+  runId              String
+  promoSourceId      String
+  unlockedAt         DateTime                  @default(now())
+  unlockedById       String?
+  sourceCheckpointId String?
+  run                PlayGroupRun              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  promoSource        PromoSource               @relation(fields: [promoSourceId], references: [id], onDelete: Cascade)
+  unlockedBy         User?                     @relation("RunPromoAccessUnlockedBy", fields: [unlockedById], references: [id], onDelete: SetNull)
+  sourceCheckpoint   RunProgressionCheckpoint? @relation(fields: [sourceCheckpointId], references: [id], onDelete: SetNull)
+
+  @@unique([runId, promoSourceId])
+  @@index([promoSourceId])
+  @@index([sourceCheckpointId])
+}
+
+model PromoClaim {
+  id                String           @id @default(cuid())
+  runId             String
+  promoSourceId     String
+  userId            String
+  setCardId         String
+  collectionEntryId String?
+  claimedAt         DateTime         @default(now())
+  run               PlayGroupRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  promoSource       PromoSource      @relation(fields: [promoSourceId], references: [id], onDelete: Cascade)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  setCard           SetCard          @relation(fields: [setCardId], references: [id], onDelete: Cascade)
+  collectionEntry   CollectionEntry? @relation(fields: [collectionEntryId], references: [id], onDelete: SetNull)
+
+  @@index([runId, userId, claimedAt])
+  @@index([promoSourceId, setCardId])
+  @@index([collectionEntryId])
+}
+
+model HistoryEvent {
+  id          String           @id @default(cuid())
+  runId       String
+  title       String
+  description String?
+  type        HistoryEventType @default(CUSTOM)
+  eventDate   DateTime?
+  isUnlocked  Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  run         PlayGroupRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  progressionUnlocks RunProgressionUnlock[]
+  rewardGrants RewardGrant[]
+
+  @@index([runId, eventDate])
+}
+
+model RewardGrant {
+  id          String            @id @default(cuid())
+  runId       String
+  recipientId String
+  grantedById String?
+  eventId     String?
+  setId       String?
+  credits     Int               @default(0)
+  packQuantity Int              @default(0)
+  status      RewardGrantStatus @default(PENDING)
+  reason      String?
+  claimedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  run         PlayGroupRun      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  recipient   User              @relation("RewardGrantRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  grantedBy   User?             @relation("RewardGrantGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  event       HistoryEvent?     @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  set         CardSet?          @relation(fields: [setId], references: [id], onDelete: SetNull)
+
+  @@index([runId, recipientId, createdAt])
+  @@index([eventId])
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  userId         String
+  tokenHash      String   @unique
+  deviceLabel    String?
+  userAgent      String?
+  rememberDevice Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastSeenAt     DateTime @default(now())
+  expiresAt      DateTime
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+}
+
+model Card {
+  id                  String            @id @default(cuid())
+  slug                String            @unique
+  externalCardId      String?           @unique
+  name                String
+  kind                CardKind
+  attribute           String?
+  monsterType         String?
+  levelRankLink       Int?
+  atk                 Int?
+  def                 Int?
+  currentOracleText   String?
+  currentPendulumText String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  textVersions        CardTextVersion[]
+  setCards            SetCard[]
+  packPulls           PackPull[]
+  collectionEntries   CollectionEntry[]
+  banlistEntries      BanlistEntry[]
+  deckCards           DeckCard[]
+  promoSourceCards    PromoSourceCard[]
+}
+
+model CardTextVersion {
+  id            String    @id @default(cuid())
+  cardId        String
+  label         String
+  effectText    String
+  pendulumText  String?
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  isErrata      Boolean   @default(false)
+  isCurrent     Boolean   @default(false)
+  sourceNote    String?
+  card          Card      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, effectiveFrom])
+}
+
+model CardSet {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  releaseDate  DateTime
+  region       Region
+  productType  SetProductType @default(UNKNOWN)
+  isOpenable   Boolean       @default(true)
+  packSize     Int           @default(9)
+  imageUrl     String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  setCards     SetCard[]
+  packOpenings PackOpening[]
+  packOpeningBatches PackOpeningBatch[]
+  runUnlocks   RunSetUnlock[]
+  rewardGrants RewardGrant[]
+  promoSources PromoSource[]
+  progressionUnlocks RunProgressionUnlock[]
+}
+
+model SetCard {
+  id                String            @id @default(cuid())
+  setId             String
+  cardId            String
+  setCode           String
+  rarity            String            @default("Unknown")
+  collectorNumber   String?
+  pullWeight        Int               @default(1)
+  isReprint         Boolean           @default(false)
+  set               CardSet           @relation(fields: [setId], references: [id], onDelete: Cascade)
+  card              Card              @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  packPulls         PackPull[]
+  collectionEntries CollectionEntry[]
+  promoSourceCards  PromoSourceCard[]
+  promoClaims       PromoClaim[]
+
+  @@unique([setId, setCode, rarity])
+  @@index([cardId])
+}
+
+model PackOpening {
+  id         String     @id @default(cuid())
+  userId     String
+  runId      String?
+  batchId    String?
+  setId      String
+  openedAt   DateTime   @default(now())
+  randomSeed String?
+  auditHash  String?
+  notes      String?
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run        PlayGroupRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  batch      PackOpeningBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  set        CardSet    @relation(fields: [setId], references: [id], onDelete: Cascade)
+  pulls      PackPull[]
+
+  @@index([userId, openedAt])
+  @@index([runId, openedAt])
+  @@index([batchId])
+}
+
+model PackOpeningBatch {
+  id             String               @id @default(cuid())
+  runId          String
+  userId         String
+  setId          String
+  type           PackOpeningBatchType
+  quantity       Int
+  totalCards     Int                  @default(0)
+  totalCost      Int                  @default(0)
+  idempotencyKey String?              @unique
+  openedAt       DateTime             @default(now())
+  notes          String?
+  run            PlayGroupRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  set            CardSet              @relation(fields: [setId], references: [id], onDelete: Cascade)
+  openings       PackOpening[]
+
+  @@index([runId, userId, openedAt])
+  @@index([setId, openedAt])
+}
+
+model PackPull {
+  id        String      @id @default(cuid())
+  openingId String
+  cardId    String
+  setCardId String
+  slotIndex Int
+  rarity    String?
+  createdAt DateTime    @default(now())
+  opening   PackOpening @relation(fields: [openingId], references: [id], onDelete: Cascade)
+  card      Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  setCard   SetCard     @relation(fields: [setCardId], references: [id], onDelete: Cascade)
+
+  @@index([openingId, slotIndex])
+}
+
+model CollectionEntry {
+  id                String          @id @default(cuid())
+  userId            String
+  runId             String?
+  cardId            String
+  setCardId         String?
+  acquiredAt        DateTime        @default(now())
+  source            OwnershipSource
+  sourceReferenceId String?
+  lockState         EntryLockState  @default(AVAILABLE)
+  notes             String?
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run               PlayGroupRun?   @relation(fields: [runId], references: [id], onDelete: SetNull)
+  card              Card            @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  setCard           SetCard?        @relation(fields: [setCardId], references: [id], onDelete: SetNull)
+  tradeItems        TradeItem[]
+  tradeVersionItems TradeVersionItem[]
+  binderSlots       CollectionBinderSlot[]
+  promoClaims       PromoClaim[]
+
+  @@index([userId, cardId])
+  @@index([runId, userId, cardId])
+}
+
+model CollectionBinder {
+  id          String             @id @default(cuid())
+  userId      String
+  runId       String?
+  name        String
+  coverKey    String
+  description String?
+  accentColor String?
+  isActive    Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  user        User               @relation("BinderOwner", fields: [userId], references: [id], onDelete: Cascade)
+  run         PlayGroupRun?      @relation(fields: [runId], references: [id], onDelete: SetNull)
+  showcasedByUsers User[]        @relation("ShowcaseBinder")
+  pages       CollectionBinderPage[]
+  presets     CollectionPreset[]
+
+  @@index([userId, updatedAt])
+  @@index([runId, updatedAt])
+}
+
+model CollectionBinderPage {
+  id        String                 @id @default(cuid())
+  binderId  String
+  pageIndex Int
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  binder    CollectionBinder       @relation(fields: [binderId], references: [id], onDelete: Cascade)
+  slots     CollectionBinderSlot[]
+
+  @@unique([binderId, pageIndex])
+  @@index([binderId, updatedAt])
+}
+
+model CollectionBinderSlot {
+  id                   String                @id @default(cuid())
+  pageId               String
+  slotIndex            Int
+  collectionEntryId    String?
+  entryReferenceId     String?
+  snapshotCardId       String?
+  snapshotCardName     String?
+  snapshotImageUrl     String?
+  snapshotPrintingLabel String?
+  snapshotSetCode      String?
+  snapshotRarity       String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  page                 CollectionBinderPage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  collectionEntry      CollectionEntry?      @relation(fields: [collectionEntryId], references: [id], onDelete: SetNull)
+
+  @@unique([pageId, slotIndex])
+  @@index([pageId, updatedAt])
+  @@index([collectionEntryId])
+  @@index([entryReferenceId])
+}
+
+model CollectionPreset {
+  id             String               @id @default(cuid())
+  userId         String
+  binderId       String?
+  name           String
+  searchQuery    String               @default("")
+  kind           CardKind?
+  duplicatesOnly Boolean              @default(false)
+  layoutMode     CollectionLayoutMode @default(BINDER)
+  sortMode       CollectionSortMode   @default(MOST_COPIES)
+  isActive       Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  binder         CollectionBinder?    @relation(fields: [binderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, updatedAt])
+  @@index([binderId])
+}
+
+model FormatProfile {
+  id                  String       @id @default(cuid())
+  slug                String       @unique
+  name                String
+  type                FormatType
+  region              Region
+  startDate           DateTime?
+  endDate             DateTime?
+  defaultErrataPolicy ErrataPolicy @default(BAN_ON_ERRATA)
+  description         String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  banlists            Banlist[]
+  decks               Deck[]
+}
+
+model Banlist {
+  id              String         @id @default(cuid())
+  formatProfileId String
+  name            String
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  errataPolicy    ErrataPolicy?
+  notes           String?
+  createdAt       DateTime       @default(now())
+  formatProfile   FormatProfile  @relation(fields: [formatProfileId], references: [id], onDelete: Cascade)
+  entries         BanlistEntry[]
+  decks           Deck[]
+
+  @@unique([formatProfileId, effectiveFrom])
+  @@index([formatProfileId, effectiveFrom])
+}
+
+model BanlistEntry {
+  id            String  @id @default(cuid())
+  banlistId     String
+  cardId        String
+  allowedCopies Int     @default(3)
+  note          String?
+  banlist       Banlist @relation(fields: [banlistId], references: [id], onDelete: Cascade)
+  card          Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([banlistId, cardId])
+}
+
+model Deck {
+  id                       String           @id @default(cuid())
+  userId                   String
+  runId                    String?
+  formatProfileId          String?
+  banlistId                String?
+  name                     String
+  snapshotDate             DateTime?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  run                      PlayGroupRun?    @relation(fields: [runId], references: [id], onDelete: SetNull)
+  formatProfile            FormatProfile?   @relation(fields: [formatProfileId], references: [id], onDelete: SetNull)
+  banlist                  Banlist?         @relation(fields: [banlistId], references: [id], onDelete: SetNull)
+  cards                    DeckCard[]
+  exports                  DeckExport[]
+  duelRequests             DuelRequest[]
+  tournamentMatchesAsPlayerOne TournamentMatch[] @relation("TournamentMatchPlayerOneDeck")
+  tournamentMatchesAsPlayerTwo TournamentMatch[] @relation("TournamentMatchPlayerTwoDeck")
+
+  @@index([userId, updatedAt])
+  @@index([runId, userId, updatedAt])
+}
+
+model DeckCard {
+  id       String      @id @default(cuid())
+  deckId   String
+  cardId   String
+  section  DeckSection @default(MAIN)
+  quantity Int
+  deck     Deck        @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  card     Card        @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([deckId, cardId, section])
+}
+
+model Trade {
+  id                   String         @id @default(cuid())
+  runId                String?
+  proposerId           String
+  responderId          String
+  status               TradeStatus    @default(PENDING)
+  proposedAt           DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  resolvedAt           DateTime?
+  note                 String?
+  activeVersionId      String?        @unique
+  acceptedVersionId    String?        @unique
+  acceptedAt           DateTime?
+  proposerConfirmedAt  DateTime?
+  responderConfirmedAt DateTime?
+  cancelledByUserId    String?
+  rejectedByUserId     String?
+  proposer             User           @relation("TradeProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  responder            User           @relation("TradeResponder", fields: [responderId], references: [id], onDelete: Cascade)
+  cancelledBy          User?          @relation("TradeCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  rejectedBy           User?          @relation("TradeRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+  run                  PlayGroupRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+  activeVersion        TradeVersion?  @relation("TradeActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  acceptedVersion      TradeVersion?  @relation("TradeAcceptedVersion", fields: [acceptedVersionId], references: [id], onDelete: SetNull)
+  versions             TradeVersion[] @relation("TradeVersions")
+  items                TradeItem[]
+
+  @@index([proposerId, proposedAt])
+  @@index([responderId, proposedAt])
+  @@index([runId, proposedAt])
+}
+
+model TradeItem {
+  id                String          @id @default(cuid())
+  tradeId           String
+  collectionEntryId String
+  fromUserId        String
+  toUserId          String
+  trade             Trade           @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  collectionEntry   CollectionEntry @relation(fields: [collectionEntryId], references: [id], onDelete: Cascade)
+
+  @@index([tradeId])
+  @@index([collectionEntryId])
+}
+
+model TradeVersion {
+  id              String             @id @default(cuid())
+  tradeId         String
+  versionNumber   Int
+  senderId        String
+  recipientId     String
+  note            String?
+  createdAt       DateTime           @default(now())
+  supersededAt    DateTime?
+  trade           Trade              @relation("TradeVersions", fields: [tradeId], references: [id], onDelete: Cascade)
+  sender          User               @relation("TradeVersionSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient       User               @relation("TradeVersionRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  activeForTrade  Trade?             @relation("TradeActiveVersion")
+  acceptedForTrade Trade?            @relation("TradeAcceptedVersion")
+  items           TradeVersionItem[]
+
+  @@unique([tradeId, versionNumber])
+  @@index([tradeId, createdAt])
+  @@index([senderId, recipientId])
+}
+
+model TradeVersionItem {
+  id                String          @id @default(cuid())
+  tradeVersionId    String
+  collectionEntryId String
+  fromUserId        String
+  toUserId          String
+  tradeVersion      TradeVersion    @relation(fields: [tradeVersionId], references: [id], onDelete: Cascade)
+  collectionEntry   CollectionEntry @relation(fields: [collectionEntryId], references: [id], onDelete: Cascade)
+
+  @@index([tradeVersionId])
+  @@index([collectionEntryId])
+}
+
+model DeckExport {
+  id         String          @id @default(cuid())
+  userId     String
+  deckId     String
+  fileName   String
+  exportPath String?
+  exportBody String
+  createdAt  DateTime        @default(now())
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck       Deck            @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  duelRequests DuelRequest[]
+  tournamentMatches TournamentMatch[]
+
+  @@index([userId, createdAt])
+  @@index([deckId, createdAt])
+}
+
+model DuelRequest {
+  id                String            @id @default(cuid())
+  runId             String?
+  requesterId       String
+  opponentId        String
+  requesterDeckId   String?
+  exportId          String?
+  tournamentMatchId String?           @unique
+  status            DuelRequestStatus @default(PENDING)
+  message           String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  requester         User              @relation("DuelRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  run               PlayGroupRun?     @relation(fields: [runId], references: [id], onDelete: SetNull)
+  opponent          User              @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  requesterDeck     Deck?             @relation(fields: [requesterDeckId], references: [id], onDelete: SetNull)
+  export            DeckExport?       @relation(fields: [exportId], references: [id], onDelete: SetNull)
+  tournamentMatch   TournamentMatch?  @relation(fields: [tournamentMatchId], references: [id], onDelete: SetNull)
+  appointment       DuelAppointment?
+
+  @@index([requesterId, createdAt])
+  @@index([opponentId, createdAt])
+  @@index([runId, createdAt])
+}
+
+model DuelAppointment {
+  id            String      @id @default(cuid())
+  duelRequestId String      @unique
+  proposedAt    DateTime?
+  confirmedAt   DateTime?
+  note          String?
+  platform      String      @default("EDOPro")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  duelRequest   DuelRequest @relation(fields: [duelRequestId], references: [id], onDelete: Cascade)
+}
+
+model Tournament {
+  id           String                  @id @default(cuid())
+  runId        String?
+  hostId       String
+  title        String
+  description  String?
+  formatLabel  String?
+  scheduledAt  DateTime?
+  status       TournamentStatus       @default(DRAFT)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  run          PlayGroupRun?           @relation(fields: [runId], references: [id], onDelete: SetNull)
+  host         User                   @relation("TournamentHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants TournamentParticipant[]
+  rounds       TournamentRound[]
+  matches      TournamentMatch[]
+  progressionCheckpoints RunProgressionCheckpoint[]
+
+  @@index([hostId, createdAt])
+  @@index([runId, createdAt])
+}
+
+model TournamentParticipant {
+  id           String                      @id @default(cuid())
+  tournamentId String
+  userId       String
+  invitedById  String?
+  status       TournamentParticipantStatus @default(INVITED)
+  seed         Int?
+  joinedAt     DateTime?
+  droppedAt    DateTime?
+  createdAt    DateTime                    @default(now())
+  updatedAt    DateTime                    @updatedAt
+  tournament   Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy    User?                       @relation("TournamentParticipantInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId, status])
+}
+
+model TournamentRound {
+  id           String              @id @default(cuid())
+  tournamentId String
+  roundNumber  Int
+  status       TournamentRoundStatus @default(PAIRED)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  tournament   Tournament          @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches      TournamentMatch[]
+
+  @@unique([tournamentId, roundNumber])
+}
+
+model TournamentMatch {
+  id            String               @id @default(cuid())
+  tournamentId  String
+  roundId       String
+  tableNumber   Int?
+  playerOneId   String
+  playerTwoId   String?
+  playerOneDeckId String?
+  playerTwoDeckId String?
+  deckExportId  String?
+  winnerId      String?
+  playerOneScore Int                 @default(0)
+  playerTwoScore Int                 @default(0)
+  status        TournamentMatchStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  tournament    Tournament           @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round         TournamentRound      @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  playerOne     User                 @relation("TournamentMatchPlayerOne", fields: [playerOneId], references: [id], onDelete: Cascade)
+  playerTwo     User?                @relation("TournamentMatchPlayerTwo", fields: [playerTwoId], references: [id], onDelete: SetNull)
+  winner        User?                @relation("TournamentMatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  playerOneDeck Deck?                @relation("TournamentMatchPlayerOneDeck", fields: [playerOneDeckId], references: [id], onDelete: SetNull)
+  playerTwoDeck Deck?                @relation("TournamentMatchPlayerTwoDeck", fields: [playerTwoDeckId], references: [id], onDelete: SetNull)
+  deckExport    DeckExport?          @relation(fields: [deckExportId], references: [id], onDelete: SetNull)
+  duelRequest   DuelRequest?
+
+  @@index([tournamentId, roundId])
+  @@index([playerOneId, playerTwoId])
+  @@index([winnerId])
+}

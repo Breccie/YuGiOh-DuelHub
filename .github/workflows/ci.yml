@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      APP_MODE: desktop-demo
+      DATABASE_URL: file:./demo.db
+      API_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/yugioh_duel_hub
+      API_BASE_URL: ""
+      COOKIE_SECRET: ci-cookie-secret-at-least-32-characters
+      CORS_ORIGIN: http://127.0.0.1:3000,http://localhost:3000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Prisma schemas
+        run: |
+          npx prisma validate --schema prisma/schema.prisma
+          npx prisma validate --schema apps/api/prisma/schema.prisma
+
+      - name: Generate Prisma clients
+        run: npm run db:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

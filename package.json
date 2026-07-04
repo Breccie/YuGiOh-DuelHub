@@ -1,0 +1,89 @@
+{
+  "name": "yugioh-progression",
+  "version": "0.1.0",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "cross-env APP_MODE=desktop-demo next dev apps/frontend",
+    "frontend:dev": "cross-env APP_MODE=desktop-demo next dev apps/frontend",
+    "frontend:online:dev": "cross-env APP_MODE=online-dev next dev apps/frontend",
+    "build": "next build apps/frontend",
+    "start": "next start apps/frontend",
+    "lint": "eslint apps packages electron prisma scripts",
+    "typecheck": "tsc -p apps/frontend/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/domain/tsconfig.json --noEmit && tsc -p apps/api/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "api:dev": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs watch --tsconfig apps/api/tsconfig.json apps/api/src/server.ts",
+    "api:start": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts",
+    "db:generate": "prisma generate --schema prisma/schema.prisma && prisma generate --schema apps/api/prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
+    "db:push:legacy": "node scripts/db-push.mjs",
+    "db:seed": "cross-env DATABASE_URL=file:./demo.db prisma db push --schema prisma/schema.prisma --skip-generate --accept-data-loss && cross-env DATABASE_URL=file:./demo.db tsx prisma/demo-seed.ts",
+    "db:seed:base": "tsx apps/api/prisma/base-seed.ts",
+    "db:seed:demo": "cross-env DATABASE_URL=file:./demo.db prisma db push --schema prisma/schema.prisma --skip-generate --accept-data-loss && cross-env DATABASE_URL=file:./demo.db tsx prisma/demo-seed.ts",
+    "db:studio": "prisma studio --schema apps/api/prisma/schema.prisma",
+    "online:infra": "docker compose up -d postgres",
+    "online:dev": "npm run online:infra && npm run db:generate && npm run db:migrate && npm run db:seed:base && concurrently -k \"npm:api:dev\" \"npm:frontend:online:dev\"",
+    "assets:audit:packs": "tsx scripts/audit-pack-assets.ts",
+    "import:ygo": "tsx scripts/import-ygo-data.ts",
+    "desktop:dev": "node scripts/desktop-dev.mjs",
+    "desktop:build:web": "npm run db:seed:demo && next build apps/frontend && node scripts/prepare-desktop-build.mjs",
+    "desktop:preview": "npm run desktop:build:web && cross-env ELECTRON_USE_STANDALONE=1 electron .",
+    "desktop:dir": "npm run desktop:build:web && electron-builder --dir",
+    "desktop:dist": "npm run desktop:build:web && electron-builder"
+  },
+  "build": {
+    "appId": "com.emil.yugiohduelhub",
+    "productName": "Yu-Gi-Oh Duel Hub",
+    "asar": false,
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "electron/**/*",
+      "apps/frontend/.next/standalone/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.1.0",
+    "@prisma/client": "^6.18.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "@tabler/icons-react": "^3.44.0",
+    "fastify": "^5.6.2",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "three": "^0.184.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^42.4.0",
+    "electron-builder": "^26.15.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "prisma": "^6.18.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "typescript": "^5",
+    "vitest": "^3.2.4",
+    "wait-on": "^9.0.10"
+  },
+  "overrides": {
+    "effect": "3.20.0",
+    "postcss": "8.5.10"
+  }
+}
