@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { HomeDashboardResponse } from "@ygo/contracts";
 import { listDuelRequests } from "@/lib/duel-service";
 import { getPackDashboardSnapshot } from "@/lib/pack-openings";
-import { getActiveRun } from "@/lib/run-service";
+import { getActiveRun, getOrCreateWallet } from "@/lib/run-service";
 
 function getEraLabel(value: string) {
   const year = new Date(value).getUTCFullYear();
@@ -49,8 +49,14 @@ export async function buildHomeDashboardPayload(
     recentPendingTrades,
     latestBanlist,
     tournamentCount,
+    wallet,
+    pendingPackRewards,
+    unlockedPromoSources,
+    readyCheckpoints,
+    matchesToConfirm,
+    matchesToReport,
   ] = await Promise.all([
-    getPackDashboardSnapshot(prisma, viewerId),
+    getPackDashboardSnapshot(prisma, viewerId, activeRun.id),
     listDuelRequests(prisma, viewerId),
     prisma.collectionEntry.groupBy({
       by: ["cardId"],
@@ -115,12 +121,188 @@ export async function buildHomeDashboardPayload(
         OR: [{ hostId: viewerId }, { participants: { some: { userId: viewerId } } }],
       },
     }),
+    getOrCreateWallet(prisma, {
+      runId: activeRun.id,
+      userId: viewerId,
+    }),
+    prisma.rewardGrant.findMany({
+      where: {
+        runId: activeRun.id,
+        recipientId: viewerId,
+        status: "PENDING",
+        packSetId: {
+          not: null,
+        },
+        packQuantity: {
+          gt: 0,
+        },
+      },
+      take: 3,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        packSet: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    }),
+    prisma.promoSource.findMany({
+      where: {
+        runAccesses: {
+          some: {
+            runId: activeRun.id,
+          },
+        },
+      },
+      orderBy: [{ availableFrom: "desc" }, { name: "asc" }],
+      take: 6,
+      include: {
+        claims: {
+          where: {
+            runId: activeRun.id,
+            userId: viewerId,
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
+    }),
+    prisma.runProgressionCheckpoint.findMany({
+      where: {
+        runId: activeRun.id,
+        status: "READY",
+      },
+      orderBy: {
+        sequence: "asc",
+      },
+      take: 3,
+      include: {
+        unlocks: {
+          include: {
+            set: {
+              select: {
+                name: true,
+              },
+            },
+            promoSource: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.tournamentMatch.findMany({
+      where: {
+        status: "REPORTED",
+        reportedById: {
+          not: viewerId,
+        },
+        tournament: {
+          runId: activeRun.id,
+        },
+        OR: [{ playerOneId: viewerId }, { playerTwoId: viewerId }],
+      },
+      take: 3,
+      orderBy: {
+        updatedAt: "desc",
+      },
+      include: {
+        tournament: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    }),
+    prisma.tournamentMatch.count({
+      where: {
+        status: {
+          in: ["PENDING", "SCHEDULED"],
+        },
+        tournament: {
+          runId: activeRun.id,
+        },
+        OR: [{ playerOneId: viewerId }, { playerTwoId: viewerId }],
+      },
+    }),
   ]);
 
   const coreTimeline = dashboard.sets.filter((set) => set.productType === "CORE_BOOSTER");
   const eraSource = (coreTimeline[0] ?? dashboard.sets[0])?.releaseDate ?? new Date().toISOString();
-  const nextPack =
-    coreTimeline.find((set) => set.totalOpened === 0) ?? coreTimeline[0] ?? dashboard.sets[0];
+  const newlyAvailablePacks = dashboard.sets
+    .filter((set) => set.canBuy && set.totalOpened === 0)
+    .slice(0, 3);
+  const pendingPromoSources = unlockedPromoSources.filter(
+    (source) => source.claims.length === 0,
+  );
+  const actionItems: HomeDashboardResponse["newsItems"] = [
+    ...pendingPackRewards.map((reward) => ({
+      id: `reward-${reward.id}`,
+      kicker: "Gratispacks",
+      title: `${reward.packQuantity}x ${reward.packSet?.name ?? "Reward-Pack"}`,
+      detail: "Liegt in deiner Reward-Inbox und kann kostenlos geöffnet werden.",
+      meta: "Packs",
+    })),
+    ...newlyAvailablePacks.map((pack) => ({
+      id: `pack-${pack.id}`,
+      kicker: "Neues Pack offen",
+      title: pack.name,
+      detail: `${formatNumber(pack.cardPoolSize)} Karten im Pool, kaufbar mit Credits.`,
+      meta: `${pack.packPrice ?? 0} Credits`,
+    })),
+    ...pendingPromoSources.map((source) => ({
+      id: `promo-${source.id}`,
+      kicker: "Promo offen",
+      title: source.name,
+      detail: "Diese Promo-Quelle ist freigeschaltet und noch nicht abgeholt.",
+      meta: "Promos",
+    })),
+    ...readyCheckpoints.map((checkpoint) => ({
+      id: `checkpoint-${checkpoint.id}`,
+      kicker: "Kampagne bereit",
+      title: checkpoint.title,
+      detail:
+        checkpoint.unlocks
+          .map((unlock) => unlock.set?.name ?? unlock.promoSource?.name)
+          .filter((name): name is string => Boolean(name))
+          .join(", ") || "Neuer Kampagnenschritt kann angewendet werden.",
+      meta: "Progression",
+    })),
+    ...matchesToConfirm.map((match) => ({
+      id: `match-${match.id}`,
+      kicker: "Score bestätigen",
+      title: match.tournament.title,
+      detail: "Dein Gegner hat ein Ergebnis gemeldet. Bitte prüfen und bestätigen.",
+      meta: "Turnier",
+    })),
+  ];
+  const visibleActions =
+    actionItems.length > 0
+      ? actionItems.slice(0, 6)
+      : [
+          {
+            id: "empty",
+            kicker: "Alles erledigt",
+            title: "Keine offenen Aktionen",
+            detail: "Aktuell gibt es keine neuen Rewards, Promos oder Match-Bestätigungen.",
+            meta: "Bereit",
+          },
+        ];
+  const openActionCount =
+    pendingPackRewards.length +
+    newlyAvailablePacks.length +
+    pendingPromoSources.length +
+    readyCheckpoints.length +
+    matchesToConfirm.length +
+    matchesToReport +
+    pendingTrades;
 
   return {
     viewer: {
@@ -131,49 +313,23 @@ export async function buildHomeDashboardPayload(
     activeEra: getEraLabel(eraSource),
     heroStats: [
       {
-        label: "Sammlung",
-        value: formatNumber(uniqueOwnedCards.length),
+        label: "Credits",
+        value: formatNumber(wallet.balance),
       },
       {
-        label: "Decks",
-        value: formatNumber(deckCount),
+        label: "Offen",
+        value: formatNumber(openActionCount),
       },
       {
-        label: "Duelle",
-        value: formatNumber(duelRequests.length),
+        label: "Gratispacks",
+        value: formatNumber(pendingPackRewards.reduce((total, reward) => total + reward.packQuantity, 0)),
       },
       {
-        label: "Tausch",
-        value: formatNumber(totalTrades),
+        label: "Promos",
+        value: formatNumber(pendingPromoSources.length),
       },
     ],
-    newsItems: [
-      {
-        id: "news-1",
-        kicker: "Nächstes Pack",
-        title: nextPack?.name ?? "Kein Pack verfügbar",
-        detail: nextPack
-          ? `${formatNumber(nextPack.cardPoolSize)} Karten im Pool, ${formatNumber(
-              nextPack.totalOpened,
-            )} geöffnet.`
-          : "Importiere Kartendaten, um Pack-Ziele zu sehen.",
-        meta: nextPack ? getEraLabel(nextPack.releaseDate) : "System",
-      },
-      {
-        id: "news-2",
-        kicker: "Turnierstatus",
-        title: `${formatNumber(tournamentCount)} aktive Cups`,
-        detail: "Swiss-Runden, Pairings und Duel-Handoff bleiben direkt im Desktop Hub sichtbar.",
-        meta: "Turniere",
-      },
-      {
-        id: "news-3",
-        kicker: "Tauschstatus",
-        title: `${formatNumber(pendingTrades)} offen`,
-        detail: `${formatNumber(totalTrades)} Angebote im Verlauf.`,
-        meta: "Aktuell",
-      },
-    ],
+    newsItems: visibleActions,
     duelRequests: duelRequests.slice(0, 3).map((duelRequest) => ({
       id: duelRequest.id,
       name:
@@ -197,34 +353,45 @@ export async function buildHomeDashboardPayload(
     })),
     progressCards: [
       {
-        id: "tasks",
-        label: "Offene Aktionen",
-        value: formatNumber(
-          pendingTrades + duelRequests.filter((duel) => duel.status !== "COMPLETED").length,
-        ),
-        detail: "Aktive Tauschangebote, Duellanfragen und nächste Pack-Ziele.",
-        action: "Öffnen",
+        id: "packs",
+        label: "Packs öffnen",
+        value: formatNumber(pendingPackRewards.length + newlyAvailablePacks.length),
+        detail:
+          pendingPackRewards.length > 0
+            ? "Gratispacks in der Reward-Inbox."
+            : newlyAvailablePacks.length > 0
+              ? "Neue kaufbare Packs sind freigeschaltet."
+              : "Keine neuen Packs offen.",
+        action: "Zu Packs",
+      },
+      {
+        id: "promos",
+        label: "Promos abholen",
+        value: formatNumber(pendingPromoSources.length),
+        detail:
+          pendingPromoSources.length > 0
+            ? "Freigeschaltete Promo-Quellen warten."
+            : "Keine offenen Promos.",
+        action: "Promos",
+      },
+      {
+        id: "tournaments",
+        label: "Turnier prüfen",
+        value: formatNumber(matchesToConfirm.length + matchesToReport),
+        detail:
+          matchesToConfirm.length > 0
+            ? "Gemeldete Scores brauchen deine Bestätigung."
+            : matchesToReport > 0
+              ? "Offene Matches können eingetragen werden."
+              : `${formatNumber(tournamentCount)} Turnier(e) in der Kampagne.`,
+        action: "Turniere",
       },
       {
         id: "collection",
-        label: "Sammlungsfortschritt",
-        value: `${formatNumber(uniqueOwnedCards.length)} Karten`,
-        detail: "Einzigartige Kartenkopien im Besitz und bereit für Binder oder Deckbau.",
+        label: "Sammlung",
+        value: `${formatNumber(uniqueOwnedCards.length)}`,
+        detail: `${formatNumber(deckCount)} Deck(s), ${formatNumber(totalTrades)} Tauschvorgänge.`,
         action: "Sammlung",
-      },
-      {
-        id: "decks",
-        label: "Deckpflege",
-        value: formatNumber(deckCount),
-        detail: "Decks mit Besitzprüfung, Banlist-Kontext und Exportpfad.",
-        action: "Decks",
-      },
-      {
-        id: "packs",
-        label: "Pack-Timeline",
-        value: formatNumber(coreTimeline.length),
-        detail: "Core-Booster im aktuellen Import- und Progression-Pool.",
-        action: "Packs",
       },
     ],
   };
