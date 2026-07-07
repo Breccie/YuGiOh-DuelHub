@@ -35,6 +35,9 @@ export async function PATCH(
       defaultPackPrice: body.defaultPackPrice,
       defaultDisplaySize: body.defaultDisplaySize,
       freePacksPerSetUnlock: body.freePacksPerSetUnlock,
+      tournamentWinnerCredits: body.tournamentWinnerCredits,
+      tournamentRunnerUpCredits: body.tournamentRunnerUpCredits,
+      tournamentParticipationCredits: body.tournamentParticipationCredits,
     });
 
     return NextResponse.json(run satisfies PlayGroupRunDto);

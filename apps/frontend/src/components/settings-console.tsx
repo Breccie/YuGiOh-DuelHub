@@ -107,6 +107,15 @@ export function SettingsConsole({
   const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState(
     String(activeRun.freePacksPerSetUnlock),
   );
+  const [tournamentWinnerCredits, setTournamentWinnerCredits] = useState(
+    String(activeRun.tournamentWinnerCredits),
+  );
+  const [tournamentRunnerUpCredits, setTournamentRunnerUpCredits] = useState(
+    String(activeRun.tournamentRunnerUpCredits),
+  );
+  const [tournamentParticipationCredits, setTournamentParticipationCredits] = useState(
+    String(activeRun.tournamentParticipationCredits),
+  );
   const [campaignSaving, setCampaignSaving] = useState(false);
   const [campaignFeedback, setCampaignFeedback] = useState<string | null>(null);
 
@@ -199,14 +208,20 @@ export function SettingsConsole({
     const parsedPackPrice = Number(defaultPackPrice);
     const parsedDisplaySize = Number(defaultDisplaySize);
     const parsedFreePacks = Number(freePacksPerSetUnlock);
+    const parsedWinnerCredits = Number(tournamentWinnerCredits);
+    const parsedRunnerUpCredits = Number(tournamentRunnerUpCredits);
+    const parsedParticipationCredits = Number(tournamentParticipationCredits);
 
     if (
       !Number.isInteger(parsedPackPrice) ||
       !Number.isInteger(parsedDisplaySize) ||
-      !Number.isInteger(parsedFreePacks)
+      !Number.isInteger(parsedFreePacks) ||
+      !Number.isInteger(parsedWinnerCredits) ||
+      !Number.isInteger(parsedRunnerUpCredits) ||
+      !Number.isInteger(parsedParticipationCredits)
     ) {
       setCampaignSaving(false);
-      setCampaignFeedback("Bitte ganze Zahlen fuer Packpreis, Display-Groesse und Gratispacks eingeben.");
+      setCampaignFeedback("Bitte ganze Zahlen fuer Packpreise, Gratispacks und Turnier-Credits eingeben.");
       return;
     }
 
@@ -215,11 +230,17 @@ export function SettingsConsole({
         defaultPackPrice: parsedPackPrice,
         defaultDisplaySize: parsedDisplaySize,
         freePacksPerSetUnlock: parsedFreePacks,
+        tournamentWinnerCredits: parsedWinnerCredits,
+        tournamentRunnerUpCredits: parsedRunnerUpCredits,
+        tournamentParticipationCredits: parsedParticipationCredits,
       });
 
       setDefaultPackPrice(String(updatedRun.defaultPackPrice));
       setDefaultDisplaySize(String(updatedRun.defaultDisplaySize));
       setFreePacksPerSetUnlock(String(updatedRun.freePacksPerSetUnlock));
+      setTournamentWinnerCredits(String(updatedRun.tournamentWinnerCredits));
+      setTournamentRunnerUpCredits(String(updatedRun.tournamentRunnerUpCredits));
+      setTournamentParticipationCredits(String(updatedRun.tournamentParticipationCredits));
       setCampaignFeedback("Kampagnen-Einstellungen gespeichert.");
       startTransition(() => router.refresh());
     } catch (error) {
@@ -405,6 +426,39 @@ export function SettingsConsole({
               <p className="mt-3 text-sm leading-7 text-[#baa58a]">
                 Beim Freischalten eines neuen Booster-Sets bekommen alle Kampagnenmitglieder
                 diese Anzahl als kostenlose Reward-Packs. Standard ist ein Display.
+              </p>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Credits Platz 1</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={tournamentWinnerCredits}
+                    onChange={(event) => setTournamentWinnerCredits(event.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Credits Platz 2</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={tournamentRunnerUpCredits}
+                    onChange={(event) => setTournamentRunnerUpCredits(event.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Credits Platz 3-8</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={tournamentParticipationCredits}
+                    onChange={(event) => setTournamentParticipationCredits(event.target.value)}
+                  />
+                </label>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#baa58a]">
+                Diese Turnier-Credits werden in neu generierte Kampagnen-Checkpoints geschrieben
+                und dienen als Pack-Währung für den freigeschalteten Shop.
               </p>
               {campaignFeedback ? (
                 <div className="mt-4 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">

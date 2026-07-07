@@ -195,6 +195,9 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
         defaultPackPrice: body.defaultPackPrice,
         defaultDisplaySize: body.defaultDisplaySize,
         freePacksPerSetUnlock: body.freePacksPerSetUnlock,
+        tournamentWinnerCredits: body.tournamentWinnerCredits,
+        tournamentRunnerUpCredits: body.tournamentRunnerUpCredits,
+        tournamentParticipationCredits: body.tournamentParticipationCredits,
       });
 
       return reply.send(run);

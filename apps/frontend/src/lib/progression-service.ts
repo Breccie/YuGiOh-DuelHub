@@ -111,25 +111,32 @@ function chunkArray<T>(items: T[], size: number) {
   return chunks;
 }
 
-function defaultRewardConfig(packSetId: string | null) {
+function defaultRewardConfig(
+  packSetId: string | null,
+  run: {
+    tournamentWinnerCredits: number;
+    tournamentRunnerUpCredits: number;
+    tournamentParticipationCredits: number;
+  },
+) {
   return {
     placements: [
       {
         rank: 1,
-        credits: 300,
+        credits: run.tournamentWinnerCredits,
         packSetId,
         packQuantity: packSetId ? 2 : 0,
       },
       {
         rank: 2,
-        credits: 150,
+        credits: run.tournamentRunnerUpCredits,
         packSetId,
         packQuantity: packSetId ? 1 : 0,
       },
       {
         fromRank: 3,
         toRank: 8,
-        credits: 50,
+        credits: run.tournamentParticipationCredits,
       },
     ],
   };
@@ -550,7 +557,7 @@ export async function generateRunProgression(
           checkpointId: checkpoint.id,
           runId,
           type: "REWARD",
-          rewardConfig: defaultRewardConfig(lastTournamentPackId),
+          rewardConfig: defaultRewardConfig(lastTournamentPackId, run),
         },
       });
 

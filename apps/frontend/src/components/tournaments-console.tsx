@@ -6,15 +6,23 @@ import { useRouter } from "next/navigation";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel, StatusPill } from "@/components/panel";
 import type { TournamentOverviewDto, ViewerSession } from "@/lib/app-dtos";
+import type { CreditLedgerEntryDto } from "@ygo/contracts";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { tournamentClient } from "@/lib/tournament-client";
 
 export function TournamentsConsole({
   session,
   tournaments,
+  currency,
 }: {
   session: ViewerSession;
   tournaments: TournamentOverviewDto[];
+  currency: {
+    balance: number;
+    tournamentCreditsEarned: number;
+    packCreditsSpent: number;
+    recentEntries: CreditLedgerEntryDto[];
+  };
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -110,6 +118,53 @@ export function TournamentsConsole({
           </div>
         </Panel>
 
+        <div className="space-y-6">
+        <Panel kicker="Währung" title="Kampagnen-Credits">
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              ["Guthaben", `${currency.balance} Credits`],
+              ["Turniere", `+${currency.tournamentCreditsEarned}`],
+              ["Packkäufe", `-${currency.packCreditsSpent}`],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4"
+              >
+                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-[#9f8c77]">
+                  {label}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-[#f0dfcc]">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {currency.recentEntries.length > 0 ? (
+              currency.recentEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center justify-between gap-3 rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-semibold text-[#f0dfcc]">{entry.source}</p>
+                    <p className="mt-1 text-xs text-[#baa58a]">
+                      {entry.note ?? "Kampagnenbewegung"}
+                    </p>
+                  </div>
+                  <span className={entry.amount >= 0 ? "text-[#b8e3e4]" : "text-[#f2c1b7]"}>
+                    {entry.amount >= 0 ? "+" : ""}
+                    {entry.amount}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="ui-empty rounded-[20px] px-4 py-5 text-sm">
+                Noch keine Credit-Bewegungen.
+              </div>
+            )}
+          </div>
+        </Panel>
+
         <Panel kicker="Standings" title="Aktive Cups">
           <div className="space-y-4">
             {tournaments.length > 0 ? (
@@ -155,6 +210,7 @@ export function TournamentsConsole({
             )}
           </div>
         </Panel>
+        </div>
       </section>
     </DuelConsoleScaffold>
   );

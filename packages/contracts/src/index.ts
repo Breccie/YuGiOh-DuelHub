@@ -839,6 +839,9 @@ export const playGroupRunSchema = z.object({
   defaultPackPrice: z.number().int(),
   defaultDisplaySize: z.number().int(),
   freePacksPerSetUnlock: z.number().int(),
+  tournamentWinnerCredits: z.number().int(),
+  tournamentRunnerUpCredits: z.number().int(),
+  tournamentParticipationCredits: z.number().int(),
   startingCredits: z.number().int(),
   viewerRole: runRoleSchema,
   memberCount: z.number().int(),
@@ -875,6 +878,9 @@ export const createRunRequestSchema = z.object({
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
   freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
+  tournamentWinnerCredits: z.number().int().min(0).max(999_999).optional(),
+  tournamentRunnerUpCredits: z.number().int().min(0).max(999_999).optional(),
+  tournamentParticipationCredits: z.number().int().min(0).max(999_999).optional(),
 });
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
@@ -882,6 +888,9 @@ export const updateRunSettingsRequestSchema = z.object({
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
   freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
+  tournamentWinnerCredits: z.number().int().min(0).max(999_999).optional(),
+  tournamentRunnerUpCredits: z.number().int().min(0).max(999_999).optional(),
+  tournamentParticipationCredits: z.number().int().min(0).max(999_999).optional(),
 });
 export type UpdateRunSettingsRequest = z.infer<
   typeof updateRunSettingsRequestSchema

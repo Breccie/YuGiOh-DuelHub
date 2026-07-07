@@ -85,6 +85,9 @@ export default async function SettingsPage() {
         defaultPackPrice: activeRun.defaultPackPrice,
         defaultDisplaySize: activeRun.defaultDisplaySize,
         freePacksPerSetUnlock: activeRun.freePacksPerSetUnlock,
+        tournamentWinnerCredits: activeRun.tournamentWinnerCredits,
+        tournamentRunnerUpCredits: activeRun.tournamentRunnerUpCredits,
+        tournamentParticipationCredits: activeRun.tournamentParticipationCredits,
         startingCredits: activeRun.startingCredits,
         viewerRole:
           activeRun.memberships.find((membership) => membership.userId === session.userId)

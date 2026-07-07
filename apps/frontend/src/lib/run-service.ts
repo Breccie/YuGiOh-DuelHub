@@ -36,6 +36,9 @@ export function serializeRun(run: RunWithMemberships, viewerId: string) {
     defaultPackPrice: run.defaultPackPrice,
     defaultDisplaySize: run.defaultDisplaySize,
     freePacksPerSetUnlock: run.freePacksPerSetUnlock,
+    tournamentWinnerCredits: run.tournamentWinnerCredits,
+    tournamentRunnerUpCredits: run.tournamentRunnerUpCredits,
+    tournamentParticipationCredits: run.tournamentParticipationCredits,
     startingCredits: run.startingCredits,
     viewerRole: viewerMembership?.role ?? ("PLAYER" as RunRole),
     memberCount: run._count.memberships,
@@ -343,6 +346,9 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
         defaultPackPrice: 100,
         defaultDisplaySize: 24,
         freePacksPerSetUnlock: 24,
+        tournamentWinnerCredits: 300,
+        tournamentRunnerUpCredits: 150,
+        tournamentParticipationCredits: 50,
         startingCredits: 2400,
         memberships: {
           create: {
@@ -513,6 +519,9 @@ export async function createRun(
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
     freePacksPerSetUnlock?: number;
+    tournamentWinnerCredits?: number;
+    tournamentRunnerUpCredits?: number;
+    tournamentParticipationCredits?: number;
   },
 ) {
   return prisma.$transaction(async (tx) => {
@@ -525,6 +534,9 @@ export async function createRun(
         defaultPackPrice: input.defaultPackPrice ?? 100,
         defaultDisplaySize: input.defaultDisplaySize ?? 24,
         freePacksPerSetUnlock: input.freePacksPerSetUnlock ?? 24,
+        tournamentWinnerCredits: input.tournamentWinnerCredits ?? 300,
+        tournamentRunnerUpCredits: input.tournamentRunnerUpCredits ?? 150,
+        tournamentParticipationCredits: input.tournamentParticipationCredits ?? 50,
         memberships: {
           create: {
             userId,
@@ -569,6 +581,9 @@ export async function updateRunSettings(
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
     freePacksPerSetUnlock?: number;
+    tournamentWinnerCredits?: number;
+    tournamentRunnerUpCredits?: number;
+    tournamentParticipationCredits?: number;
   },
 ) {
   await requireRunMembership(prisma, {
@@ -585,6 +600,9 @@ export async function updateRunSettings(
       defaultPackPrice: options.defaultPackPrice,
       defaultDisplaySize: options.defaultDisplaySize,
       freePacksPerSetUnlock: options.freePacksPerSetUnlock,
+      tournamentWinnerCredits: options.tournamentWinnerCredits,
+      tournamentRunnerUpCredits: options.tournamentRunnerUpCredits,
+      tournamentParticipationCredits: options.tournamentParticipationCredits,
     },
     include: {
       memberships: true,

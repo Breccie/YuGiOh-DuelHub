@@ -794,6 +794,9 @@ describe("tournament rewards and progression", () => {
           ownerId: owner.id,
           name: `${tag} run`,
           startingCredits: 0,
+          tournamentWinnerCredits: 900,
+          tournamentRunnerUpCredits: 450,
+          tournamentParticipationCredits: 125,
           memberships: {
             create: [
               { userId: owner.id, role: "OWNER" },
@@ -876,6 +879,15 @@ describe("tournament rewards and progression", () => {
         (unlock) => unlock.type === "REWARD",
       );
       expect(JSON.stringify(secondReward?.rewardConfig)).toContain(tournamentPack.id);
+      expect(secondReward?.rewardConfig).toEqual(
+        expect.objectContaining({
+          placements: expect.arrayContaining([
+            expect.objectContaining({ rank: 1, credits: 900 }),
+            expect.objectContaining({ rank: 2, credits: 450 }),
+            expect.objectContaining({ fromRank: 3, toRank: 8, credits: 125 }),
+          ]),
+        }),
+      );
 
       await expect(
         generateRunProgression(prisma, owner.id, run.id, {
