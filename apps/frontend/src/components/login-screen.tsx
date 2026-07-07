@@ -63,7 +63,7 @@ export function LoginScreen({
       }
 
       startTransition(() => {
-        router.replace("/");
+        router.replace("/campaigns");
         router.refresh();
       });
     } catch (error) {

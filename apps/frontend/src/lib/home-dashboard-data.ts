@@ -309,6 +309,7 @@ export async function buildHomeDashboardPayload(
       displayName: dashboard.viewer.displayName,
     },
     collectionValue: `${formatNumber(uniqueOwnedCards.length)} Karten`,
+    activeRunName: activeRun.name,
     latestBanlistName: latestBanlist?.name ?? "Keine Bannliste",
     activeEra: getEraLabel(eraSource),
     heroStats: [

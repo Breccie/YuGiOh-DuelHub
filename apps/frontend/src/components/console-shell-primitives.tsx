@@ -163,6 +163,13 @@ export function ConsoleProfileMenuChip({
               Einstellungen
             </Link>
             <Link
+              href="/campaigns"
+              className="ui-button-neutral text-sm"
+              onClick={() => setOpen(false)}
+            >
+              Kampagne wechseln
+            </Link>
+            <Link
               href="/duels"
               className="ui-button-neutral text-sm"
               onClick={() => setOpen(false)}

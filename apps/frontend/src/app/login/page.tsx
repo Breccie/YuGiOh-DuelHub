@@ -6,7 +6,7 @@ export default async function LoginPage() {
   const session = await getViewerSession();
 
   if (session) {
-    redirect("/");
+    redirect("/campaigns");
   }
 
   const recentAccounts = await listRecentAccounts();

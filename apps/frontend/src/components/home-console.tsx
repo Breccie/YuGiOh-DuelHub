@@ -11,6 +11,7 @@ type HomeConsoleProps = {
     displayName: string;
   };
   collectionValue: string;
+  activeRunName: string;
   latestBanlistName: string;
   activeEra: string;
   heroStats: Array<{
@@ -164,6 +165,7 @@ function cardHref(id: string) {
 export function HomeConsole({
   viewer,
   collectionValue,
+  activeRunName,
   latestBanlistName,
   activeEra,
   heroStats,
@@ -202,9 +204,10 @@ export function HomeConsole({
         displayName: viewer.displayName,
       }}
       metrics={[
+        { icon: "shield", label: "Kampagne", value: activeRunName },
         { icon: "book", label: "Sammlung", value: collectionValue },
         { icon: "scale", label: "Banlist", value: latestBanlistName },
-        { icon: "hourglass", label: "Aktive Ära", value: activeEra },
+        { icon: "hourglass", label: "Ära", value: activeEra },
       ]}
     >
       <section className="grid gap-6 pt-4 xl:grid-cols-[1.08fr_0.92fr]">

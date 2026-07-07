@@ -614,6 +614,7 @@ export const homeDashboardResponseSchema = z.object({
     displayName: z.string(),
   }),
   collectionValue: z.string(),
+  activeRunName: z.string(),
   latestBanlistName: z.string(),
   activeEra: z.string(),
   heroStats: z.array(
