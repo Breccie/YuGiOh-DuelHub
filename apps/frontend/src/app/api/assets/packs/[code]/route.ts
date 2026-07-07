@@ -119,7 +119,10 @@ export async function GET(
 
     const headers = createPackAssetHeaders(match, resolved);
 
-    if (match.assetStatus === "NEEDS_NORMALIZE") {
+    if (
+      match.assetStatus === "NEEDS_NORMALIZE" ||
+      match.assetStatus === "NEEDS_GENERATION"
+    ) {
       const normalizedAsset = await normalizePackImageAsset(resolved.asset);
 
       return createImageResponse(normalizedAsset, "image/png", {

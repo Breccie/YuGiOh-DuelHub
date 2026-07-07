@@ -92,7 +92,6 @@ function createManifestAssetMatch(entry: PackAssetManifestEntry) {
 
   if (
     !imageUrl ||
-    entry.assetStatus === "NEEDS_GENERATION" ||
     entry.assetStatus === "SPECIAL_PRODUCT" ||
     entry.assetStatus === "NO_GOOD_SOURCE"
   ) {
