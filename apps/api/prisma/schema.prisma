@@ -99,6 +99,7 @@ enum TournamentRoundStatus {
 enum TournamentMatchStatus {
   PENDING
   SCHEDULED
+  REPORTED
   COMPLETED
   BYE
   CANCELLED
@@ -241,6 +242,8 @@ model User {
   tournamentMatchesAsPlayerOne TournamentMatch[]    @relation("TournamentMatchPlayerOne")
   tournamentMatchesAsPlayerTwo TournamentMatch[]    @relation("TournamentMatchPlayerTwo")
   tournamentMatchWins        TournamentMatch[]      @relation("TournamentMatchWinner")
+  tournamentMatchReports     TournamentMatch[]      @relation("TournamentMatchReportedBy")
+  tournamentMatchConfirmations TournamentMatch[]    @relation("TournamentMatchConfirmedBy")
   collectionBinders          CollectionBinder[]     @relation("BinderOwner")
   collectionPresets          CollectionPreset[]
 }
@@ -1053,6 +1056,10 @@ model TournamentMatch {
   playerTwoScore Int                 @default(0)
   status        TournamentMatchStatus @default(PENDING)
   notes         String?
+  reportedById  String?
+  confirmedById String?
+  reportedAt    DateTime?
+  confirmedAt   DateTime?
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
   tournament    Tournament           @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
@@ -1060,6 +1067,8 @@ model TournamentMatch {
   playerOne     User                 @relation("TournamentMatchPlayerOne", fields: [playerOneId], references: [id], onDelete: Cascade)
   playerTwo     User?                @relation("TournamentMatchPlayerTwo", fields: [playerTwoId], references: [id], onDelete: SetNull)
   winner        User?                @relation("TournamentMatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  reportedBy    User?                @relation("TournamentMatchReportedBy", fields: [reportedById], references: [id], onDelete: SetNull)
+  confirmedBy   User?                @relation("TournamentMatchConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
   playerOneDeck Deck?                @relation("TournamentMatchPlayerOneDeck", fields: [playerOneDeckId], references: [id], onDelete: SetNull)
   playerTwoDeck Deck?                @relation("TournamentMatchPlayerTwoDeck", fields: [playerTwoDeckId], references: [id], onDelete: SetNull)
   deckExport    DeckExport?          @relation(fields: [deckExportId], references: [id], onDelete: SetNull)
@@ -1068,4 +1077,6 @@ model TournamentMatch {
   @@index([tournamentId, roundId])
   @@index([playerOneId, playerTwoId])
   @@index([winnerId])
+  @@index([reportedById])
+  @@index([confirmedById])
 }

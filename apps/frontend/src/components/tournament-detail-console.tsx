@@ -32,6 +32,9 @@ export function TournamentDetailConsole({
   const [inviteDuelistId, setInviteDuelistId] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [completePending, setCompletePending] = useState(false);
+  const [scoreDrafts, setScoreDrafts] = useState<
+    Record<string, { playerOneScore: string; playerTwoScore: string }>
+  >({});
 
   async function invite() {
     setFeedback(null);
@@ -56,15 +59,65 @@ export function TournamentDetailConsole({
     }
   }
 
-  async function recordMatch(matchId: string, playerOneScore: number, playerTwoScore: number) {
+  function getScoreDraft(match: TournamentDetail["rounds"][number]["matches"][number]) {
+    return (
+      scoreDrafts[match.id] ?? {
+        playerOneScore: String(match.playerOneScore),
+        playerTwoScore: String(match.playerTwoScore),
+      }
+    );
+  }
+
+  function updateScoreDraft(
+    matchId: string,
+    field: "playerOneScore" | "playerTwoScore",
+    value: string,
+  ) {
+    setScoreDrafts((current) => ({
+      ...current,
+      [matchId]: {
+        playerOneScore: current[matchId]?.playerOneScore ?? "0",
+        playerTwoScore: current[matchId]?.playerTwoScore ?? "0",
+        [field]: value,
+      },
+    }));
+  }
+
+  async function reportMatch(
+    match: TournamentDetail["rounds"][number]["matches"][number],
+    action: "report" | "adminConfirm",
+  ) {
+    const draft = getScoreDraft(match);
+    const playerOneScore = Number(draft.playerOneScore);
+    const playerTwoScore = Number(draft.playerTwoScore);
+
+    if (!Number.isInteger(playerOneScore) || !Number.isInteger(playerTwoScore)) {
+      setFeedback("Bitte ganze Zahlen als Score eintragen.");
+      return;
+    }
+
     try {
-      await tournamentClient.recordMatchResult(matchId, {
+      await tournamentClient.recordMatchResult(match.id, {
+        action,
         playerOneScore,
         playerTwoScore,
       });
       startTransition(() => router.refresh());
     } catch (error) {
       setFeedback(getApiErrorMessage(error, "Matchergebnis konnte nicht gespeichert werden."));
+    }
+  }
+
+  async function confirmMatch(match: TournamentDetail["rounds"][number]["matches"][number]) {
+    try {
+      await tournamentClient.recordMatchResult(match.id, {
+        action: "confirm",
+        playerOneScore: match.playerOneScore,
+        playerTwoScore: match.playerTwoScore,
+      });
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Matchergebnis konnte nicht bestätigt werden."));
     }
   }
 
@@ -86,6 +139,7 @@ export function TournamentDetailConsole({
   const readyCheckpoint = tournament.campaign.readyCheckpoint;
   const hasTournamentRewards = tournament.campaign.rewardGrants.length > 0;
   const completed = tournament.overview.status === "COMPLETED";
+  const isHost = tournament.overview.host.userId === session.userId;
 
   return (
     <DuelConsoleScaffold
@@ -376,36 +430,80 @@ export function TournamentDetailConsole({
                         </div>
                       </div>
 
+                      {match.reportedById ? (
+                        <p className="mt-3 text-sm text-[#baa58a]">
+                          Gemeldet von{" "}
+                          {match.reportedById === match.playerOne.userId
+                            ? match.playerOne.displayName
+                            : match.playerTwo?.displayName ?? "Spieler"}
+                          {match.confirmedById
+                            ? ` · bestätigt von ${
+                                match.confirmedById === match.playerOne.userId
+                                  ? match.playerOne.displayName
+                                  : match.playerTwo?.displayName ?? "Spieler"
+                              }`
+                            : " · wartet auf Bestätigung"}
+                        </p>
+                      ) : null}
+
                       {match.playerTwo && match.status !== "COMPLETED" ? (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <button
-                            className="ui-button-primary"
-                            type="button"
-                            onClick={() => recordMatch(match.id, 2, 0)}
-                          >
-                            2:0 speichern
-                          </button>
-                          <button
-                            className="ui-button-secondary"
-                            type="button"
-                            onClick={() => recordMatch(match.id, 2, 1)}
-                          >
-                            2:1 speichern
-                          </button>
-                          <button
-                            className="ui-button-neutral"
-                            type="button"
-                            onClick={() => recordMatch(match.id, 1, 2)}
-                          >
-                            1:2 speichern
-                          </button>
-                          <button
-                            className="ui-button-neutral"
-                            type="button"
-                            onClick={() => recordMatch(match.id, 1, 1)}
-                          >
-                            Draw speichern
-                          </button>
+                        <div className="mt-4 grid gap-3 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                          <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr]">
+                            <label className="block">
+                              <span className="ui-kicker">{match.playerOne.displayName}</span>
+                              <input
+                                className="ui-input mt-2"
+                                inputMode="numeric"
+                                value={getScoreDraft(match).playerOneScore}
+                                onChange={(event) =>
+                                  updateScoreDraft(match.id, "playerOneScore", event.target.value)
+                                }
+                              />
+                            </label>
+                            <div className="hidden items-end pb-3 text-sm font-semibold text-[#baa58a] sm:flex">
+                              :
+                            </div>
+                            <label className="block">
+                              <span className="ui-kicker">{match.playerTwo.displayName}</span>
+                              <input
+                                className="ui-input mt-2"
+                                inputMode="numeric"
+                                value={getScoreDraft(match).playerTwoScore}
+                                onChange={(event) =>
+                                  updateScoreDraft(match.id, "playerTwoScore", event.target.value)
+                                }
+                              />
+                            </label>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              className="ui-button-primary"
+                              type="button"
+                              onClick={() => void reportMatch(match, "report")}
+                            >
+                              Ergebnis melden
+                            </button>
+                            {match.status === "REPORTED" &&
+                            match.reportedById !== session.userId ? (
+                              <button
+                                className="ui-button-secondary"
+                                type="button"
+                                onClick={() => void confirmMatch(match)}
+                              >
+                                Ergebnis bestätigen
+                              </button>
+                            ) : null}
+                            {isHost ? (
+                              <button
+                                className="ui-button-neutral"
+                                type="button"
+                                onClick={() => void reportMatch(match, "adminConfirm")}
+                              >
+                                Admin-bestätigen
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                     </article>

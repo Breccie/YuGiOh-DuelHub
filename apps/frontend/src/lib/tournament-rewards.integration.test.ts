@@ -5,13 +5,163 @@ import {
   applyProgressionCheckpoint,
   generateRunProgression,
 } from "@/lib/progression-service";
-import { completeTournament } from "@/lib/tournament-service";
+import {
+  completeTournament,
+  recordTournamentMatchResult,
+} from "@/lib/tournament-service";
 
 const prisma = new PrismaClient();
 
 describe("tournament rewards and progression", () => {
   afterAll(async () => {
     await prisma.$disconnect();
+  });
+
+  it("lets players report external match scores and requires opponent confirmation", async () => {
+    const tag = `vitest-match-report-${Date.now()}`;
+    const createdIds: {
+      runId?: string;
+      ownerId?: string;
+      playerId?: string;
+    } = {};
+
+    try {
+      const [owner, player] = await Promise.all([
+        prisma.user.create({
+          data: {
+            duelistId: `${tag}-owner`,
+            email: `${tag}-owner@example.test`,
+            passwordHash: "test-hash",
+            displayName: "Codex Owner",
+          },
+        }),
+        prisma.user.create({
+          data: {
+            duelistId: `${tag}-player`,
+            email: `${tag}-player@example.test`,
+            passwordHash: "test-hash",
+            displayName: "Codex Player",
+          },
+        }),
+      ]);
+      createdIds.ownerId = owner.id;
+      createdIds.playerId = player.id;
+
+      const run = await prisma.playGroupRun.create({
+        data: {
+          ownerId: owner.id,
+          name: `${tag} run`,
+          startingCredits: 0,
+          memberships: {
+            create: [
+              { userId: owner.id, role: "OWNER" },
+              { userId: player.id, role: "PLAYER" },
+            ],
+          },
+        },
+      });
+      createdIds.runId = run.id;
+
+      const tournament = await prisma.tournament.create({
+        data: {
+          runId: run.id,
+          hostId: owner.id,
+          title: `${tag} tournament`,
+          status: "ACTIVE",
+          participants: {
+            create: [
+              { userId: owner.id, status: "ACCEPTED", joinedAt: new Date(), seed: 1 },
+              { userId: player.id, status: "ACCEPTED", joinedAt: new Date(), seed: 2 },
+            ],
+          },
+          rounds: {
+            create: {
+              roundNumber: 1,
+              status: "PAIRED",
+            },
+          },
+        },
+        include: {
+          rounds: true,
+        },
+      });
+      const match = await prisma.tournamentMatch.create({
+        data: {
+          tournamentId: tournament.id,
+          roundId: tournament.rounds[0]!.id,
+          playerOneId: owner.id,
+          playerTwoId: player.id,
+          status: "PENDING",
+          tableNumber: 1,
+        },
+      });
+
+      const reported = await recordTournamentMatchResult(prisma, owner.id, match.id, {
+        action: "report",
+        playerOneScore: 2,
+        playerTwoScore: 1,
+      });
+
+      expect(reported.rounds[0]!.matches[0]).toEqual(
+        expect.objectContaining({
+          status: "REPORTED",
+          playerOneScore: 2,
+          playerTwoScore: 1,
+          winnerId: owner.id,
+          reportedById: owner.id,
+          confirmedById: null,
+        }),
+      );
+      expect(reported.standings.standings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ userId: owner.id, matchPoints: 0 }),
+          expect.objectContaining({ userId: player.id, matchPoints: 0 }),
+        ]),
+      );
+      await expect(completeTournament(prisma, owner.id, tournament.id)).rejects.toThrow(
+        "offene Matches",
+      );
+      await expect(
+        recordTournamentMatchResult(prisma, owner.id, match.id, {
+          action: "confirm",
+          playerOneScore: 2,
+          playerTwoScore: 1,
+        }),
+      ).rejects.toThrow("eigene Ergebnis");
+
+      const confirmed = await recordTournamentMatchResult(prisma, player.id, match.id, {
+        action: "confirm",
+        playerOneScore: 2,
+        playerTwoScore: 1,
+      });
+
+      expect(confirmed.rounds[0]!.matches[0]).toEqual(
+        expect.objectContaining({
+          status: "COMPLETED",
+          confirmedById: player.id,
+        }),
+      );
+      expect(confirmed.standings.standings[0]).toEqual(
+        expect.objectContaining({
+          userId: owner.id,
+          matchPoints: 3,
+          wins: 1,
+        }),
+      );
+    } finally {
+      if (createdIds.runId) {
+        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+      }
+      if (createdIds.ownerId || createdIds.playerId) {
+        await prisma.user.deleteMany({
+          where: {
+            id: {
+              in: [createdIds.ownerId, createdIds.playerId].filter(Boolean) as string[],
+            },
+          },
+        });
+      }
+    }
   });
 
   it("rewards the winner with credits and tournament packs, then unlocks the next pack after apply", async () => {

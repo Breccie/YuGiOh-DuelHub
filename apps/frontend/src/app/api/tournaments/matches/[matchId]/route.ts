@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { recordTournamentMatchResultRequestSchema } from "@ygo/contracts";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
+import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { getPrisma } from "@/lib/prisma";
@@ -19,6 +20,11 @@ export async function PATCH(
   }
 
   try {
+    requireSameOriginMutation(
+      request,
+      "Matchergebnisse muessen aus der App heraus kommen.",
+    );
+
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const { matchId } = await context.params;

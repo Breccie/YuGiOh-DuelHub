@@ -96,6 +96,10 @@ export type TournamentDetail = {
       winnerId: string | null;
       playerOneScore: number;
       playerTwoScore: number;
+      reportedById: string | null;
+      confirmedById: string | null;
+      reportedAt: string | null;
+      resultConfirmedAt: string | null;
       duelRequestId: string | null;
       confirmedAt: string | null;
       exportPath: string | null;
@@ -640,6 +644,10 @@ async function mapTournamentDetail(
         winnerId: match.winnerId ?? null,
         playerOneScore: match.playerOneScore,
         playerTwoScore: match.playerTwoScore,
+        reportedById: match.reportedById ?? null,
+        confirmedById: match.confirmedById ?? null,
+        reportedAt: match.reportedAt?.toISOString() ?? null,
+        resultConfirmedAt: match.confirmedAt?.toISOString() ?? null,
         duelRequestId: match.duelRequest?.id ?? null,
         confirmedAt: match.duelRequest?.appointment?.confirmedAt?.toISOString() ?? null,
         exportPath: match.duelRequest?.export?.exportPath ?? null,
@@ -871,13 +879,19 @@ export async function recordTournamentMatchResult(
   viewerId: string,
   matchId: string,
   input: {
-    playerOneScore: number;
-    playerTwoScore: number;
+    action?: "report" | "confirm" | "adminConfirm";
+    playerOneScore?: number;
+    playerTwoScore?: number;
     winnerId?: string | null;
     notes?: string | null;
   },
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const viewerMembership = activeRun.memberships.find(
+    (membership) => membership.userId === viewerId,
+  );
+  const isOrganizer =
+    viewerMembership?.role === "OWNER" || viewerMembership?.role === "ORGANIZER";
   const match = await prisma.tournamentMatch.findUnique({
     where: {
       id: matchId,
@@ -887,26 +901,97 @@ export async function recordTournamentMatchResult(
     },
   });
 
-  if (!match || match.tournament.hostId !== viewerId || match.tournament.runId !== activeRun.id) {
-    throw new Error("Nur der Host kann Matchergebnisse eintragen.");
+  if (!match || match.tournament.runId !== activeRun.id) {
+    throw new Error("Match wurde nicht gefunden.");
+  }
+
+  if (match.status === "BYE" || match.status === "CANCELLED") {
+    throw new Error("Dieses Match kann kein Ergebnis-Reporting erhalten.");
+  }
+
+  const isPlayerOne = match.playerOneId === viewerId;
+  const isPlayerTwo = match.playerTwoId === viewerId;
+  const isMatchPlayer = isPlayerOne || isPlayerTwo;
+  const action = input.action ?? "report";
+
+  if (action !== "adminConfirm" && !isMatchPlayer) {
+    throw new Error("Nur Match-Spieler können Ergebnisse melden oder bestätigen.");
+  }
+
+  if (action === "adminConfirm" && !isOrganizer) {
+    throw new Error("Nur Organizer können Ergebnisse administrativ bestätigen.");
+  }
+
+  if (action === "confirm") {
+    if (match.status !== "REPORTED" || !match.reportedById) {
+      throw new Error("Für dieses Match liegt noch kein Ergebnis zur Bestätigung vor.");
+    }
+
+    if (match.reportedById === viewerId) {
+      throw new Error("Der meldende Spieler kann das eigene Ergebnis nicht bestätigen.");
+    }
+
+    if (
+      input.playerOneScore !== undefined &&
+      input.playerOneScore !== match.playerOneScore
+    ) {
+      throw new Error("Der bestätigte Score stimmt nicht mit dem gemeldeten Ergebnis überein.");
+    }
+
+    if (
+      input.playerTwoScore !== undefined &&
+      input.playerTwoScore !== match.playerTwoScore
+    ) {
+      throw new Error("Der bestätigte Score stimmt nicht mit dem gemeldeten Ergebnis überein.");
+    }
+
+    await prisma.tournamentMatch.update({
+      where: {
+        id: matchId,
+      },
+      data: {
+        status: "COMPLETED",
+        confirmedById: viewerId,
+        confirmedAt: new Date(),
+      },
+    });
+
+    return getTournamentDetail(prisma, viewerId, match.tournamentId);
+  }
+
+  const playerOneScore = input.playerOneScore;
+  const playerTwoScore = input.playerTwoScore;
+
+  if (playerOneScore === undefined || playerTwoScore === undefined) {
+    throw new Error("Bitte beide Scores eintragen.");
   }
 
   const winnerId =
-    input.playerOneScore === input.playerTwoScore
+    playerOneScore === playerTwoScore
       ? null
       : input.winnerId?.trim() ||
-        (input.playerOneScore > input.playerTwoScore ? match.playerOneId : match.playerTwoId);
+        (playerOneScore > playerTwoScore ? match.playerOneId : match.playerTwoId);
+
+  if (winnerId && winnerId !== match.playerOneId && winnerId !== match.playerTwoId) {
+    throw new Error("Der Gewinner muss einer der Match-Spieler sein.");
+  }
+
+  const now = new Date();
 
   await prisma.tournamentMatch.update({
     where: {
       id: matchId,
     },
     data: {
-      status: "COMPLETED",
-      playerOneScore: input.playerOneScore,
-      playerTwoScore: input.playerTwoScore,
+      status: action === "adminConfirm" ? "COMPLETED" : "REPORTED",
+      playerOneScore,
+      playerTwoScore,
       winnerId: winnerId || null,
       notes: input.notes?.trim() || null,
+      reportedById: action === "adminConfirm" ? match.reportedById : viewerId,
+      reportedAt: action === "adminConfirm" ? (match.reportedAt ?? now) : now,
+      confirmedById: action === "adminConfirm" ? viewerId : null,
+      confirmedAt: action === "adminConfirm" ? now : null,
     },
   });
 

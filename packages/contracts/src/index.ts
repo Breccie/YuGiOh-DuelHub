@@ -234,8 +234,9 @@ export type InviteTournamentParticipantRequest = z.infer<
 >;
 
 export const recordTournamentMatchResultRequestSchema = z.object({
-  playerOneScore: z.number().int().min(0),
-  playerTwoScore: z.number().int().min(0),
+  action: z.enum(["report", "confirm", "adminConfirm"]).optional().default("report"),
+  playerOneScore: z.number().int().min(0).optional(),
+  playerTwoScore: z.number().int().min(0).optional(),
   winnerId: z.string().trim().min(1).nullable().optional(),
   notes: z.string().trim().max(400).nullable().optional(),
 });
