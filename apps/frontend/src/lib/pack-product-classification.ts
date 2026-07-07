@@ -49,22 +49,49 @@ export function isPromoOrSpecialPack(set: Pick<PackProductInput, "code" | "name"
     /^DTP\d/.test(code) ||
     /^MVP\d/.test(code) ||
     /^YMP\d/.test(code) ||
+    /^YAP\d/.test(code) ||
+    /^WCPP/.test(code) ||
+    /^WP\d/.test(code) ||
+    /^DEM\d/.test(code) ||
+    /^RYMP/.test(code) ||
+    /^PGL/.test(code) ||
+    /^MP\d/.test(code) ||
+    /^NKRT/.test(code) ||
+    /^DUSA/.test(code) ||
+    /^LED\d?/.test(code) ||
+    /^LDS\d/.test(code) ||
+    /^LD\d+/.test(code) ||
+    /^TBC\d/.test(code) ||
+    /^KC\d/.test(code) ||
+    /^25LP/.test(code) ||
     /^SB/.test(code) ||
     /^SGX/.test(code) ||
+    name.includes("anniversary") ||
     name.includes("duelist pack") ||
     name.includes("dark beginning") ||
     name.includes("dark revelation") ||
     name.includes("premium pack") ||
+    name.includes("premium gold") ||
     name.includes("retro pack") ||
     name.includes("star pack") ||
     name.includes("battle pack") ||
+    name.includes("mega pack") ||
     name.includes("movie pack") ||
     name.includes("exclusive pack") ||
     name.includes("speed duel") ||
     name.includes("duel terminal") ||
+    name.includes("world championship") ||
+    name.includes("demo pack") ||
+    name.includes("rarity collection") ||
+    name.includes("pot collection") ||
+    name.includes("kaiba set") ||
+    name.includes("box set") ||
     name.includes("master collection") ||
+    name.includes("legendary duelists") ||
+    name.includes("legendary duelist") ||
     name.includes("collector") ||
-    name.includes("limited edition")
+    name.includes("limited edition") ||
+    name.includes("limited pack")
   );
 }
 

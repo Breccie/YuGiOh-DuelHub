@@ -36,6 +36,14 @@ describe("pack product classification", () => {
       makeSet("BP01", "Battle Pack: Epic Dawn", "BOOSTER"),
       makeSet("SP13", "Star Pack 2013", "BOOSTER"),
       makeSet("SBLS", "Speed Duel: Arena of Lost Souls"),
+      makeSet("YAP1", "Anniversary Pack"),
+      makeSet("WCPP", "World Championship 2010 Card Pack"),
+      makeSet("PGLD", "Premium Gold"),
+      makeSet("RYMP", "Ra Yellow Mega Pack"),
+      makeSet("NKRT", "Noble Knights of the Round Table Box Set"),
+      makeSet("TBC1", "The Pot Collection"),
+      makeSet("KC01", "25th Anniversary Ultimate Kaiba Set"),
+      makeSet("25LP", "Limited Pack World Championship 2025"),
     ];
 
     for (const set of promoLikeSets) {
