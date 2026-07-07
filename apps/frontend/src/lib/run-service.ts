@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient, RunRole } from "@prisma/client";
 import { DomainError, applyLedgerAmount } from "@ygo/domain";
+import { isStandardProgressionPack } from "@/lib/pack-product-classification";
 
 const DEFAULT_RUN_NAME = "DM Progression 2002";
 const DEFAULT_RUN_DESCRIPTION =
@@ -148,19 +149,6 @@ async function backfillLegacyUserData(
   ]);
 }
 
-function isTournamentPackLike(set: { code: string; name: string }) {
-  const code = set.code.toUpperCase();
-  const name = set.name.toLowerCase();
-
-  return (
-    /^T(P|U)\d/.test(code) ||
-    /^OTS/.test(code) ||
-    name.includes("tournament pack") ||
-    name.includes("turbo pack") ||
-    name.includes("ots tournament")
-  );
-}
-
 async function ensureInitialSetUnlocks(prisma: PrismaLike, runId: string) {
   const existingUnlockCount = await prisma.runSetUnlock.count({
     where: {
@@ -186,10 +174,12 @@ async function ensureInitialSetUnlocks(prisma: PrismaLike, runId: string) {
         id: true,
         code: true,
         name: true,
+        productType: true,
+        isOpenable: true,
       },
     })
   )
-    .filter((set) => !isTournamentPackLike(set))
+    .filter(isStandardProgressionPack)
     .slice(0, INITIAL_UNLOCK_COUNT);
 
   for (const set of initialSets) {

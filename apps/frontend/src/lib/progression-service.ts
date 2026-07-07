@@ -6,6 +6,10 @@ import {
 } from "@ygo/domain";
 import { DomainError } from "@ygo/domain";
 import { getCardAssetUrl } from "@/lib/asset-urls";
+import {
+  isStandardProgressionPack,
+  isTournamentRewardPack,
+} from "@/lib/pack-product-classification";
 import { requireRunMembership } from "@/lib/run-service";
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
@@ -69,36 +73,6 @@ function parseOptionalDate(value: string | null | undefined) {
   }
 
   return date;
-}
-
-function isTournamentPackSet(set: {
-  code: string;
-  name: string;
-  productType: string;
-}) {
-  const code = set.code.toUpperCase();
-  const name = set.name.toLowerCase();
-
-  return (
-    /^T(P|U)\d/.test(code) ||
-    /^OTS/.test(code) ||
-    name.includes("tournament pack") ||
-    name.includes("turbo pack") ||
-    name.includes("ots tournament")
-  );
-}
-
-function isProgressionBoosterSet(set: {
-  isOpenable: boolean;
-  productType: string;
-  code: string;
-  name: string;
-}) {
-  if (!set.isOpenable || isTournamentPackSet(set)) {
-    return false;
-  }
-
-  return set.productType === "CORE_BOOSTER" || set.productType === "BOOSTER";
 }
 
 function chunkArray<T>(items: T[], size: number) {
@@ -437,11 +411,11 @@ export async function generateRunProgression(
       .filter((historyEventId): historyEventId is string => Boolean(historyEventId)),
   );
   const boosterSets = allSets
-    .filter(isProgressionBoosterSet)
+    .filter(isStandardProgressionPack)
     .filter((set) => !unavailableSetIds.has(set.id))
     .slice(0, count * setsPerCheckpoint);
   const tournamentPackSets = includeTournamentPacks
-    ? allRewardPackSets.filter((set) => isTournamentPackSet(set))
+    ? allRewardPackSets.filter((set) => isTournamentRewardPack(set))
     : [];
   const promoQueue = promoSources.filter(
     (source) => !plannedPromoSourceIds.has(source.id),

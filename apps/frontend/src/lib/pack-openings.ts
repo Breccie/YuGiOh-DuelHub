@@ -17,6 +17,7 @@ import {
   getCanonicalSetCards,
   getEffectiveSetConfiguration,
 } from "@/lib/pack-collation";
+import { isStandardProgressionPack } from "@/lib/pack-product-classification";
 import {
   creditWallet,
   getOrCreateWallet,
@@ -541,7 +542,14 @@ export async function getPackDashboardSnapshot(
     })
     .filter(
       (set) =>
-        set.effectiveConfiguration.isOpenable && !isInternalSampleSet(set),
+        set.effectiveConfiguration.isOpenable &&
+        !isInternalSampleSet(set) &&
+        isStandardProgressionPack({
+          code: set.code,
+          name: set.name,
+          productType: set.effectiveConfiguration.productType,
+          isOpenable: set.effectiveConfiguration.isOpenable,
+        }),
     );
 
   return {
