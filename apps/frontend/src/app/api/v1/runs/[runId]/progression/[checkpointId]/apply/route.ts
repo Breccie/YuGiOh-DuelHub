@@ -1,43 +1,44 @@
 import { NextResponse } from "next/server";
-import type { ClaimRewardResponse } from "@ygo/contracts";
+import type { ApplyRunProgressionResponse } from "@ygo/contracts";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
-import { claimRewardPack } from "@/lib/pack-openings";
 import { getPrisma } from "@/lib/prisma";
+import { applyProgressionCheckpoint } from "@/lib/progression-service";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ runId: string; rewardGrantId: string }> },
+  { params }: { params: Promise<{ runId: string; checkpointId: string }> },
 ) {
-  const { runId, rewardGrantId } = await params;
+  const { runId, checkpointId } = await params;
 
   if (shouldProxyToApiService()) {
     return proxyApiRoute(
       request,
-      `/api/v1/runs/${runId}/rewards/${rewardGrantId}/claim`,
+      `/api/v1/runs/${runId}/progression/${checkpointId}/apply`,
     );
   }
 
   try {
     requireSameOriginMutation(
       request,
-      "Reward-Claims muessen aus der App heraus kommen.",
+      "Progression-Mutationen muessen aus der App heraus kommen.",
     );
 
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
-    const payload: ClaimRewardResponse = await claimRewardPack(prisma, {
-      viewerId: session.userId,
+    const payload: ApplyRunProgressionResponse = await applyProgressionCheckpoint(
+      prisma,
+      session.userId,
       runId,
-      rewardGrantId,
-    });
+      checkpointId,
+    );
 
-    return NextResponse.json(payload, { status: 201 });
+    return NextResponse.json(payload);
   } catch (error) {
-    return toNextErrorResponse(error, "Reward konnte nicht geclaimt werden.");
+    return toNextErrorResponse(error, "Run-Fortschritt konnte nicht angewendet werden.");
   }
 }

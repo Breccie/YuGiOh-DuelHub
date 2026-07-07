@@ -9,6 +9,8 @@ import {
   createHistoryEventRequestSchema,
   createRewardGrantRequestSchema,
   createRunRequestSchema,
+  generateRunProgressionRequestSchema,
+  generateRunProgressionResponseSchema,
   historyEventSchema,
   openDisplayRequestSchema,
   openDisplayResponseSchema,
@@ -29,6 +31,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
   claimRewardPack,
+  createRunRewardGrant,
   listRunRewardGrants,
   openDisplay,
   openPack,
@@ -37,12 +40,12 @@ import { buildPackSelectionPayload } from "@/lib/packs-data";
 import {
   applyProgressionCheckpoint,
   claimPromoCard,
+  generateRunProgression,
   getRunProgression,
   getRunPromos,
 } from "@/lib/progression-service";
 import {
   createRun,
-  creditWallet,
   getActiveRun,
   getOrCreateWallet,
   listRuns,
@@ -99,34 +102,6 @@ function serializeEvent(event: {
     rewardConfig: event.rewardConfig ?? null,
     createdAt: event.createdAt.toISOString(),
     updatedAt: event.updatedAt.toISOString(),
-  };
-}
-
-function serializeRewardGrant(grant: {
-  id: string;
-  runId: string;
-  recipientId: string;
-  grantedById: string | null;
-  amountCredits: number;
-  packSetId: string | null;
-  packQuantity: number;
-  reason: string | null;
-  status: "PENDING" | "CLAIMED" | "CANCELLED";
-  createdAt: Date;
-  claimedAt: Date | null;
-}) {
-  return {
-    id: grant.id,
-    runId: grant.runId,
-    recipientId: grant.recipientId,
-    grantedById: grant.grantedById,
-    amountCredits: grant.amountCredits,
-    packSetId: grant.packSetId,
-    packQuantity: grant.packQuantity,
-    reason: grant.reason,
-    status: grant.status,
-    createdAt: grant.createdAt.toISOString(),
-    claimedAt: grant.claimedAt?.toISOString() ?? null,
   };
 }
 
@@ -426,6 +401,24 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.post("/:runId/progression/generate", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const body = generateRunProgressionRequestSchema.parse(request.body ?? {});
+      const payload = await generateRunProgression(
+        getSharedPrisma(),
+        session.userId,
+        runId,
+        body,
+      );
+
+      return reply.status(201).send(generateRunProgressionResponseSchema.parse(payload));
+    } catch (error) {
+      return sendApiError(reply, error, "Run-Fortschritt konnte nicht generiert werden.");
+    }
+  });
+
   app.post("/:runId/progression/:checkpointId/apply", async (request, reply) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
@@ -560,62 +553,17 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       const session = await requireViewerSession(request, getPrisma());
       const { runId } = runParamsSchema.parse(request.params);
       const body = createRewardGrantRequestSchema.parse(request.body ?? {});
-      await requireRunMembership(getSharedPrisma(), {
+      const payload = await createRunRewardGrant(getSharedPrisma(), {
+        organizerId: session.userId,
         runId,
-        userId: session.userId,
-        organizerOnly: true,
+        recipientDuelistId: body.recipientDuelistId,
+        amountCredits: body.amountCredits,
+        packSetId: body.packSetId,
+        packQuantity: body.packQuantity,
+        reason: body.reason,
       });
 
-      const recipient = await getSharedPrisma().user.findUnique({
-        where: {
-          duelistId: normalizeDuelistId(body.recipientDuelistId),
-        },
-      });
-
-      if (!recipient) {
-        throw new DomainError({
-          code: "recipient_not_found",
-          message: "Dieser Duelist wurde nicht gefunden.",
-          status: 404,
-        });
-      }
-
-      await requireRunMembership(getSharedPrisma(), {
-        runId,
-        userId: recipient.id,
-      });
-
-      const grant = await getSharedPrisma().$transaction(async (tx) => {
-        const createdGrant = await tx.rewardGrant.create({
-          data: {
-            runId,
-            recipientId: recipient.id,
-            grantedById: session.userId,
-            amountCredits: body.amountCredits ?? 0,
-            packSetId: body.packSetId ?? null,
-            packQuantity: body.packQuantity ?? 0,
-            reason: body.reason?.trim() || null,
-            status: body.amountCredits ? "CLAIMED" : "PENDING",
-            claimedAt: body.amountCredits ? new Date() : null,
-          },
-        });
-
-        if (createdGrant.amountCredits > 0) {
-          await creditWallet(tx, {
-            runId,
-            userId: recipient.id,
-            amount: createdGrant.amountCredits,
-            source: "MANUAL_GRANT",
-            referenceType: "RewardGrant",
-            referenceId: createdGrant.id,
-            note: createdGrant.reason,
-          });
-        }
-
-        return createdGrant;
-      });
-
-      return reply.status(201).send(rewardGrantSchema.parse(serializeRewardGrant(grant)));
+      return reply.status(201).send(rewardGrantSchema.parse(payload.reward));
     } catch (error) {
       return sendApiError(reply, error, "Reward konnte nicht vergeben werden.");
     }

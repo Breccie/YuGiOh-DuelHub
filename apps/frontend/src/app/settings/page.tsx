@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getViewerSession } from "@/lib/auth";
 import { listFriendRequests } from "@/lib/friend-service";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 import { SettingsConsole } from "@/components/settings-console";
 
 export default async function SettingsPage() {
@@ -12,6 +13,7 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
+  const activeRun = await getActiveRun(prisma, session.userId);
   const [profile, deviceSessions, binderOptions, friendRequests] = await Promise.all([
     prisma.user.findUnique({
       where: {
@@ -45,6 +47,7 @@ export default async function SettingsPage() {
     prisma.collectionBinder.findMany({
       where: {
         userId: session.userId,
+        runId: activeRun.id,
       },
       orderBy: {
         updatedAt: "desc",

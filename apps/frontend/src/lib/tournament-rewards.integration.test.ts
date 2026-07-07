@@ -1,7 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
-import { claimRewardPack } from "@/lib/pack-openings";
-import { applyProgressionCheckpoint } from "@/lib/progression-service";
+import { claimRewardPack, createRunRewardGrant } from "@/lib/pack-openings";
+import {
+  applyProgressionCheckpoint,
+  generateRunProgression,
+} from "@/lib/progression-service";
 import { completeTournament } from "@/lib/tournament-service";
 
 const prisma = new PrismaClient();
@@ -76,7 +79,7 @@ describe("tournament rewards and progression", () => {
 
       const owner = await prisma.user.create({
         data: {
-          duelistId: `${tag}-owner`,
+          duelistId: `${tag.toUpperCase()}-OWNER`,
           email: `${tag}-owner@example.test`,
           passwordHash: "test-hash",
           displayName: "Codex Owner",
@@ -84,7 +87,7 @@ describe("tournament rewards and progression", () => {
       });
       const player = await prisma.user.create({
         data: {
-          duelistId: `${tag}-player`,
+          duelistId: `${tag.toUpperCase()}-PLAYER`,
           email: `${tag}-player@example.test`,
           passwordHash: "test-hash",
           displayName: "Codex Player",
@@ -302,6 +305,59 @@ describe("tournament rewards and progression", () => {
         }),
       ).resolves.toBe(2);
 
+      const manualReward = await createRunRewardGrant(prisma, {
+        organizerId: owner.id,
+        runId: run.id,
+        recipientDuelistId: owner.duelistId,
+        amountCredits: 25,
+        packSetId: rewardPackSet.id,
+        packQuantity: 1,
+        reason: `${tag} manual mixed reward`,
+      });
+      expect(manualReward.reward).toEqual(
+        expect.objectContaining({
+          amountCredits: 25,
+          packSetId: rewardPackSet.id,
+          packQuantity: 1,
+          status: "PENDING",
+        }),
+      );
+      await expect(
+        prisma.creditLedgerEntry.findFirst({
+          where: {
+            runId: run.id,
+            userId: owner.id,
+            source: "MANUAL_GRANT",
+            referenceId: manualReward.reward.id,
+          },
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          amount: 25,
+          referenceType: "RewardGrant",
+        }),
+      );
+      const walletBeforeManualClaim = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: owner.id } },
+      });
+      const manualClaim = await claimRewardPack(prisma, {
+        viewerId: owner.id,
+        runId: run.id,
+        rewardGrantId: manualReward.reward.id,
+      });
+      const walletAfterManualClaim = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: owner.id } },
+      });
+      expect(manualClaim.batch).toEqual(
+        expect.objectContaining({
+          type: "REWARD",
+          quantity: 1,
+          totalCost: 0,
+        }),
+      );
+      expect(manualClaim.openings).toHaveLength(1);
+      expect(walletAfterManualClaim.balance).toBe(walletBeforeManualClaim.balance);
+
       await expect(
         prisma.runSetUnlock.findUnique({
           where: { runId_setId: { runId: run.id, setId: nextSet.id } },
@@ -310,7 +366,15 @@ describe("tournament rewards and progression", () => {
 
       await completeTournament(prisma, owner.id, tournament.id);
       await expect(
-        prisma.rewardGrant.count({ where: { runId: run.id, recipientId: owner.id } }),
+        prisma.rewardGrant.count({
+          where: {
+            runId: run.id,
+            recipientId: owner.id,
+            reason: {
+              startsWith: `TOURNAMENT_REWARD | ${tournament.id}`,
+            },
+          },
+        }),
       ).resolves.toBe(1);
 
       await applyProgressionCheckpoint(prisma, owner.id, run.id, checkpoint.id);
@@ -353,6 +417,286 @@ describe("tournament rewards and progression", () => {
           where: {
             id: {
               in: createdIds.cardIds,
+            },
+          },
+        });
+      }
+    }
+  });
+
+  it("generates chronological checkpoints without turning tournament packs into free unlocks", async () => {
+    const tag = `vitest-progression-generator-${Date.now()}`;
+    const createdIds: {
+      runId?: string;
+      ownerId?: string;
+      playerId?: string;
+      setIds: string[];
+      promoSourceIds: string[];
+    } = {
+      setIds: [],
+      promoSourceIds: [],
+    };
+
+    try {
+      const [firstSet, tournamentPack, secondSet] = await Promise.all([
+        prisma.cardSet.create({
+          data: {
+            code: `${tag}-LOB`,
+            name: `${tag} Legend Booster`,
+            releaseDate: new Date("2099-03-08T00:00:00.000Z"),
+            region: "TCG",
+            productType: "CORE_BOOSTER",
+            isOpenable: true,
+            packSize: 9,
+          },
+        }),
+        prisma.cardSet.create({
+          data: {
+            code: `${tag}-TP1`,
+            name: `${tag} Tournament Pack 1`,
+            releaseDate: new Date("2099-04-01T00:00:00.000Z"),
+            region: "TCG",
+            productType: "BOOSTER",
+            isOpenable: true,
+            packSize: 3,
+          },
+        }),
+        prisma.cardSet.create({
+          data: {
+            code: `${tag}-MRD`,
+            name: `${tag} Metal Booster`,
+            releaseDate: new Date("2099-06-26T00:00:00.000Z"),
+            region: "TCG",
+            productType: "CORE_BOOSTER",
+            isOpenable: true,
+            packSize: 9,
+          },
+        }),
+      ]);
+      createdIds.setIds.push(firstSet.id, tournamentPack.id, secondSet.id);
+
+      const [owner, player] = await Promise.all([
+        prisma.user.create({
+          data: {
+            duelistId: `${tag}-owner`,
+            email: `${tag}-owner@example.test`,
+            passwordHash: "test-hash",
+            displayName: "Codex Owner",
+          },
+        }),
+        prisma.user.create({
+          data: {
+            duelistId: `${tag}-player`,
+            email: `${tag}-player@example.test`,
+            passwordHash: "test-hash",
+            displayName: "Codex Player",
+          },
+        }),
+      ]);
+      createdIds.ownerId = owner.id;
+      createdIds.playerId = player.id;
+
+      const run = await prisma.playGroupRun.create({
+        data: {
+          ownerId: owner.id,
+          name: `${tag} run`,
+          startingCredits: 0,
+          memberships: {
+            create: [
+              { userId: owner.id, role: "OWNER" },
+              { userId: player.id, role: "PLAYER" },
+            ],
+          },
+          wallets: {
+            create: [
+              { userId: owner.id, balance: 0 },
+              { userId: player.id, balance: 0 },
+            ],
+          },
+        },
+      });
+      createdIds.runId = run.id;
+
+      const [promoSource, packRewardSource] = await Promise.all([
+        prisma.promoSource.create({
+          data: {
+            code: `${tag}-JUMP`,
+            name: `${tag} Jump Promo`,
+            sourceType: "PROMO_CHOICE",
+            claimMode: "CHOOSE",
+            availableFrom: new Date("2099-03-01T00:00:00.000Z"),
+          },
+        }),
+        prisma.promoSource.create({
+          data: {
+            code: `${tag}-PACK-REWARD`,
+            name: `${tag} Pack Reward Source`,
+            sourceType: "PACK_REWARD",
+            claimMode: "RANDOM",
+            availableFrom: new Date("2099-03-01T00:00:00.000Z"),
+          },
+        }),
+      ]);
+      createdIds.promoSourceIds.push(promoSource.id, packRewardSource.id);
+
+      const event = await prisma.historyEvent.create({
+        data: {
+          runId: run.id,
+          title: `${tag} historical event`,
+          type: "TOURNAMENT_PACK_PERIOD",
+          eventDate: new Date("2099-04-15T00:00:00.000Z"),
+        },
+      });
+
+      const generated = await generateRunProgression(prisma, owner.id, run.id, {
+        count: 2,
+        fromDate: "2099-01-01T00:00:00.000Z",
+        setsPerCheckpoint: 1,
+        includePromos: true,
+        includeTournamentPacks: true,
+      });
+
+      expect(generated.generatedCheckpoints).toHaveLength(2);
+      expect(
+        generated.generatedCheckpoints.flatMap((checkpoint) =>
+          checkpoint.unlocks
+            .filter((unlock) => unlock.type === "SET")
+            .map((unlock) => unlock.setId),
+        ),
+      ).toEqual([firstSet.id, secondSet.id]);
+      const generatedPromoSourceIds = generated.generatedCheckpoints.flatMap((checkpoint) =>
+        checkpoint.unlocks
+          .filter((unlock) => unlock.type === "PROMO_SOURCE")
+          .map((unlock) => unlock.promoSourceId),
+      );
+      expect(generatedPromoSourceIds).toContain(promoSource.id);
+      expect(generatedPromoSourceIds).not.toContain(packRewardSource.id);
+      expect(
+        generated.generatedCheckpoints.flatMap((checkpoint) =>
+          checkpoint.unlocks
+            .filter((unlock) => unlock.type === "HISTORY_EVENT")
+            .map((unlock) => unlock.historyEventId),
+        ),
+      ).toEqual([event.id]);
+
+      const secondReward = generated.generatedCheckpoints[1]!.unlocks.find(
+        (unlock) => unlock.type === "REWARD",
+      );
+      expect(JSON.stringify(secondReward?.rewardConfig)).toContain(tournamentPack.id);
+
+      await expect(
+        generateRunProgression(prisma, owner.id, run.id, {
+          count: 2,
+          fromDate: "2099-01-01T00:00:00.000Z",
+        }),
+      ).rejects.toMatchObject({
+        code: "progression_generation_empty",
+      });
+
+      const tournament = await prisma.tournament.create({
+        data: {
+          runId: run.id,
+          hostId: owner.id,
+          title: `${tag} tournament`,
+          status: "ACTIVE",
+          participants: {
+            create: [
+              { userId: owner.id, status: "ACCEPTED", joinedAt: new Date(), seed: 1 },
+              { userId: player.id, status: "ACCEPTED", joinedAt: new Date(), seed: 2 },
+            ],
+          },
+          rounds: {
+            create: {
+              roundNumber: 1,
+              status: "COMPLETED",
+            },
+          },
+        },
+        include: {
+          rounds: true,
+        },
+      });
+      await prisma.tournamentMatch.create({
+        data: {
+          tournamentId: tournament.id,
+          roundId: tournament.rounds[0]!.id,
+          playerOneId: owner.id,
+          playerTwoId: player.id,
+          winnerId: owner.id,
+          playerOneScore: 2,
+          playerTwoScore: 0,
+          status: "COMPLETED",
+          tableNumber: 1,
+        },
+      });
+
+      await completeTournament(prisma, owner.id, tournament.id);
+
+      await expect(
+        prisma.runProgressionCheckpoint.findUnique({
+          where: { id: generated.generatedCheckpoints[0]!.id },
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          requiredTournamentId: tournament.id,
+          status: "READY",
+        }),
+      );
+
+      await applyProgressionCheckpoint(
+        prisma,
+        owner.id,
+        run.id,
+        generated.generatedCheckpoints[0]!.id,
+      );
+
+      await expect(
+        prisma.runSetUnlock.findUnique({
+          where: { runId_setId: { runId: run.id, setId: firstSet.id } },
+        }),
+      ).resolves.toEqual(expect.objectContaining({ setId: firstSet.id }));
+      await expect(
+        prisma.runSetUnlock.findUnique({
+          where: { runId_setId: { runId: run.id, setId: tournamentPack.id } },
+        }),
+      ).resolves.toBeNull();
+      await expect(
+        prisma.runPromoAccess.findUnique({
+          where: {
+            runId_promoSourceId: {
+              runId: run.id,
+              promoSourceId: promoSource.id,
+            },
+          },
+        }),
+      ).resolves.toEqual(expect.objectContaining({ promoSourceId: promoSource.id }));
+    } finally {
+      if (createdIds.runId) {
+        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+      }
+      if (createdIds.promoSourceIds.length > 0) {
+        await prisma.promoSource.deleteMany({
+          where: {
+            id: {
+              in: createdIds.promoSourceIds,
+            },
+          },
+        });
+      }
+      if (createdIds.ownerId || createdIds.playerId) {
+        await prisma.user.deleteMany({
+          where: {
+            id: {
+              in: [createdIds.ownerId, createdIds.playerId].filter(Boolean) as string[],
+            },
+          },
+        });
+      }
+      if (createdIds.setIds.length > 0) {
+        await prisma.cardSet.deleteMany({
+          where: {
+            id: {
+              in: createdIds.setIds,
             },
           },
         });

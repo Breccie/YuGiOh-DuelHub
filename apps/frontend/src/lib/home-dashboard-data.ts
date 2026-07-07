@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import type { HomeDashboardResponse } from "@ygo/contracts";
 import { listDuelRequests } from "@/lib/duel-service";
 import { getPackDashboardSnapshot } from "@/lib/pack-openings";
+import { getActiveRun } from "@/lib/run-service";
 
 function getEraLabel(value: string) {
   const year = new Date(value).getUTCFullYear();
@@ -37,6 +38,7 @@ export async function buildHomeDashboardPayload(
   prisma: PrismaClient,
   viewerId: string,
 ): Promise<HomeDashboardResponse> {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const [
     dashboard,
     duelRequests,
@@ -54,26 +56,31 @@ export async function buildHomeDashboardPayload(
       by: ["cardId"],
       where: {
         userId: viewerId,
+        runId: activeRun.id,
       },
     }),
     prisma.deck.count({
       where: {
         userId: viewerId,
+        runId: activeRun.id,
       },
     }),
     prisma.trade.count({
       where: {
+        runId: activeRun.id,
         status: "PENDING",
         OR: [{ proposerId: viewerId }, { responderId: viewerId }],
       },
     }),
     prisma.trade.count({
       where: {
+        runId: activeRun.id,
         OR: [{ proposerId: viewerId }, { responderId: viewerId }],
       },
     }),
     prisma.trade.findMany({
       where: {
+        runId: activeRun.id,
         status: "PENDING",
         OR: [{ proposerId: viewerId }, { responderId: viewerId }],
       },
@@ -104,6 +111,7 @@ export async function buildHomeDashboardPayload(
     }),
     prisma.tournament.count({
       where: {
+        runId: activeRun.id,
         OR: [{ hostId: viewerId }, { participants: { some: { userId: viewerId } } }],
       },
     }),

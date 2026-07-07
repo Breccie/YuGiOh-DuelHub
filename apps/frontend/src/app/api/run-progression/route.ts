@@ -5,6 +5,7 @@ import {
   fetchApiService,
   fetchApiServiceJson,
   shouldProxyToApiService,
+  toProxiedNextResponse,
 } from "@/lib/api-service-proxy";
 import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
@@ -31,10 +32,7 @@ export async function GET(request: Request) {
         },
       );
 
-      return new NextResponse(response.body, {
-        status: response.status,
-        headers: response.headers,
-      });
+      return toProxiedNextResponse(response);
     } catch (error) {
       return toNextErrorResponse(error, "Run-Fortschritt konnte nicht geladen werden.");
     }

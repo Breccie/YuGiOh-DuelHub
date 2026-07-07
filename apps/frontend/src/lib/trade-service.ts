@@ -16,6 +16,7 @@ import type {
   TradeVersionDraft,
   TradeVersionDto,
 } from "@/lib/app-dtos";
+import { getActiveRun, requireRunMembership } from "@/lib/run-service";
 
 class TradeServiceError extends Error {
   status: number;
@@ -576,10 +577,15 @@ async function loadTradeForViewer(
   viewerId: string,
   tradeId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
   const trade = await loadTrade(prisma, tradeId);
 
-  if (!trade || (trade.proposerId !== viewerId && trade.responderId !== viewerId)) {
+  if (
+    !trade ||
+    trade.runId !== activeRun.id ||
+    (trade.proposerId !== viewerId && trade.responderId !== viewerId)
+  ) {
     throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
   }
 
@@ -590,6 +596,7 @@ async function loadEntriesForDraft(
   prisma: PrismaClient | Prisma.TransactionClient,
   senderId: string,
   recipientId: string,
+  runId: string,
   selection: EntrySelection,
 ) {
   const [offeredEntries, requestedEntries] = await Promise.all([
@@ -600,6 +607,7 @@ async function loadEntriesForDraft(
               in: selection.offeredIds,
             },
             userId: senderId,
+            runId,
             lockState: EntryLockState.AVAILABLE,
           },
           select: {
@@ -614,6 +622,7 @@ async function loadEntriesForDraft(
               in: selection.requestedIds,
             },
             userId: recipientId,
+            runId,
             lockState: EntryLockState.AVAILABLE,
           },
           select: {
@@ -659,10 +668,12 @@ function requireParticipant(trade: TradeRecord, viewerId: string) {
 }
 
 export async function listTradesForViewer(prisma: PrismaClient, viewerId: string) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradesForViewer(prisma, viewerId);
 
   const trades = await prisma.trade.findMany({
     where: {
+      runId: activeRun.id,
       OR: [{ proposerId: viewerId }, { responderId: viewerId }],
     },
     orderBy: {
@@ -688,6 +699,7 @@ export async function createTradeOffer(
   viewerId: string,
   draft: TradeOfferDraft,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const responder = await prisma.user.findUnique({
     where: {
       duelistId: draft.responderDuelistId.trim().toUpperCase(),
@@ -706,16 +718,21 @@ export async function createTradeOffer(
   }
 
   await ensureAcceptedFriendship(prisma, viewerId, responder.id);
+  await requireRunMembership(prisma, {
+    runId: activeRun.id,
+    userId: responder.id,
+  });
 
   const selection = uniqueEntrySelection(draft.offeredEntryIds, draft.requestedEntryIds);
   ensureNonEmptyTrade(selection);
-  await loadEntriesForDraft(prisma, viewerId, responder.id, selection);
+  await loadEntriesForDraft(prisma, viewerId, responder.id, activeRun.id, selection);
 
   const tradeId = await prisma.$transaction(async (tx) => {
     const trade = await tx.trade.create({
       data: {
         proposerId: viewerId,
         responderId: responder.id,
+        runId: activeRun.id,
         note: draft.note?.trim() || null,
       },
       select: {
@@ -779,12 +796,13 @@ export async function createTradeCounterOffer(
   tradeId: string,
   draft: TradeVersionDraft,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
     const trade = await loadTrade(tx, tradeId);
 
-    if (!trade) {
+    if (!trade || trade.runId !== activeRun.id) {
       throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
     }
 
@@ -808,7 +826,7 @@ export async function createTradeCounterOffer(
 
     const selection = uniqueEntrySelection(draft.offeredEntryIds, draft.requestedEntryIds);
     ensureNonEmptyTrade(selection);
-    await loadEntriesForDraft(tx, viewerId, activeVersion.senderId, selection);
+    await loadEntriesForDraft(tx, viewerId, activeVersion.senderId, activeRun.id, selection);
 
     await tx.tradeVersion.update({
       where: {
@@ -876,12 +894,13 @@ export async function acceptTradeVersion(
   viewerId: string,
   tradeId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
     const trade = await loadTrade(tx, tradeId);
 
-    if (!trade) {
+    if (!trade || trade.runId !== activeRun.id) {
       throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
     }
 
@@ -906,6 +925,7 @@ export async function acceptTradeVersion(
         where: {
           id: item.collectionEntryId,
           userId: item.fromUserId,
+          runId: activeRun.id,
           lockState: EntryLockState.AVAILABLE,
         },
         data: {
@@ -949,12 +969,13 @@ export async function confirmTradeCompletion(
   viewerId: string,
   tradeId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
     const trade = await loadTrade(tx, tradeId);
 
-    if (!trade) {
+    if (!trade || trade.runId !== activeRun.id) {
       throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
     }
 
@@ -992,6 +1013,7 @@ export async function confirmTradeCompletion(
           where: {
             id: item.collectionEntryId,
             userId: item.fromUserId,
+            runId: activeRun.id,
             lockState: EntryLockState.RESERVED,
           },
           data: {
@@ -1031,12 +1053,13 @@ export async function rejectTrade(
   viewerId: string,
   tradeId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
     const trade = await loadTrade(tx, tradeId);
 
-    if (!trade) {
+    if (!trade || trade.runId !== activeRun.id) {
       throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
     }
 
@@ -1081,12 +1104,13 @@ export async function cancelTrade(
   viewerId: string,
   tradeId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
     const trade = await loadTrade(tx, tradeId);
 
-    if (!trade) {
+    if (!trade || trade.runId !== activeRun.id) {
       throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
     }
 
@@ -1117,6 +1141,7 @@ export async function cancelTrade(
           id: {
             in: acceptedVersion.items.map((item) => item.collectionEntryId),
           },
+          runId: activeRun.id,
           lockState: EntryLockState.RESERVED,
         },
         data: {

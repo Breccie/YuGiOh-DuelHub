@@ -8,28 +8,15 @@ import {
   fetchApiService,
   fetchApiServiceJson,
   shouldProxyToApiService,
+  toProxiedNextResponse,
 } from "@/lib/api-service-proxy";
+import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 import { applyProgressionCheckpoint } from "@/lib/progression-service";
 import { getActiveRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
-
-function isSameOriginMutation(request: Request) {
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-
-  if (!origin || !host) {
-    return false;
-  }
-
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(
   request: Request,
@@ -55,22 +42,17 @@ export async function POST(
         },
       );
 
-      return new NextResponse(response.body, {
-        status: response.status,
-        headers: response.headers,
-      });
+      return toProxiedNextResponse(response);
     } catch (error) {
       return toNextErrorResponse(error, "Run-Fortschritt konnte nicht angewendet werden.");
     }
   }
 
   try {
-    if (!isSameOriginMutation(request)) {
-      return NextResponse.json(
-        { error: "Progression-Mutationen muessen aus der App heraus kommen." },
-        { status: 403 },
-      );
-    }
+    requireSameOriginMutation(
+      request,
+      "Progression-Mutationen muessen aus der App heraus kommen.",
+    );
 
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);

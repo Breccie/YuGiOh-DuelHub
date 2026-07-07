@@ -6,6 +6,7 @@ import {
 } from "@prisma/client";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 
 export type CollectionKindFilter = "ALL" | CardKind;
 
@@ -104,10 +105,11 @@ function getPrintingLabel(entry: RawCollectionEntry) {
   return "Ohne Set-Zuordnung";
 }
 
-async function loadCollectionEntries(prisma: PrismaClient, viewerId: string) {
+async function loadCollectionEntries(prisma: PrismaClient, viewerId: string, runId: string) {
   const entries = await prisma.collectionEntry.findMany({
     where: {
       userId: viewerId,
+      runId,
     },
     orderBy: {
       acquiredAt: "desc",
@@ -265,7 +267,8 @@ prisma: PrismaClient = getPrisma()): Promise<CollectionSnapshot> {
   const duplicatesOnly = options.duplicatesOnly ?? false;
   const normalizedQuery = query.toLowerCase();
 
-  const allEntries = await loadCollectionEntries(prisma, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  const allEntries = await loadCollectionEntries(prisma, viewer.id, activeRun.id);
   const overallGroups = groupCollectionEntries(allEntries);
 
   const filteredEntries = allEntries.filter((entry) => {

@@ -246,6 +246,7 @@ export function BinderOpenSpread({
             src="/app-assets/binder-open-shadow-overlay-aligned.png"
             alt=""
             fill
+            loading="eager"
             sizes="1600px"
             className="object-contain opacity-[0.38] mix-blend-multiply"
           />
@@ -256,6 +257,7 @@ export function BinderOpenSpread({
             src="/app-assets/binder-open-highlight-overlay-aligned.png"
             alt=""
             fill
+            loading="eager"
             sizes="1600px"
             className="object-contain opacity-[0.62] mix-blend-screen"
           />

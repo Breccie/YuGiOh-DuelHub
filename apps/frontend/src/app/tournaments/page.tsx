@@ -23,7 +23,7 @@ export default async function TournamentsPage() {
           "/api/v1/tournaments",
         )
       ).tournaments
-    : await listTournamentOverviews(prisma);
+    : await listTournamentOverviews(prisma, session.userId);
 
   return <TournamentsConsole session={session} tournaments={tournaments} />;
 }

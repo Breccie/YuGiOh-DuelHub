@@ -2,7 +2,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { pairSwissRound } from "@ygo/domain";
 import type { TournamentOverviewDto, TournamentStandingsDto } from "@/lib/app-dtos";
 import { markTournamentProgressionReady } from "@/lib/progression-service";
-import { creditWallet } from "@/lib/run-service";
+import { creditWallet, getActiveRun, requireRunMembership } from "@/lib/run-service";
 
 type TournamentRecord = Prisma.TournamentGetPayload<{
   include: {
@@ -520,8 +520,17 @@ function mapTournamentDetail(tournament: TournamentRecord): TournamentDetail {
   };
 }
 
-export async function listTournamentOverviews(prisma: PrismaClient) {
+export async function listTournamentOverviews(prisma: PrismaClient, viewerId: string) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const tournaments = await prisma.tournament.findMany({
+    where: {
+      runId: activeRun.id,
+      participants: {
+        some: {
+          userId: viewerId,
+        },
+      },
+    },
     orderBy: [{ status: "asc" }, { scheduledAt: "asc" }, { createdAt: "desc" }],
     include: {
       host: true,
@@ -536,10 +545,19 @@ export async function listTournamentOverviews(prisma: PrismaClient) {
   );
 }
 
-export async function getTournamentDetail(prisma: PrismaClient, tournamentId: string) {
+export async function getTournamentDetail(
+  prisma: PrismaClient,
+  viewerId: string,
+  tournamentId: string,
+) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const tournament = await loadTournament(prisma, tournamentId);
 
-  if (!tournament) {
+  if (
+    !tournament ||
+    tournament.runId !== activeRun.id ||
+    !tournament.participants.some((participant) => participant.userId === viewerId)
+  ) {
     throw new Error("Turnier wurde nicht gefunden.");
   }
 
@@ -556,8 +574,10 @@ export async function createTournament(
     scheduledAt?: string | null;
   },
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const tournament = await prisma.tournament.create({
     data: {
+      runId: activeRun.id,
       hostId: viewerId,
       title: input.title.trim(),
       description: input.description?.trim() || null,
@@ -576,7 +596,7 @@ export async function createTournament(
     },
   });
 
-  return getTournamentDetail(prisma, tournament.id);
+  return getTournamentDetail(prisma, viewerId, tournament.id);
 }
 
 export async function inviteTournamentParticipant(
@@ -585,13 +605,14 @@ export async function inviteTournamentParticipant(
   tournamentId: string,
   inviteeDuelistId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const tournament = await prisma.tournament.findUnique({
     where: {
       id: tournamentId,
     },
   });
 
-  if (!tournament || tournament.hostId !== viewerId) {
+  if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
     throw new Error("Nur der Host kann Teilnehmer einladen.");
   }
 
@@ -604,6 +625,11 @@ export async function inviteTournamentParticipant(
   if (!invitee) {
     throw new Error("Duelist wurde nicht gefunden.");
   }
+
+  await requireRunMembership(prisma, {
+    runId: activeRun.id,
+    userId: invitee.id,
+  });
 
   await prisma.tournamentParticipant.upsert({
     where: {
@@ -626,7 +652,7 @@ export async function inviteTournamentParticipant(
     },
   });
 
-  return getTournamentDetail(prisma, tournamentId);
+  return getTournamentDetail(prisma, viewerId, tournamentId);
 }
 
 export async function createSwissRound(
@@ -634,9 +660,10 @@ export async function createSwissRound(
   viewerId: string,
   tournamentId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const tournament = await loadTournament(prisma, tournamentId);
 
-  if (!tournament || tournament.hostId !== viewerId) {
+  if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
     throw new Error("Nur der Host kann neue Swiss-Runden erzeugen.");
   }
 
@@ -705,7 +732,7 @@ export async function createSwissRound(
     });
   });
 
-  return getTournamentDetail(prisma, tournamentId);
+  return getTournamentDetail(prisma, viewerId, tournamentId);
 }
 
 export async function recordTournamentMatchResult(
@@ -719,6 +746,7 @@ export async function recordTournamentMatchResult(
     notes?: string | null;
   },
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const match = await prisma.tournamentMatch.findUnique({
     where: {
       id: matchId,
@@ -728,7 +756,7 @@ export async function recordTournamentMatchResult(
     },
   });
 
-  if (!match || match.tournament.hostId !== viewerId) {
+  if (!match || match.tournament.hostId !== viewerId || match.tournament.runId !== activeRun.id) {
     throw new Error("Nur der Host kann Matchergebnisse eintragen.");
   }
 
@@ -751,7 +779,7 @@ export async function recordTournamentMatchResult(
     },
   });
 
-  return getTournamentDetail(prisma, match.tournamentId);
+  return getTournamentDetail(prisma, viewerId, match.tournamentId);
 }
 
 export async function completeTournament(
@@ -759,6 +787,7 @@ export async function completeTournament(
   viewerId: string,
   tournamentId: string,
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const tournament = await prisma.tournament.findUnique({
     where: {
       id: tournamentId,
@@ -800,12 +829,12 @@ export async function completeTournament(
     },
   });
 
-  if (!tournament || tournament.hostId !== viewerId) {
+  if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
     throw new Error("Nur der Host kann das Turnier abschließen.");
   }
 
   if (tournament.status === "COMPLETED") {
-    return getTournamentDetail(prisma, tournamentId);
+    return getTournamentDetail(prisma, viewerId, tournamentId);
   }
 
   const hasOpenMatches = tournament.matches.some(
@@ -829,5 +858,5 @@ export async function completeTournament(
     await markTournamentProgressionReady(tx, tournamentId);
   });
 
-  return getTournamentDetail(prisma, tournamentId);
+  return getTournamentDetail(prisma, viewerId, tournamentId);
 }

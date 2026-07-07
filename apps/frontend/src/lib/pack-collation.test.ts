@@ -4,6 +4,9 @@ import { SetProductType } from "@prisma/client";
 import {
   generatePackCards,
   getEffectiveSetConfiguration,
+  inferOpenableStatus,
+  inferPackSize,
+  inferSetProductType,
   type SetCardLike,
   type SetLike,
 } from "./pack-collation";
@@ -202,5 +205,48 @@ describe("historical core booster collation", () => {
     expect(
       (counts.super ?? 0) + (counts.ultra ?? 0) + (counts.secret ?? 0),
     ).toBe(1);
+  });
+});
+
+describe("set product classification", () => {
+  it("keeps deck and promo products out of normal pack opening", () => {
+    const starterDeckType = inferSetProductType("Starter Deck: Yugi");
+    const jumpPromoType = inferSetProductType("Shonen Jump Promotional Cards");
+
+    expect(starterDeckType).toBe(SetProductType.DECK);
+    expect(inferOpenableStatus("Starter Deck: Yugi", starterDeckType)).toBe(false);
+    expect(jumpPromoType).toBe(SetProductType.PROMO);
+    expect(inferOpenableStatus("Shonen Jump Promotional Cards", jumpPromoType)).toBe(false);
+  });
+
+  it("treats tournament-style packs as small openable reward products", () => {
+    const tournamentPackType = inferSetProductType("Tournament Pack 1");
+    const otsPackType = inferSetProductType("OTS Tournament Pack 1");
+
+    expect(tournamentPackType).toBe(SetProductType.BOOSTER);
+    expect(otsPackType).toBe(SetProductType.BOOSTER);
+    expect(inferOpenableStatus("Tournament Pack 1", tournamentPackType)).toBe(true);
+    expect(inferPackSize("Tournament Pack 1", tournamentPackType)).toBe(3);
+    expect(inferPackSize("Speed Duel Tournament Pack 1", tournamentPackType)).toBe(2);
+  });
+
+  it("supports small special pack families without making fixed products openable", () => {
+    const duelTerminalType = inferSetProductType("Duel Terminal - Preview Wave 1");
+    const deckBuildType = inferSetProductType("Tactical Masters");
+    const tinType = inferSetProductType("2020 Tin of Lost Memories");
+    const megaPackType = inferSetProductType("2020 Tin of Lost Memories Mega Pack");
+    const adventCalendarType = inferSetProductType("Advent Calendar 2018");
+
+    expect(duelTerminalType).toBe(SetProductType.BOOSTER);
+    expect(inferPackSize("Duel Terminal - Preview Wave 1", duelTerminalType)).toBe(1);
+    expect(deckBuildType).toBe(SetProductType.SPECIAL);
+    expect(inferOpenableStatus("Tactical Masters", deckBuildType)).toBe(true);
+    expect(inferPackSize("Tactical Masters", deckBuildType)).toBe(7);
+    expect(tinType).toBe(SetProductType.TIN);
+    expect(inferOpenableStatus("2020 Tin of Lost Memories", tinType)).toBe(false);
+    expect(megaPackType).toBe(SetProductType.TIN);
+    expect(inferOpenableStatus("2020 Tin of Lost Memories Mega Pack", megaPackType)).toBe(true);
+    expect(adventCalendarType).toBe(SetProductType.PROMO);
+    expect(inferOpenableStatus("Advent Calendar 2018", adventCalendarType)).toBe(false);
   });
 });

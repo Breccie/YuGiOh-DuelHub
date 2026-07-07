@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type {
+  ApplyRunProgressionResponse,
+  GenerateRunProgressionResponse,
   RunProgressionResponse,
   RunPromosResponse,
   PromoSourceDto,
@@ -102,12 +104,13 @@ export function PromoCardsConsole({
   recentCollectionCards,
 }: PromoCardsConsoleProps) {
   const [sources, setSources] = useState(promos.sources);
+  const [progressionState, setProgressionState] = useState(progression);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const readyCheckpoint = progression.readyCheckpoints[0] ?? null;
+  const readyCheckpoint = progressionState.readyCheckpoints[0] ?? null;
   const canApplyProgression =
-    progression.run.viewerRole === "OWNER" ||
-    progression.run.viewerRole === "ORGANIZER";
+    progressionState.run.viewerRole === "OWNER" ||
+    progressionState.run.viewerRole === "ORGANIZER";
 
   async function claim(sourceId: string, setCardId: string) {
     const pending = `${sourceId}:${setCardId}`;
@@ -137,11 +140,45 @@ export function PromoCardsConsole({
     setMessage(null);
 
     try {
-      await apiPostJson(`/api/run-progression/${checkpointId}/apply`, {});
-      setMessage("Fortschritt angewendet. Lade die Seite neu, um neue Promos zu sehen.");
+      const payload = await apiPostJson<ApplyRunProgressionResponse, Record<string, never>>(
+        `/api/v1/runs/${progressionState.run.id}/progression/${checkpointId}/apply`,
+        {},
+      );
+      setProgressionState(payload.progression);
+      setMessage("Fortschritt angewendet. Neue Booster, Promos und Events sind freigeschaltet.");
     } catch (error) {
       setMessage(
         getApiErrorMessage(error, "Run-Fortschritt konnte nicht angewendet werden."),
+      );
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function generateProgression() {
+    setPendingKey("progression:generate");
+    setMessage(null);
+
+    try {
+      const payload = await apiPostJson<
+        GenerateRunProgressionResponse,
+        {
+          count: number;
+          setsPerCheckpoint: number;
+          includePromos: boolean;
+          includeTournamentPacks: boolean;
+        }
+      >(`/api/v1/runs/${progressionState.run.id}/progression/generate`, {
+        count: 5,
+        setsPerCheckpoint: 1,
+        includePromos: true,
+        includeTournamentPacks: true,
+      });
+      setProgressionState(payload.progression);
+      setMessage(`${payload.generatedCheckpoints.length} neue History-Schritte generiert.`);
+    } catch (error) {
+      setMessage(
+        getApiErrorMessage(error, "Run-Fortschritt konnte nicht generiert werden."),
       );
     } finally {
       setPendingKey(null);
@@ -222,7 +259,7 @@ export function PromoCardsConsole({
                     History
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#efdfcb]">
-                    {formatDate(progression.run.historyCursor)}
+                    {formatDate(progressionState.run.historyCursor)}
                   </p>
                 </div>
               </div>
@@ -316,13 +353,56 @@ export function PromoCardsConsole({
                   Run-Freischaltungen
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#f0ddc3]">
-                  {progression.run.name}
+                  {progressionState.run.name}
                 </h2>
               </div>
               <div className="text-right text-xs uppercase tracking-[0.16em] text-[#aa9983]">
                 <p>{viewer.displayName}</p>
-                <p className="mt-1 text-[#d0b38c]">{progression.run.viewerRole}</p>
+                <p className="mt-1 text-[#d0b38c]">{progressionState.run.viewerRole}</p>
               </div>
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                <p className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a99680]">
+                  Aktiver History-Stand
+                </p>
+                <p className="mt-2 text-sm font-semibold text-[#f0ddc3]">
+                  {formatDate(progressionState.run.historyCursor)}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                  <p className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a99680]">
+                    Letzter Schritt
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm font-semibold text-[#f0ddc3]">
+                    {progressionState.currentCheckpoint?.title ?? "Noch kein Checkpoint angewendet"}
+                  </p>
+                </div>
+                <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+                  <p className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a99680]">
+                    Nächster Schritt
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm font-semibold text-[#f0ddc3]">
+                    {progressionState.nextCheckpoint?.title ?? "Keine geplanten Schritte"}
+                  </p>
+                </div>
+              </div>
+
+              {canApplyProgression ? (
+                <button
+                  type="button"
+                  onClick={generateProgression}
+                  disabled={pendingKey === "progression:generate"}
+                  className="rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb] disabled:cursor-wait disabled:opacity-60"
+                >
+                  {pendingKey === "progression:generate"
+                    ? "Generiert..."
+                    : "Nächste Schritte generieren"}
+                </button>
+              ) : null}
             </div>
 
             {readyCheckpoint ? (
@@ -333,18 +413,36 @@ export function PromoCardsConsole({
                 <h3 className="mt-2 text-lg font-semibold text-[#f6dfc0]">
                   {readyCheckpoint.title}
                 </h3>
-                <p className="mt-2 text-sm text-[#cbb79e]">
-                  Würde freischalten:{" "}
-                  {readyCheckpoint.unlocks
-                    .map(
-                      (unlock) =>
-                        unlock.setName ??
-                        unlock.promoSourceName ??
-                        unlock.historyEventTitle ??
-                        unlock.type,
-                    )
-                    .join(", ") || "keine Inhalte hinterlegt"}
-                </p>
+                <div className="mt-3 grid gap-2 text-sm text-[#cbb79e]">
+                  {[
+                    ["Booster-Sets", readyCheckpoint.unlocks.filter((unlock) => unlock.type === "SET")],
+                    [
+                      "Promo-Quellen",
+                      readyCheckpoint.unlocks.filter((unlock) => unlock.type === "PROMO_SOURCE"),
+                    ],
+                    [
+                      "History Events",
+                      readyCheckpoint.unlocks.filter((unlock) => unlock.type === "HISTORY_EVENT"),
+                    ],
+                    [
+                      "Reward-Konfigurationen",
+                      readyCheckpoint.unlocks.filter((unlock) => unlock.type === "REWARD"),
+                    ],
+                  ].map(([label, unlocks]) => (
+                    <p key={label as string}>
+                      <span className="text-[#e0c19d]">{label as string}:</span>{" "}
+                      {(unlocks as typeof readyCheckpoint.unlocks)
+                        .map(
+                          (unlock) =>
+                            unlock.setName ??
+                            unlock.promoSourceName ??
+                            unlock.historyEventTitle ??
+                            (unlock.rewardConfig ? "Credits / Tournament Packs" : unlock.type),
+                        )
+                        .join(", ") || "keine"}
+                    </p>
+                  ))}
+                </div>
                 {canApplyProgression ? (
                   <button
                     type="button"

@@ -760,6 +760,23 @@ async function importCatalog(limitCards: number | null) {
   let importedPromoSourceCards = 0;
 
   for (const candidate of promoSourceCandidates) {
+    const promoSetCards = await prisma.setCard.findMany({
+      where: {
+        setId: candidate.set.id,
+      },
+      select: {
+        id: true,
+        cardId: true,
+      },
+      orderBy: {
+        setCode: "asc",
+      },
+    });
+
+    if (promoSetCards.length === 0) {
+      continue;
+    }
+
     const source = await prisma.promoSource.upsert({
       where: {
         code: candidate.classification.code,
@@ -780,18 +797,6 @@ async function importCatalog(limitCards: number | null) {
         sourceType: candidate.classification.sourceType,
         claimMode: candidate.classification.claimMode,
         availableFrom: candidate.classification.availableFrom,
-      },
-    });
-    const promoSetCards = await prisma.setCard.findMany({
-      where: {
-        setId: candidate.set.id,
-      },
-      select: {
-        id: true,
-        cardId: true,
-      },
-      orderBy: {
-        setCode: "asc",
       },
     });
 

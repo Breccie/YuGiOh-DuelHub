@@ -35,6 +35,12 @@ export function createServer() {
     },
     credentials: true,
   });
+  app.addHook("onRequest", async (_request, reply) => {
+    reply.header("X-Content-Type-Options", "nosniff");
+    reply.header("X-Frame-Options", "DENY");
+    reply.header("Referrer-Policy", "no-referrer");
+    reply.header("Cross-Origin-Resource-Policy", "same-site");
+  });
 
   app.get("/health", async () => {
     return {

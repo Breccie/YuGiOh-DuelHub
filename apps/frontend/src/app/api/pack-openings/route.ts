@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { openPackRequestSchema } from "@ygo/contracts";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
+import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { openPack, getPackDashboardSnapshot } from "@/lib/pack-openings";
@@ -8,21 +9,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
-
-function isSameOriginMutation(request: Request) {
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-
-  if (!origin || !host) {
-    return false;
-  }
-
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 export async function GET(request: Request) {
   if (shouldProxyToApiService()) {
@@ -59,12 +45,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (!isSameOriginMutation(request)) {
-      return NextResponse.json(
-        { error: "Pack openings must be requested from the app origin." },
-        { status: 403 },
-      );
-    }
+    requireSameOriginMutation(
+      request,
+      "Pack openings must be requested from the app origin.",
+    );
 
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);

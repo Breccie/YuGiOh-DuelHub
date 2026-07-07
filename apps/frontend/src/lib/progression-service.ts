@@ -10,6 +10,14 @@ import { requireRunMembership } from "@/lib/run-service";
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
 
+type GenerateProgressionOptions = {
+  count?: number;
+  fromDate?: string | null;
+  setsPerCheckpoint?: number;
+  includePromos?: boolean;
+  includeTournamentPacks?: boolean;
+};
+
 type CheckpointWithUnlocks = Prisma.RunProgressionCheckpointGetPayload<{
   include: {
     unlocks: {
@@ -43,6 +51,88 @@ type PromoSourceWithCards = Prisma.PromoSourceGetPayload<{
 
 function iso(value: Date | null | undefined) {
   return value ? value.toISOString() : null;
+}
+
+function parseOptionalDate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new DomainError({
+      code: "validation_error",
+      message: "fromDate ist kein gültiges Datum.",
+      status: 400,
+    });
+  }
+
+  return date;
+}
+
+function isTournamentPackSet(set: {
+  code: string;
+  name: string;
+  productType: string;
+}) {
+  const code = set.code.toUpperCase();
+  const name = set.name.toLowerCase();
+
+  return (
+    /^T(P|U)\d/.test(code) ||
+    /^OTS/.test(code) ||
+    name.includes("tournament pack") ||
+    name.includes("turbo pack") ||
+    name.includes("ots tournament")
+  );
+}
+
+function isProgressionBoosterSet(set: {
+  isOpenable: boolean;
+  productType: string;
+  code: string;
+  name: string;
+}) {
+  if (!set.isOpenable || isTournamentPackSet(set)) {
+    return false;
+  }
+
+  return set.productType === "CORE_BOOSTER" || set.productType === "BOOSTER";
+}
+
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+function defaultRewardConfig(packSetId: string | null) {
+  return {
+    placements: [
+      {
+        rank: 1,
+        credits: 300,
+        packSetId,
+        packQuantity: packSetId ? 2 : 0,
+      },
+      {
+        rank: 2,
+        credits: 150,
+        packSetId,
+        packQuantity: packSetId ? 1 : 0,
+      },
+      {
+        fromRank: 3,
+        toRank: 8,
+        credits: 50,
+      },
+    ],
+  };
 }
 
 export function serializeProgressionUnlock(
@@ -204,6 +294,287 @@ export async function getRunProgression(
   };
 }
 
+export async function generateRunProgression(
+  prisma: PrismaClient,
+  viewerId: string,
+  runId: string,
+  options: GenerateProgressionOptions = {},
+) {
+  await requireRunMembership(prisma, {
+    runId,
+    userId: viewerId,
+    organizerOnly: true,
+  });
+
+  const run = await prisma.playGroupRun.findUnique({
+    where: {
+      id: runId,
+    },
+  });
+
+  if (!run) {
+    throw new DomainError({
+      code: "run_required",
+      message: "Für diese Aktion wird eine gültige Runde benötigt.",
+      status: 404,
+    });
+  }
+
+  const count = options.count ?? 5;
+  const setsPerCheckpoint = options.setsPerCheckpoint ?? 1;
+  const includePromos = options.includePromos ?? true;
+  const includeTournamentPacks = options.includeTournamentPacks ?? true;
+  const fromDate = parseOptionalDate(options.fromDate) ?? run.historyCursor ?? null;
+
+  const [
+    existingSetUnlocks,
+    existingProgressionUnlocks,
+    maxCheckpoint,
+    allSets,
+    allRewardPackSets,
+    promoSources,
+    historyEvents,
+  ] = await Promise.all([
+    prisma.runSetUnlock.findMany({
+      where: {
+        runId,
+      },
+      select: {
+        setId: true,
+      },
+    }),
+    prisma.runProgressionUnlock.findMany({
+      where: {
+        runId,
+      },
+      select: {
+        setId: true,
+        promoSourceId: true,
+        historyEventId: true,
+      },
+    }),
+    prisma.runProgressionCheckpoint.findFirst({
+      where: {
+        runId,
+      },
+      orderBy: {
+        sequence: "desc",
+      },
+      select: {
+        sequence: true,
+      },
+    }),
+    prisma.cardSet.findMany({
+      where: {
+        isOpenable: true,
+        releaseDate: fromDate
+          ? {
+              gte: fromDate,
+            }
+          : undefined,
+      },
+      orderBy: [{ releaseDate: "asc" }, { code: "asc" }],
+    }),
+    includeTournamentPacks
+      ? prisma.cardSet.findMany({
+          where: {
+            isOpenable: true,
+          },
+          orderBy: [{ releaseDate: "asc" }, { code: "asc" }],
+        })
+      : Promise.resolve([]),
+    includePromos
+      ? prisma.promoSource.findMany({
+          where: {
+            sourceType: {
+              not: "PACK_REWARD",
+            },
+          },
+          orderBy: [{ availableFrom: "asc" }, { name: "asc" }],
+        })
+      : Promise.resolve([]),
+    prisma.historyEvent.findMany({
+      where: {
+        runId,
+        isUnlocked: false,
+      },
+      orderBy: [{ eventDate: "asc" }, { createdAt: "asc" }],
+    }),
+  ]);
+
+  const plannedSetIds = new Set(
+    existingProgressionUnlocks
+      .map((unlock) => unlock.setId)
+      .filter((setId): setId is string => Boolean(setId)),
+  );
+  const unavailableSetIds = new Set([
+    ...existingSetUnlocks.map((unlock) => unlock.setId),
+    ...plannedSetIds,
+  ]);
+  const plannedPromoSourceIds = new Set(
+    existingProgressionUnlocks
+      .map((unlock) => unlock.promoSourceId)
+      .filter((promoSourceId): promoSourceId is string => Boolean(promoSourceId)),
+  );
+  const plannedHistoryEventIds = new Set(
+    existingProgressionUnlocks
+      .map((unlock) => unlock.historyEventId)
+      .filter((historyEventId): historyEventId is string => Boolean(historyEventId)),
+  );
+  const boosterSets = allSets
+    .filter(isProgressionBoosterSet)
+    .filter((set) => !unavailableSetIds.has(set.id))
+    .slice(0, count * setsPerCheckpoint);
+  const tournamentPackSets = includeTournamentPacks
+    ? allRewardPackSets.filter((set) => isTournamentPackSet(set))
+    : [];
+  const promoQueue = promoSources.filter(
+    (source) => !plannedPromoSourceIds.has(source.id),
+  );
+  const historyEventQueue = historyEvents.filter(
+    (event) => !plannedHistoryEventIds.has(event.id),
+  );
+  const setChunks = chunkArray(boosterSets, setsPerCheckpoint).slice(0, count);
+
+  if (setChunks.length === 0) {
+    throw new DomainError({
+      code: "progression_generation_empty",
+      message: "Keine neuen chronologischen Booster für weitere Checkpoints gefunden.",
+      status: 409,
+    });
+  }
+
+  const createdCheckpoints = await prisma.$transaction(async (tx) => {
+    const created: CheckpointWithUnlocks[] = [];
+    let sequence = maxCheckpoint?.sequence ?? 0;
+    let lastTournamentPackId: string | null = null;
+
+    for (const setChunk of setChunks) {
+      sequence += 1;
+      const unlockDate = setChunk[setChunk.length - 1]?.releaseDate ?? null;
+      const boosterNames = setChunk.map((set) => set.name).join(", ");
+      const checkpoint = await tx.runProgressionCheckpoint.create({
+        data: {
+          runId,
+          sequence,
+          title:
+            setChunk.length === 1
+              ? `History-Step ${sequence}: ${setChunk[0]!.name}`
+              : `History-Step ${sequence}: ${setChunk[0]!.code}-${setChunk[setChunk.length - 1]!.code}`,
+          description: `Automatisch generierter Checkpoint für ${boosterNames}.`,
+          unlockDate,
+          status: "LOCKED",
+        },
+      });
+
+      for (const set of setChunk) {
+        await tx.runProgressionUnlock.create({
+          data: {
+            checkpointId: checkpoint.id,
+            runId,
+            type: "SET",
+            setId: set.id,
+          },
+        });
+      }
+
+      if (includePromos && unlockDate) {
+        const promoUnlocks = promoQueue.filter(
+          (source) =>
+            source.availableFrom &&
+            source.availableFrom.getTime() <= unlockDate.getTime(),
+        );
+
+        for (const source of promoUnlocks) {
+          await tx.runProgressionUnlock.create({
+            data: {
+              checkpointId: checkpoint.id,
+              runId,
+              type: "PROMO_SOURCE",
+              promoSourceId: source.id,
+            },
+          });
+          plannedPromoSourceIds.add(source.id);
+        }
+
+        for (let index = promoQueue.length - 1; index >= 0; index -= 1) {
+          if (plannedPromoSourceIds.has(promoQueue[index]!.id)) {
+            promoQueue.splice(index, 1);
+          }
+        }
+      }
+
+      if (unlockDate) {
+        const eventUnlocks = historyEventQueue.filter(
+          (event) =>
+            event.eventDate && event.eventDate.getTime() <= unlockDate.getTime(),
+        );
+
+        for (const event of eventUnlocks) {
+          await tx.runProgressionUnlock.create({
+            data: {
+              checkpointId: checkpoint.id,
+              runId,
+              type: "HISTORY_EVENT",
+              historyEventId: event.id,
+            },
+          });
+          plannedHistoryEventIds.add(event.id);
+        }
+
+        for (let index = historyEventQueue.length - 1; index >= 0; index -= 1) {
+          if (plannedHistoryEventIds.has(historyEventQueue[index]!.id)) {
+            historyEventQueue.splice(index, 1);
+          }
+        }
+      }
+
+      const rewardPack =
+        unlockDate && includeTournamentPacks
+          ? [...tournamentPackSets]
+              .filter((set) => set.releaseDate.getTime() <= unlockDate.getTime())
+              .at(-1) ?? null
+          : null;
+      lastTournamentPackId = rewardPack?.id ?? lastTournamentPackId;
+
+      await tx.runProgressionUnlock.create({
+        data: {
+          checkpointId: checkpoint.id,
+          runId,
+          type: "REWARD",
+          rewardConfig: defaultRewardConfig(lastTournamentPackId),
+        },
+      });
+
+      const createdCheckpoint = await tx.runProgressionCheckpoint.findUniqueOrThrow({
+        where: {
+          id: checkpoint.id,
+        },
+        include: {
+          unlocks: {
+            orderBy: {
+              createdAt: "asc",
+            },
+            include: {
+              set: true,
+              promoSource: true,
+              historyEvent: true,
+            },
+          },
+        },
+      });
+      created.push(createdCheckpoint);
+    }
+
+    return created;
+  });
+
+  return {
+    generatedCheckpoints: createdCheckpoints.map(serializeCheckpoint),
+    progression: await getRunProgression(prisma, viewerId, runId),
+  };
+}
+
 export async function applyProgressionCheckpoint(
   prisma: PrismaClient,
   viewerId: string,
@@ -303,14 +674,30 @@ export async function applyProgressionCheckpoint(
             }
           }
 
-          await tx.playGroupRun.update({
-            where: {
-              id: runId,
-            },
-            data: {
-              historyCursor: checkpoint.unlockDate ?? undefined,
-            },
-          });
+          if (checkpoint.unlockDate) {
+            const currentRun = await tx.playGroupRun.findUnique({
+              where: {
+                id: runId,
+              },
+              select: {
+                historyCursor: true,
+              },
+            });
+
+            if (
+              !currentRun?.historyCursor ||
+              checkpoint.unlockDate.getTime() > currentRun.historyCursor.getTime()
+            ) {
+              await tx.playGroupRun.update({
+                where: {
+                  id: runId,
+                },
+                data: {
+                  historyCursor: checkpoint.unlockDate,
+                },
+              });
+            }
+          }
 
           return tx.runProgressionCheckpoint.update({
             where: {
@@ -345,6 +732,14 @@ export async function markTournamentProgressionReady(
   prisma: PrismaLike,
   tournamentId: string,
 ) {
+  const tournament = await prisma.tournament.findUnique({
+    where: {
+      id: tournamentId,
+    },
+    select: {
+      runId: true,
+    },
+  });
   const checkpoints = await prisma.runProgressionCheckpoint.findMany({
     where: {
       requiredTournamentId: tournamentId,
@@ -365,6 +760,35 @@ export async function markTournamentProgressionReady(
       });
     }
   }
+
+  if (!tournament?.runId || checkpoints.length > 0) {
+    return;
+  }
+
+  const nextUnboundCheckpoint = await prisma.runProgressionCheckpoint.findFirst({
+    where: {
+      runId: tournament.runId,
+      requiredTournamentId: null,
+      status: "LOCKED",
+    },
+    orderBy: {
+      sequence: "asc",
+    },
+  });
+
+  if (!nextUnboundCheckpoint) {
+    return;
+  }
+
+  await prisma.runProgressionCheckpoint.update({
+    where: {
+      id: nextUnboundCheckpoint.id,
+    },
+    data: {
+      requiredTournamentId: tournamentId,
+      status: "READY",
+    },
+  });
 }
 
 export async function getRunPromos(

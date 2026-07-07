@@ -23,9 +23,10 @@ function getSharedPrisma() {
 }
 
 const tournamentRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/", async (_request, reply) => {
+  app.get("/", async (request, reply) => {
     try {
-      const tournaments = await listTournamentOverviews(getSharedPrisma());
+      const session = await requireViewerSession(request, getPrisma());
+      const tournaments = await listTournamentOverviews(getSharedPrisma(), session.userId);
 
       return reply.send({ tournaments });
     } catch (error) {
@@ -47,8 +48,9 @@ const tournamentRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/:id", async (request, reply) => {
     try {
+      const session = await requireViewerSession(request, getPrisma());
       const { id } = request.params as { id: string };
-      const tournament = await getTournamentDetail(getSharedPrisma(), id);
+      const tournament = await getTournamentDetail(getSharedPrisma(), session.userId, id);
 
       return reply.send({ tournament });
     } catch (error) {

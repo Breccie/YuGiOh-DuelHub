@@ -904,6 +904,7 @@ export function PackSelectionConsole({
                               src={timelineImage}
                               alt={set.name}
                               fill
+                              loading={selected ? "eager" : "lazy"}
                               sizes="102px"
                               className="object-contain object-center"
                               draggable={false}

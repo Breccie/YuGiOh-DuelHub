@@ -17,7 +17,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const tournaments = await listTournamentOverviews(getPrisma());
+    const prisma = getPrisma();
+    const session = await requireViewerSession(prisma);
+    const tournaments = await listTournamentOverviews(prisma, session.userId);
 
     return NextResponse.json({
       tournaments,

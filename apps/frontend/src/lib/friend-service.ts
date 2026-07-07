@@ -1,5 +1,3 @@
-import "server-only";
-
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { FriendRequestDto } from "@/lib/app-dtos";
 

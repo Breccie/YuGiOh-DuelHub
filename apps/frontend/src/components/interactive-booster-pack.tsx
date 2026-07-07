@@ -111,6 +111,7 @@ export function InteractiveBoosterPack({
             alt=""
             width={351}
             height={550}
+            loading="eager"
             sizes="260px"
             className="mx-auto h-auto w-[258px] scale-y-[-1] opacity-[0.82]"
             unoptimized
@@ -162,6 +163,7 @@ export function InteractiveBoosterPack({
                     alt={label}
                     width={351}
                     height={550}
+                    loading="eager"
                     sizes="270px"
                     className="h-auto w-full drop-shadow-[0_26px_34px_rgba(0,0,0,0.44)] brightness-[1.02] saturate-[1.02]"
                     unoptimized

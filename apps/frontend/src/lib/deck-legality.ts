@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 
 type LoadedDeck = Awaited<ReturnType<typeof loadDecks>>[number];
 type OwnershipSummary = {
@@ -125,10 +126,11 @@ function clampSnippet(text: string | null) {
   return text.length > 140 ? `${text.slice(0, 137)}...` : text;
 }
 
-async function loadDecks(prisma: PrismaClient, userId: string) {
+async function loadDecks(prisma: PrismaClient, userId: string, runId: string) {
   return prisma.deck.findMany({
     where: {
       userId,
+      runId,
     },
     orderBy: [
       {
@@ -476,11 +478,14 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
+  const activeRun = await getActiveRun(prisma, viewer.id);
+
   const [decks, collectionEntries, availableBanlists] = await Promise.all([
-    loadDecks(prisma, viewer.id),
+    loadDecks(prisma, viewer.id, activeRun.id),
     prisma.collectionEntry.findMany({
       where: {
         userId: viewer.id,
+        runId: activeRun.id,
       },
       select: {
         cardId: true,

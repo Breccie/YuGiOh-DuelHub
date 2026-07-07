@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { openDisplayRequestSchema } from "@ygo/contracts";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
+import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
 import { openDisplay } from "@/lib/pack-openings";
 import { getPrisma } from "@/lib/prisma";
@@ -9,33 +10,16 @@ import { getActiveRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
 
-function isSameOriginMutation(request: Request) {
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-
-  if (!origin || !host) {
-    return false;
-  }
-
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(request: Request) {
   if (shouldProxyToApiService()) {
     return proxyApiRoute(request, "/api/v1/packs/displays");
   }
 
   try {
-    if (!isSameOriginMutation(request)) {
-      return NextResponse.json(
-        { error: "Display openings must be requested from the app origin." },
-        { status: 403 },
-      );
-    }
+    requireSameOriginMutation(
+      request,
+      "Display openings must be requested from the app origin.",
+    );
 
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);

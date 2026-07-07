@@ -8,6 +8,7 @@ import {
   DomainError,
   applyLedgerAmount,
   assertSufficientCredits,
+  normalizeDuelistId,
   normalizePackEconomy,
 } from "@ygo/domain";
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
@@ -17,6 +18,7 @@ import {
   getEffectiveSetConfiguration,
 } from "@/lib/pack-collation";
 import {
+  creditWallet,
   getOrCreateWallet,
   requireRunMembership,
   serializeWallet,
@@ -529,6 +531,105 @@ export async function listRunRewardGrants(
 
   return {
     rewards: rewards.map(serializeRewardGrant),
+  };
+}
+
+export async function createRunRewardGrant(
+  prisma: PrismaClient,
+  options: {
+    organizerId: string;
+    runId: string;
+    recipientDuelistId: string;
+    amountCredits?: number;
+    packSetId?: string | null;
+    packQuantity?: number;
+    reason?: string | null;
+  },
+) {
+  await requireRunMembership(prisma, {
+    runId: options.runId,
+    userId: options.organizerId,
+    organizerOnly: true,
+  });
+
+  const amountCredits = options.amountCredits ?? 0;
+  const packQuantity = options.packQuantity ?? 0;
+  const packSetId = options.packSetId ?? null;
+
+  if (amountCredits <= 0 && packQuantity <= 0) {
+    throw new DomainError({
+      code: "reward_empty",
+      message: "Ein Reward braucht Credits oder Packs.",
+      status: 400,
+    });
+  }
+
+  const recipient = await prisma.user.findUnique({
+    where: {
+      duelistId: normalizeDuelistId(options.recipientDuelistId),
+    },
+  });
+
+  if (!recipient) {
+    throw new DomainError({
+      code: "recipient_not_found",
+      message: "Dieser Duelist wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+
+  await requireRunMembership(prisma, {
+    runId: options.runId,
+    userId: recipient.id,
+  });
+
+  if (packQuantity > 0) {
+    if (!packSetId) {
+      throw new DomainError({
+        code: "reward_pack_required",
+        message: "Für Pack-Rewards muss ein Pack-Set angegeben werden.",
+        status: 400,
+      });
+    }
+
+    await loadSetOrThrow(prisma, packSetId);
+  }
+
+  const grant = await prisma.$transaction(async (tx) => {
+    const createdGrant = await tx.rewardGrant.create({
+      data: {
+        runId: options.runId,
+        recipientId: recipient.id,
+        grantedById: options.organizerId,
+        amountCredits,
+        packSetId,
+        packQuantity,
+        reason: options.reason?.trim() || null,
+        status: packQuantity > 0 ? "PENDING" : "CLAIMED",
+        claimedAt: packQuantity > 0 ? null : new Date(),
+      },
+      include: {
+        packSet: true,
+      },
+    });
+
+    if (createdGrant.amountCredits > 0) {
+      await creditWallet(tx, {
+        runId: options.runId,
+        userId: recipient.id,
+        amount: createdGrant.amountCredits,
+        source: "MANUAL_GRANT",
+        referenceType: "RewardGrant",
+        referenceId: createdGrant.id,
+        note: createdGrant.reason,
+      });
+    }
+
+    return createdGrant;
+  });
+
+  return {
+    reward: serializeRewardGrant(grant),
   };
 }
 

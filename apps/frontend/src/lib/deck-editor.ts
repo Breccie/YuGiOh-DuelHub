@@ -1,4 +1,5 @@
 import { DeckSection, type PrismaClient } from "@prisma/client";
+import { getActiveRun } from "@/lib/run-service";
 
 function parseSnapshotDate(value: string | null | undefined) {
   if (!value) {
@@ -14,11 +15,17 @@ function parseSnapshotDate(value: string | null | undefined) {
   return parsed;
 }
 
-async function requireOwnedDeck(prisma: PrismaClient, deckId: string, userId: string) {
+async function requireOwnedDeck(
+  prisma: PrismaClient,
+  deckId: string,
+  userId: string,
+  runId: string,
+) {
   const deck = await prisma.deck.findFirst({
     where: {
       id: deckId,
       userId,
+      runId,
     },
   });
 
@@ -75,10 +82,12 @@ export async function createDeck(
   const banlist = await resolveBanlist(prisma, input.banlistId);
   const snapshotDate =
     parseSnapshotDate(input.snapshotDate) ?? banlist?.effectiveFrom ?? null;
+  const activeRun = await getActiveRun(prisma, viewer.id);
 
   const deck = await prisma.deck.create({
     data: {
       userId: viewer.id,
+      runId: activeRun.id,
       name,
       formatProfileId: banlist?.formatProfileId ?? null,
       banlistId: banlist?.id ?? null,
@@ -109,7 +118,8 @@ export async function updateDeckMetadata(
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
-  await requireOwnedDeck(prisma, deckId, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
 
   const name = input.name.trim();
 
@@ -147,7 +157,8 @@ export async function deleteDeck(prisma: PrismaClient, viewerId: string, deckId:
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
-  await requireOwnedDeck(prisma, deckId, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
 
   await prisma.deck.delete({
     where: {
@@ -176,7 +187,8 @@ export async function upsertDeckCard(
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
-  await requireOwnedDeck(prisma, deckId, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
 
   if (!input.cardId) {
     throw new Error("Keine Karte ausgewählt.");
@@ -235,7 +247,8 @@ export async function removeDeckCard(
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
-  await requireOwnedDeck(prisma, deckId, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
 
   await prisma.deckCard.deleteMany({
     where: {

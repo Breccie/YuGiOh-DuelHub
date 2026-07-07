@@ -70,6 +70,11 @@ async function main() {
       continue;
     }
 
+    if (set.setCards.length === 0) {
+      console.warn(`Skipping ${set.code} (${set.name}) because it has no set cards.`);
+      continue;
+    }
+
     const source = await prisma.promoSource.upsert({
       where: {
         code: classification.code,

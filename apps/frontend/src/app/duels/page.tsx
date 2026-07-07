@@ -7,6 +7,7 @@ import {
 } from "@/lib/api-service-proxy";
 import { listDuelRequests } from "@/lib/duel-service";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 
 type RemoteDuelsPayload = {
   duels: Awaited<ReturnType<typeof listDuelRequests>>;
@@ -29,11 +30,13 @@ export default async function DuelsPage() {
     );
   }
 
+  const activeRun = await getActiveRun(prisma, session.userId);
   const [duelRequests, decks] = await Promise.all([
     listDuelRequests(prisma, session.userId),
     prisma.deck.findMany({
       where: {
         userId: session.userId,
+        runId: activeRun.id,
       },
       orderBy: {
         updatedAt: "desc",

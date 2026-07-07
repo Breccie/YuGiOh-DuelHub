@@ -49,7 +49,7 @@ export async function buildPackSelectionPayload(
   ] = await Promise.all([
     getDeckLegalitySnapshot({
       viewerId,
-    }),
+    }, prisma),
     prisma.collectionEntry.groupBy({
       by: ["cardId"],
       where: {

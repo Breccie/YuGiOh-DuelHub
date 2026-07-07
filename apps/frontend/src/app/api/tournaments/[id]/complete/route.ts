@@ -1,26 +1,12 @@
 import { NextResponse } from "next/server";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
+import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 import { completeTournament } from "@/lib/tournament-service";
 
 export const dynamic = "force-dynamic";
-
-function isSameOriginMutation(request: Request) {
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-
-  if (!origin || !host) {
-    return false;
-  }
-
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(
   request: Request,
@@ -33,12 +19,10 @@ export async function POST(
   }
 
   try {
-    if (!isSameOriginMutation(request)) {
-      return NextResponse.json(
-        { error: "Turnierabschluss muss aus der App heraus kommen." },
-        { status: 403 },
-      );
-    }
+    requireSameOriginMutation(
+      request,
+      "Turnierabschluss muss aus der App heraus kommen.",
+    );
 
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);

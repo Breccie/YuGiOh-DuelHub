@@ -21,6 +21,7 @@ import {
   getDeckLegalitySnapshot,
   type DeckLegalitySnapshot,
 } from "@/lib/deck-legality";
+import { getActiveRun } from "@/lib/run-service";
 import { requireViewerSession } from "../lib/auth";
 import { sendApiError } from "../lib/errors";
 import { getPrisma } from "../lib/prisma";
@@ -85,11 +86,13 @@ async function buildDeckOverviewPayload(
     },
     sharedPrisma,
   );
+  const activeRun = await getActiveRun(sharedPrisma, snapshot.viewer.id);
   const [totalCards, recentCollectionEntries, deckPreviewRows] = await Promise.all([
     prisma.card.count(),
     prisma.collectionEntry.findMany({
       where: {
         userId: snapshot.viewer.id,
+        runId: activeRun.id,
       },
       orderBy: {
         acquiredAt: "desc",
@@ -113,6 +116,7 @@ async function buildDeckOverviewPayload(
     prisma.deck.findMany({
       where: {
         userId: snapshot.viewer.id,
+        runId: activeRun.id,
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       include: {

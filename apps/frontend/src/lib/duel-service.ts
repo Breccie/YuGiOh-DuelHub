@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { DuelRequestDto } from "@/lib/app-dtos";
+import { getActiveRun, requireRunMembership } from "@/lib/run-service";
 
 type DuelRequestRecord = Prisma.DuelRequestGetPayload<{
   include: {
@@ -83,8 +84,10 @@ async function loadDuelRequest(prisma: PrismaClient, duelRequestId: string) {
 }
 
 export async function listDuelRequests(prisma: PrismaClient, viewerId: string) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const duelRequests = await prisma.duelRequest.findMany({
     where: {
+      runId: activeRun.id,
       OR: [{ requesterId: viewerId }, { opponentId: viewerId }],
     },
     orderBy: {
@@ -115,6 +118,7 @@ export async function createDuelRequest(
     tournamentMatchId?: string | null;
   },
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const opponent = await prisma.user.findUnique({
     where: {
       duelistId: input.opponentDuelistId.trim().toUpperCase(),
@@ -129,11 +133,17 @@ export async function createDuelRequest(
     throw new Error("Du kannst dir nicht selbst eine Duellanfrage senden.");
   }
 
+  await requireRunMembership(prisma, {
+    runId: activeRun.id,
+    userId: opponent.id,
+  });
+
   if (input.requesterDeckId) {
     const deck = await prisma.deck.findFirst({
       where: {
         id: input.requesterDeckId,
         userId: viewerId,
+        runId: activeRun.id,
       },
     });
 
@@ -146,6 +156,7 @@ export async function createDuelRequest(
   const confirmedAt = parseDateTime(input.confirmedAt);
   const duelRequest = await prisma.duelRequest.create({
     data: {
+      runId: activeRun.id,
       requesterId: viewerId,
       opponentId: opponent.id,
       requesterDeckId: input.requesterDeckId?.trim() || null,
@@ -182,9 +193,10 @@ export async function respondToDuelRequest(
   duelRequestId: string,
   action: "accept" | "decline" | "cancel",
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const duelRequest = await loadDuelRequest(prisma, duelRequestId);
 
-  if (!duelRequest) {
+  if (!duelRequest || duelRequest.runId !== activeRun.id) {
     throw new Error("Duellanfrage wurde nicht gefunden.");
   }
 
@@ -229,9 +241,14 @@ export async function scheduleDuelRequest(
     platform?: string | null;
   },
 ) {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const duelRequest = await loadDuelRequest(prisma, duelRequestId);
 
-  if (!duelRequest || (duelRequest.requesterId !== viewerId && duelRequest.opponentId !== viewerId)) {
+  if (
+    !duelRequest ||
+    duelRequest.runId !== activeRun.id ||
+    (duelRequest.requesterId !== viewerId && duelRequest.opponentId !== viewerId)
+  ) {
     throw new Error("Duellanfrage wurde nicht gefunden.");
   }
 

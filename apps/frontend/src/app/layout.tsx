@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" className="h-full">
+    <html lang="de" className="h-full" data-scroll-behavior="smooth">
       <body className="min-h-full bg-background text-foreground antialiased">
         <DesktopPreferencesHydrator />
         {children}

@@ -18,6 +18,12 @@
 /apps/frontend/.next/
 /out/
 /prisma/*.db
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 
 # production
 /build
@@ -31,7 +37,11 @@
 /tmp/
 /tmp-*.png
 /tmp-*.log
+screenshots/
+playwright-report/
+test-results/
 /.codex-*.log
+/.codex-*.db
 /.playwright-cli/
 /apps/api/dist/
 

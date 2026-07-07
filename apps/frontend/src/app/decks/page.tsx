@@ -8,6 +8,7 @@ import {
 import { getViewerSession } from "@/lib/auth";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 
 type RemoteDeckOverviewPayload = Parameters<typeof DeckOverviewConsole>[0];
 
@@ -49,12 +50,14 @@ export default async function DecksPage({
   });
 
   const viewerId = snapshot.viewer.id;
+  const activeRun = await getActiveRun(prisma, viewerId);
 
   const [totalCards, recentCollectionEntries, deckPreviewRows] = await Promise.all([
     prisma.card.count(),
     prisma.collectionEntry.findMany({
       where: {
         userId: viewerId,
+        runId: activeRun.id,
       },
       orderBy: {
         acquiredAt: "desc",
@@ -78,6 +81,7 @@ export default async function DecksPage({
     prisma.deck.findMany({
       where: {
         userId: viewerId,
+        runId: activeRun.id,
       },
       orderBy: [
         {

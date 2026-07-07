@@ -228,6 +228,7 @@ function PreviewPackActor({
                   className="h-full w-full object-contain drop-shadow-[0_22px_34px_rgba(0,0,0,0.42)]"
                   decoding="async"
                   draggable={false}
+                  fetchPriority="high"
                   loading="eager"
                 />
                 <div
@@ -259,6 +260,7 @@ function PreviewPackActor({
                       className="h-full w-full object-contain drop-shadow-[0_18px_26px_rgba(0,0,0,0.24)]"
                       decoding="async"
                       draggable={false}
+                      fetchPriority="high"
                       loading="eager"
                     />
                   </div>
@@ -282,6 +284,7 @@ function PreviewPackActor({
                       className="h-full w-full object-contain drop-shadow-[0_12px_20px_rgba(0,0,0,0.22)]"
                       decoding="async"
                       draggable={false}
+                      fetchPriority="high"
                       loading="eager"
                     />
                   </div>

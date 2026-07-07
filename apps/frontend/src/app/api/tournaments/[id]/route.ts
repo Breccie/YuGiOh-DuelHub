@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
+import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 import { getTournamentDetail } from "@/lib/tournament-service";
 
@@ -17,7 +18,9 @@ export async function GET(
 
   try {
     const { id } = await context.params;
-    const tournament = await getTournamentDetail(getPrisma(), id);
+    const prisma = getPrisma();
+    const session = await requireViewerSession(prisma);
+    const tournament = await getTournamentDetail(prisma, session.userId, id);
 
     return NextResponse.json({
       tournament,

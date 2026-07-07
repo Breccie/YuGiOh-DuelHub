@@ -1,5 +1,3 @@
-import "server-only";
-
 import type { PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
 import type { PublicProfile } from "@/lib/app-dtos";

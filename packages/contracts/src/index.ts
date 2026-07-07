@@ -1074,6 +1074,25 @@ export type ApplyRunProgressionResponse = z.infer<
   typeof applyRunProgressionResponseSchema
 >;
 
+export const generateRunProgressionRequestSchema = z.object({
+  count: z.number().int().min(1).max(50).optional(),
+  fromDate: z.string().trim().min(1).nullable().optional(),
+  setsPerCheckpoint: z.number().int().min(1).max(12).optional(),
+  includePromos: z.boolean().optional(),
+  includeTournamentPacks: z.boolean().optional(),
+});
+export type GenerateRunProgressionRequest = z.infer<
+  typeof generateRunProgressionRequestSchema
+>;
+
+export const generateRunProgressionResponseSchema = z.object({
+  generatedCheckpoints: z.array(runProgressionCheckpointSchema),
+  progression: runProgressionResponseSchema,
+});
+export type GenerateRunProgressionResponse = z.infer<
+  typeof generateRunProgressionResponseSchema
+>;
+
 export const promoSourceCardSchema = z.object({
   setCardId: z.string(),
   cardId: z.string(),

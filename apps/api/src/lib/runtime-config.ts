@@ -29,11 +29,21 @@ export function getAllowedCorsOrigins(env: NodeJS.ProcessEnv = process.env) {
   const rawOrigins = env.CORS_ORIGIN?.trim();
 
   if (!rawOrigins) {
+    if (getApiAppMode(env) === "production") {
+      throw new Error("CORS_ORIGIN muss in production explizit gesetzt sein.");
+    }
+
     return ["http://127.0.0.1:3000", "http://localhost:3000"];
   }
 
-  return rawOrigins
+  const origins = rawOrigins
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+
+  if (getApiAppMode(env) === "production" && origins.includes("*")) {
+    throw new Error("CORS_ORIGIN darf in production kein Wildcard-Origin sein.");
+  }
+
+  return Array.from(new Set(origins));
 }

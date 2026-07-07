@@ -27,10 +27,10 @@ export default async function TournamentDetailPage({
   const tournament = shouldProxyToApiService()
     ? (
         await fetchApiServiceJson<{ tournament: TournamentDetail }>(
-          `/api/v1/tournaments/${id}`,
-        )
-      ).tournament
-    : await getTournamentDetail(prisma, id);
+      `/api/v1/tournaments/${id}`,
+    )
+  ).tournament
+    : await getTournamentDetail(prisma, session.userId, id);
 
   return <TournamentDetailConsole session={session} tournament={tournament} />;
 }

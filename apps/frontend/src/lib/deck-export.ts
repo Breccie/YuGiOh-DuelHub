@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { DeckExportResult } from "@/lib/app-dtos";
+import { getActiveRun } from "@/lib/run-service";
 
 function sanitizeFileStem(value: string) {
   return value
@@ -34,10 +35,12 @@ export async function createDeckExport(
     linkedTournamentMatchId?: string | null;
   },
 ): Promise<DeckExportResult> {
+  const activeRun = await getActiveRun(prisma, viewerId);
   const deck = await prisma.deck.findFirst({
     where: {
       id: deckId,
       userId: viewerId,
+      runId: activeRun.id,
     },
     include: {
       cards: {
@@ -114,9 +117,11 @@ export async function createDeckExport(
   });
 
   if (options?.linkedDuelRequestId) {
-    await prisma.duelRequest.update({
+    await prisma.duelRequest.updateMany({
       where: {
         id: options.linkedDuelRequestId,
+        runId: activeRun.id,
+        OR: [{ requesterId: viewerId }, { opponentId: viewerId }],
       },
       data: {
         exportId: exportRecord.id,
@@ -125,9 +130,17 @@ export async function createDeckExport(
   }
 
   if (options?.linkedTournamentMatchId) {
-    await prisma.tournamentMatch.update({
+    await prisma.tournamentMatch.updateMany({
       where: {
         id: options.linkedTournamentMatchId,
+        tournament: {
+          runId: activeRun.id,
+          participants: {
+            some: {
+              userId: viewerId,
+            },
+          },
+        },
       },
       data: {
         deckExportId: exportRecord.id,

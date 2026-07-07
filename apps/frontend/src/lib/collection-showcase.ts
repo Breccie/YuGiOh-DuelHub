@@ -13,6 +13,7 @@ import {
 } from "@/lib/collection-showcase-config";
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
 import { binderSlotCount } from "@/lib/binder-open-layout";
+import { getActiveRun } from "@/lib/run-service";
 
 type CollectionEntryRecord = Prisma.CollectionEntryGetPayload<{
   include: {
@@ -279,9 +280,9 @@ function createSlotSnapshotFromEntry(entry: CollectionEntryRecord) {
   };
 }
 
-async function ensureBinderPages(prisma: PrismaClient, userId: string) {
+async function ensureBinderPages(prisma: PrismaClient, userId: string, runId: string) {
   const binders = await prisma.collectionBinder.findMany({
-    where: { userId },
+    where: { userId, runId },
     select: {
       id: true,
       pages: {
@@ -313,13 +314,16 @@ async function ensureBinderPages(prisma: PrismaClient, userId: string) {
   );
 }
 
-async function ensureCollectionShowcaseDefaults(prisma: PrismaClient, userId: string) {
+async function ensureCollectionShowcaseDefaults(prisma: PrismaClient, userId: string, runId: string) {
   const [existingBinders, existingPresets] = await Promise.all([
     prisma.collectionBinder.count({
-      where: { userId },
+      where: { userId, runId },
     }),
     prisma.collectionPreset.count({
-      where: { userId },
+      where: {
+        userId,
+        OR: [{ binderId: null }, { binder: { runId } }],
+      },
     }),
   ]);
 
@@ -327,6 +331,7 @@ async function ensureCollectionShowcaseDefaults(prisma: PrismaClient, userId: st
     await prisma.collectionBinder.createMany({
       data: binderCoverCatalog.map((cover, index) => ({
         userId,
+        runId,
         name: cover.name,
         coverKey: cover.key,
         description: cover.description,
@@ -373,7 +378,7 @@ async function ensureCollectionShowcaseDefaults(prisma: PrismaClient, userId: st
     });
   }
 
-  await ensureBinderPages(prisma, userId);
+  await ensureBinderPages(prisma, userId, runId);
 }
 
 function mapBinderSlot(slot: BinderSlotRecord): CollectionBinderSlotDto {
@@ -505,9 +510,9 @@ function mapPreset(preset: {
   };
 }
 
-async function loadBinderRecords(prisma: PrismaClient, userId: string) {
+async function loadBinderRecords(prisma: PrismaClient, userId: string, runId: string) {
   return prisma.collectionBinder.findMany({
-    where: { userId },
+    where: { userId, runId },
     orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
     include: {
       pages: {
@@ -541,11 +546,13 @@ async function loadBinderRecords(prisma: PrismaClient, userId: string) {
 async function loadCollectionEditorInventory(
   prisma: PrismaClient,
   userId: string,
+  runId: string,
   binder: BinderRecord,
 ) {
   const entries = await prisma.collectionEntry.findMany({
     where: {
       userId,
+      runId,
       lockState: {
         not: EntryLockState.TRADED,
       },
@@ -695,11 +702,17 @@ async function loadCollectionEditorInventory(
     });
 }
 
-async function requireBinderRecord(prisma: PrismaClient, userId: string, binderId: string) {
+async function requireBinderRecord(
+  prisma: PrismaClient,
+  userId: string,
+  runId: string,
+  binderId: string,
+) {
   const binder = await prisma.collectionBinder.findFirst({
     where: {
       id: binderId,
       userId,
+      runId,
     },
     include: {
       pages: {
@@ -756,12 +769,16 @@ function validateFullPageSlotInput(slots: SaveBinderPageSlotInput[]) {
 
 export async function getCollectionShowcaseSnapshot(prisma: PrismaClient, viewerId: string) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
-  await ensureCollectionShowcaseDefaults(prisma, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  await ensureCollectionShowcaseDefaults(prisma, viewer.id, activeRun.id);
 
   const [binders, presets] = await Promise.all([
-    loadBinderRecords(prisma, viewer.id),
+    loadBinderRecords(prisma, viewer.id, activeRun.id),
     prisma.collectionPreset.findMany({
-      where: { userId: viewer.id },
+      where: {
+        userId: viewer.id,
+        OR: [{ binderId: null }, { binder: { runId: activeRun.id } }],
+      },
       orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
     }),
   ]);
@@ -782,10 +799,16 @@ export async function getCollectionBinderEditorSnapshot(
   binderId: string,
 ): Promise<CollectionBinderEditorSnapshot> {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
-  await ensureCollectionShowcaseDefaults(prisma, viewer.id);
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  await ensureCollectionShowcaseDefaults(prisma, viewer.id, activeRun.id);
 
-  const binder = await requireBinderRecord(prisma, viewer.id, binderId);
-  const inventoryCards = await loadCollectionEditorInventory(prisma, viewer.id, binder);
+  const binder = await requireBinderRecord(prisma, viewer.id, activeRun.id, binderId);
+  const inventoryCards = await loadCollectionEditorInventory(
+    prisma,
+    viewer.id,
+    activeRun.id,
+    binder,
+  );
 
   return {
     viewer: {
@@ -804,11 +827,12 @@ export async function createCollectionBinder(
 ) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
   const cover = getBinderCoverMeta(input.coverKey);
+  const activeRun = await getActiveRun(prisma, viewer.id);
 
   const binder = await prisma.$transaction(async (tx) => {
     if (input.makeActive ?? true) {
       await tx.collectionBinder.updateMany({
-        where: { userId: viewer.id },
+        where: { userId: viewer.id, runId: activeRun.id },
         data: { isActive: false },
       });
     }
@@ -816,6 +840,7 @@ export async function createCollectionBinder(
     return tx.collectionBinder.create({
       data: {
         userId: viewer.id,
+        runId: activeRun.id,
         name: input.name.trim(),
         coverKey: input.coverKey,
         description: input.description?.trim() || cover.description,
@@ -869,10 +894,12 @@ export async function updateCollectionBinder(
   input: UpdateBinderInput,
 ) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
+  const activeRun = await getActiveRun(prisma, viewer.id);
   const current = await prisma.collectionBinder.findFirst({
     where: {
       id: binderId,
       userId: viewer.id,
+      runId: activeRun.id,
     },
   });
 
@@ -885,7 +912,7 @@ export async function updateCollectionBinder(
   const binder = await prisma.$transaction(async (tx) => {
     if (input.isActive) {
       await tx.collectionBinder.updateMany({
-        where: { userId: viewer.id },
+        where: { userId: viewer.id, runId: activeRun.id },
         data: { isActive: false },
       });
     }
@@ -940,13 +967,34 @@ export async function createCollectionPreset(
   input: CreatePresetInput,
 ) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
+  const activeRun = await getActiveRun(prisma, viewer.id);
 
   const preset = await prisma.$transaction(async (tx) => {
     if (input.makeActive ?? true) {
       await tx.collectionPreset.updateMany({
-        where: { userId: viewer.id },
+        where: {
+          userId: viewer.id,
+          OR: [{ binderId: null }, { binder: { runId: activeRun.id } }],
+        },
         data: { isActive: false },
       });
+    }
+
+    if (input.binderId) {
+      const binder = await tx.collectionBinder.findFirst({
+        where: {
+          id: input.binderId,
+          userId: viewer.id,
+          runId: activeRun.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!binder) {
+        throw new Error("Binder wurde nicht gefunden.");
+      }
     }
 
     return tx.collectionPreset.create({
@@ -974,10 +1022,12 @@ export async function updateCollectionPreset(
   input: UpdatePresetInput,
 ) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
+  const activeRun = await getActiveRun(prisma, viewer.id);
   const current = await prisma.collectionPreset.findFirst({
     where: {
       id: presetId,
       userId: viewer.id,
+      OR: [{ binderId: null }, { binder: { runId: activeRun.id } }],
     },
   });
 
@@ -988,9 +1038,29 @@ export async function updateCollectionPreset(
   const preset = await prisma.$transaction(async (tx) => {
     if (input.isActive) {
       await tx.collectionPreset.updateMany({
-        where: { userId: viewer.id },
+        where: {
+          userId: viewer.id,
+          OR: [{ binderId: null }, { binder: { runId: activeRun.id } }],
+        },
         data: { isActive: false },
       });
+    }
+
+    if (input.binderId) {
+      const binder = await tx.collectionBinder.findFirst({
+        where: {
+          id: input.binderId,
+          userId: viewer.id,
+          runId: activeRun.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!binder) {
+        throw new Error("Binder wurde nicht gefunden.");
+      }
     }
 
     return tx.collectionPreset.update({
@@ -1018,10 +1088,12 @@ export async function createCollectionBinderPage(
   binderId: string,
 ) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
+  const activeRun = await getActiveRun(prisma, viewer.id);
   const binder = await prisma.collectionBinder.findFirst({
     where: {
       id: binderId,
       userId: viewer.id,
+      runId: activeRun.id,
     },
     include: {
       pages: {
@@ -1079,6 +1151,7 @@ export async function saveCollectionBinderPage(
   slots: SaveBinderPageSlotInput[],
 ) {
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
+  const activeRun = await getActiveRun(prisma, viewer.id);
   validateFullPageSlotInput(slots);
 
   const page = await prisma.collectionBinderPage.findFirst({
@@ -1087,6 +1160,7 @@ export async function saveCollectionBinderPage(
       binderId,
       binder: {
         userId: viewer.id,
+        runId: activeRun.id,
       },
     },
     include: {
@@ -1115,6 +1189,7 @@ export async function saveCollectionBinderPage(
             in: requestedEntryIds as string[],
           },
           userId: viewer.id,
+          runId: activeRun.id,
           lockState: {
             not: EntryLockState.TRADED,
           },
@@ -1136,6 +1211,9 @@ export async function saveCollectionBinderPage(
     where: {
       page: {
         binderId,
+        binder: {
+          runId: activeRun.id,
+        },
       },
       pageId: {
         not: page.id,

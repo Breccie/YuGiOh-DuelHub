@@ -6,6 +6,7 @@ import {
 } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 import { getTradeDetail } from "@/lib/trade-service";
 
 type RemoteTradeDetailPayload = Parameters<typeof TradeDetailConsole>[0];
@@ -88,11 +89,13 @@ export default async function TradeDetailPage({
     redirect("/login");
   }
 
+  const activeRun = await getActiveRun(prisma, viewer.id);
   const [uniqueOwnedCards, latestBanlist, earliestSet, trade] = await Promise.all([
     prisma.collectionEntry.groupBy({
       by: ["cardId"],
       where: {
         userId: viewer.id,
+        runId: activeRun.id,
       },
     }),
     prisma.banlist.findFirst({
@@ -126,6 +129,7 @@ export default async function TradeDetailPage({
         prisma.collectionEntry.findMany({
           where: {
             userId: viewer.id,
+            runId: activeRun.id,
             lockState: "AVAILABLE",
           },
           take: 18,
@@ -140,6 +144,7 @@ export default async function TradeDetailPage({
         prisma.collectionEntry.findMany({
           where: {
             userId: counterpartUserId,
+            runId: activeRun.id,
             lockState: "AVAILABLE",
           },
           take: 18,
