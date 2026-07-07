@@ -1076,10 +1076,7 @@ textarea {
 
 .reveal-grid--tray {
   --opening-card-width: clamp(12.6rem, 14.4vw, 14.15rem);
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(min(100%, var(--opening-card-width)), var(--opening-card-width))
-  );
+  grid-template-columns: repeat(3, minmax(0, var(--opening-card-width)));
   justify-content: center;
   gap: 0.85rem;
   max-width: 43rem;

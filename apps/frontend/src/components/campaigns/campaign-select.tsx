@@ -224,7 +224,7 @@ export function CampaignSelect({
                   className="ui-button-neutral"
                   disabled={pending}
                 >
-                  Einstellungen
+                  Kampagnen-Einstellungen
                 </button>
               </div>
             </article>
