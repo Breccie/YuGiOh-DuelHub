@@ -203,7 +203,7 @@ describe("tournament rewards and progression", () => {
         },
       });
 
-      await completeTournament(prisma, owner.id, tournament.id);
+      const completedDetail = await completeTournament(prisma, owner.id, tournament.id);
 
       const [completedTournament, readyCheckpoint, rewardGrant, ownerWallet, ledgerEntry] =
         await Promise.all([
@@ -219,6 +219,29 @@ describe("tournament rewards and progression", () => {
         ]);
 
       expect(completedTournament?.status).toBe("COMPLETED");
+      expect(completedDetail.campaign).toEqual(
+        expect.objectContaining({
+          openMatchCount: 0,
+          canComplete: false,
+          readyCheckpoint: expect.objectContaining({
+            id: checkpoint.id,
+            setNames: [nextSet.name],
+            freePacksPerSetUnlock: 3,
+          }),
+        }),
+      );
+      expect(completedDetail.campaign.rewardGrants).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            recipientId: owner.id,
+            recipientName: owner.displayName,
+            rank: 1,
+            amountCredits: 300,
+            packQuantity: 2,
+            packSetName: rewardPackSet.name,
+          }),
+        ]),
+      );
       expect(readyCheckpoint?.status).toBe("READY");
       expect(rewardGrant).toEqual(
         expect.objectContaining({

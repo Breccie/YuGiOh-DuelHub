@@ -44,6 +44,26 @@ type TournamentRecord = Prisma.TournamentGetPayload<{
 
 export type TournamentDetail = {
   overview: TournamentOverviewDto;
+  campaign: {
+    openMatchCount: number;
+    canComplete: boolean;
+    rewardGrants: Array<{
+      id: string;
+      recipientId: string;
+      recipientName: string;
+      rank: number | null;
+      amountCredits: number;
+      packQuantity: number;
+      packSetName: string | null;
+      status: string;
+    }>;
+    readyCheckpoint: {
+      id: string;
+      title: string;
+      setNames: string[];
+      freePacksPerSetUnlock: number;
+    } | null;
+  };
   participants: Array<{
     id: string;
     status: string;
@@ -304,6 +324,12 @@ function parseTournamentRewardConfig(value: Prisma.JsonValue): TournamentRewardC
   };
 }
 
+function parseRankFromRewardReason(reason: string | null) {
+  const match = reason?.match(/rank:(\d+)/);
+
+  return match ? Number(match[1]) : null;
+}
+
 function placementAppliesToRank(
   placement: NonNullable<TournamentRewardConfig["placements"]>[number],
   rank: number,
@@ -470,11 +496,116 @@ async function loadTournament(prisma: PrismaClient, tournamentId: string) {
   });
 }
 
-function mapTournamentDetail(tournament: TournamentRecord): TournamentDetail {
+async function getTournamentCampaignState(
+  prisma: PrismaClient,
+  tournament: TournamentRecord,
+): Promise<TournamentDetail["campaign"]> {
+  const openMatchCount = tournament.matches.filter(
+    (match) => match.status !== "COMPLETED" && match.status !== "BYE",
+  ).length;
+
+  if (!tournament.runId) {
+    return {
+      openMatchCount,
+      canComplete: false,
+      rewardGrants: [],
+      readyCheckpoint: null,
+    };
+  }
+
+  const [rewardGrants, readyCheckpoint, run] = await Promise.all([
+    prisma.rewardGrant.findMany({
+      where: {
+        runId: tournament.runId,
+        reason: {
+          startsWith: `TOURNAMENT_REWARD | ${tournament.id}`,
+        },
+      },
+      orderBy: [{ createdAt: "desc" }],
+      include: {
+        recipient: {
+          select: {
+            displayName: true,
+          },
+        },
+        packSet: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    }),
+    prisma.runProgressionCheckpoint.findFirst({
+      where: {
+        runId: tournament.runId,
+        requiredTournamentId: tournament.id,
+        status: {
+          in: ["READY", "APPLIED"],
+        },
+      },
+      orderBy: {
+        sequence: "asc",
+      },
+      include: {
+        unlocks: {
+          where: {
+            type: "SET",
+          },
+          include: {
+            set: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.playGroupRun.findUnique({
+      where: {
+        id: tournament.runId,
+      },
+      select: {
+        freePacksPerSetUnlock: true,
+      },
+    }),
+  ]);
+
+  return {
+    openMatchCount,
+    canComplete: tournament.status !== "COMPLETED" && openMatchCount === 0,
+    rewardGrants: rewardGrants.map((grant) => ({
+      id: grant.id,
+      recipientId: grant.recipientId,
+      recipientName: grant.recipient.displayName,
+      rank: parseRankFromRewardReason(grant.reason),
+      amountCredits: grant.amountCredits,
+      packQuantity: grant.packQuantity,
+      packSetName: grant.packSet?.name ?? null,
+      status: grant.status,
+    })),
+    readyCheckpoint: readyCheckpoint
+      ? {
+          id: readyCheckpoint.id,
+          title: readyCheckpoint.title,
+          setNames: readyCheckpoint.unlocks
+            .map((unlock) => unlock.set?.name)
+            .filter((name): name is string => Boolean(name)),
+          freePacksPerSetUnlock: run?.freePacksPerSetUnlock ?? 24,
+        }
+      : null,
+  };
+}
+
+async function mapTournamentDetail(
+  prisma: PrismaClient,
+  tournament: TournamentRecord,
+): Promise<TournamentDetail> {
   const standings = computeStandings(tournament);
 
   return {
     overview: toTournamentOverview(tournament),
+    campaign: await getTournamentCampaignState(prisma, tournament),
     participants: tournament.participants.map((participant) => ({
       id: participant.id,
       status: participant.status,
@@ -561,7 +692,7 @@ export async function getTournamentDetail(
     throw new Error("Turnier wurde nicht gefunden.");
   }
 
-  return mapTournamentDetail(tournament);
+  return mapTournamentDetail(prisma, tournament);
 }
 
 export async function createTournament(

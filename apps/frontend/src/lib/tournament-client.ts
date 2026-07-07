@@ -43,4 +43,10 @@ export const tournamentClient = {
       RecordTournamentMatchResultRequest
     >(`/api/tournaments/matches/${matchId}`, input);
   },
+
+  complete(tournamentId: string) {
+    return apiPost<TournamentMutationResponse>(
+      `/api/tournaments/${tournamentId}/complete`,
+    );
+  },
 };

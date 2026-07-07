@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel, StatusPill } from "@/components/panel";
@@ -30,6 +31,7 @@ export function TournamentDetailConsole({
   const router = useRouter();
   const [inviteDuelistId, setInviteDuelistId] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [completePending, setCompletePending] = useState(false);
 
   async function invite() {
     setFeedback(null);
@@ -65,6 +67,25 @@ export function TournamentDetailConsole({
       setFeedback(getApiErrorMessage(error, "Matchergebnis konnte nicht gespeichert werden."));
     }
   }
+
+  async function completeTournamentFlow() {
+    setCompletePending(true);
+    setFeedback(null);
+
+    try {
+      await tournamentClient.complete(tournament.overview.id);
+      setFeedback("Turnier abgeschlossen. Rewards und naechster Kampagnenschritt wurden aktualisiert.");
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Turnier konnte nicht abgeschlossen werden."));
+    } finally {
+      setCompletePending(false);
+    }
+  }
+
+  const readyCheckpoint = tournament.campaign.readyCheckpoint;
+  const hasTournamentRewards = tournament.campaign.rewardGrants.length > 0;
+  const completed = tournament.overview.status === "COMPLETED";
 
   return (
     <DuelConsoleScaffold
@@ -129,6 +150,50 @@ export function TournamentDetailConsole({
               </button>
             </div>
 
+            <div className="rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="ui-kicker">Kampagnenabschluss</p>
+                  <p className="mt-2 text-sm leading-7 text-[#baa58a]">
+                    {completed
+                      ? "Dieses Turnier ist abgeschlossen. Rewards wurden vergeben und der naechste Pack-Schritt ist bereit, sobald einer existiert."
+                      : tournament.campaign.openMatchCount > 0
+                        ? `${tournament.campaign.openMatchCount} Match(es) sind noch offen. Danach kann der Host das Turnier abschliessen.`
+                        : "Alle Matches sind erledigt. Der Host kann jetzt Rewards vergeben und das naechste Pack vorbereiten."}
+                  </p>
+                </div>
+                <StatusPill
+                  tone={
+                    completed
+                      ? "gold"
+                      : tournament.campaign.canComplete
+                        ? "teal"
+                        : "slate"
+                  }
+                >
+                  {completed
+                    ? "Abgeschlossen"
+                    : tournament.campaign.canComplete
+                      ? "Bereit"
+                      : "Offen"}
+                </StatusPill>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  className="ui-button-primary"
+                  type="button"
+                  disabled={!tournament.campaign.canComplete || completePending}
+                  onClick={() => void completeTournamentFlow()}
+                >
+                  {completePending ? "Schliesst ab..." : "Turnier abschliessen"}
+                </button>
+                <Link className="ui-button-secondary" href="/packs">
+                  Packs & Rewards öffnen
+                </Link>
+              </div>
+            </div>
+
             {feedback ? (
               <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
                 {feedback}
@@ -159,6 +224,82 @@ export function TournamentDetailConsole({
                 </p>
               </article>
             ))}
+          </div>
+        </Panel>
+      </section>
+
+      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <Panel kicker="Kampagne" title="Nächstes Pack">
+          {readyCheckpoint ? (
+            <div className="space-y-4">
+              <div className="rounded-[20px] border border-[rgba(88,163,169,0.22)] bg-[rgba(58,118,124,0.12)] px-4 py-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-semibold text-[#f0dfcc]">
+                      {readyCheckpoint.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-[#b8e3e4]">
+                      {readyCheckpoint.setNames.length > 0
+                        ? readyCheckpoint.setNames.join(", ")
+                        : "Neues Booster-Set"}
+                      {" "}ist durch dieses Turnier bereit. Beim Anwenden erhalten alle Mitglieder{" "}
+                      {readyCheckpoint.freePacksPerSetUnlock} Gratispack(s).
+                    </p>
+                  </div>
+                  <StatusPill tone="teal">Pack bereit</StatusPill>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link className="ui-button-primary" href="/packs">
+                  Zu Packs & Reward-Inbox
+                </Link>
+                <Link className="ui-button-secondary" href="/packs/promos">
+                  Promo-Quellen prüfen
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="ui-empty rounded-[20px] px-4 py-5 text-sm">
+              Noch kein Pack-Checkpoint durch dieses Turnier bereit. Erzeuge oder verknüpfe den
+              nächsten Kampagnen-Schritt, dann wird er hier angezeigt.
+            </div>
+          )}
+        </Panel>
+
+        <Panel kicker="Belohnungen" title="Turnier-Rewards">
+          <div className="space-y-3">
+            {hasTournamentRewards ? (
+              tournament.campaign.rewardGrants.map((reward) => (
+                <article
+                  key={reward.id}
+                  className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-base font-semibold text-[#f0dfcc]">
+                        {reward.recipientName}
+                        {reward.rank ? ` · Platz ${reward.rank}` : ""}
+                      </p>
+                      <p className="mt-1 text-sm text-[#baa58a]">
+                        {reward.amountCredits > 0
+                          ? `${reward.amountCredits} Credits`
+                          : "Keine Credits"}
+                        {reward.packQuantity > 0
+                          ? ` · ${reward.packQuantity} Pack(s) ${reward.packSetName ?? ""}`
+                          : ""}
+                      </p>
+                    </div>
+                    <StatusPill tone={reward.status === "PENDING" ? "teal" : "gold"}>
+                      {reward.status}
+                    </StatusPill>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="ui-empty rounded-[20px] px-4 py-5 text-sm">
+                Noch keine Turnier-Rewards vergeben. Sie erscheinen hier direkt nach dem Abschluss.
+              </div>
+            )}
           </div>
         </Panel>
       </section>
