@@ -75,6 +75,24 @@ export default async function SettingsPage() {
         lastSeenAt: deviceSession.lastSeenAt.toISOString(),
       }))}
       friendRequests={friendRequests}
+      activeRun={{
+        id: activeRun.id,
+        ownerId: activeRun.ownerId,
+        name: activeRun.name,
+        description: activeRun.description ?? null,
+        status: activeRun.status,
+        historyCursor: activeRun.historyCursor?.toISOString() ?? null,
+        defaultPackPrice: activeRun.defaultPackPrice,
+        defaultDisplaySize: activeRun.defaultDisplaySize,
+        freePacksPerSetUnlock: activeRun.freePacksPerSetUnlock,
+        startingCredits: activeRun.startingCredits,
+        viewerRole:
+          activeRun.memberships.find((membership) => membership.userId === session.userId)
+            ?.role ?? "PLAYER",
+        memberCount: activeRun._count.memberships,
+        createdAt: activeRun.createdAt.toISOString(),
+        updatedAt: activeRun.updatedAt.toISOString(),
+      }}
     />
   );
 }

@@ -837,6 +837,7 @@ export const playGroupRunSchema = z.object({
   historyCursor: z.string().nullable(),
   defaultPackPrice: z.number().int(),
   defaultDisplaySize: z.number().int(),
+  freePacksPerSetUnlock: z.number().int(),
   startingCredits: z.number().int(),
   viewerRole: runRoleSchema,
   memberCount: z.number().int(),
@@ -872,8 +873,18 @@ export const createRunRequestSchema = z.object({
   startingCredits: z.number().int().min(0).max(999_999).optional(),
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
+  freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
 });
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
+
+export const updateRunSettingsRequestSchema = z.object({
+  defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
+  defaultDisplaySize: z.number().int().min(1).max(120).optional(),
+  freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
+});
+export type UpdateRunSettingsRequest = z.infer<
+  typeof updateRunSettingsRequestSchema
+>;
 
 export const updateActiveRunRequestSchema = z.object({
   runId: z.string().trim().min(1),

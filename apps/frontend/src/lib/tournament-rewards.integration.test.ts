@@ -111,6 +111,7 @@ describe("tournament rewards and progression", () => {
           ownerId: owner.id,
           name: `${tag} run`,
           startingCredits: 0,
+          freePacksPerSetUnlock: 3,
           memberships: {
             create: [
               { userId: owner.id, role: "OWNER" },
@@ -406,6 +407,47 @@ describe("tournament rewards and progression", () => {
 
       await applyProgressionCheckpoint(prisma, owner.id, run.id, checkpoint.id);
 
+      const freePackReason = `SET_UNLOCK_FREE_PACKS | ${checkpoint.id}`;
+      const [ownerFreePackGrant, playerFreePackGrant] = await Promise.all([
+        prisma.rewardGrant.findFirst({
+          where: {
+            runId: run.id,
+            recipientId: owner.id,
+            packSetId: nextSet.id,
+            reason: {
+              startsWith: freePackReason,
+            },
+          },
+        }),
+        prisma.rewardGrant.findFirst({
+          where: {
+            runId: run.id,
+            recipientId: player.id,
+            packSetId: nextSet.id,
+            reason: {
+              startsWith: freePackReason,
+            },
+          },
+        }),
+      ]);
+
+      expect(ownerFreePackGrant).toEqual(
+        expect.objectContaining({
+          amountCredits: 0,
+          packSetId: nextSet.id,
+          packQuantity: 3,
+          status: "PENDING",
+        }),
+      );
+      expect(playerFreePackGrant).toEqual(
+        expect.objectContaining({
+          amountCredits: 0,
+          packSetId: nextSet.id,
+          packQuantity: 3,
+          status: "PENDING",
+        }),
+      );
+
       await expect(
         prisma.runProgressionCheckpoint.findUnique({ where: { id: checkpoint.id } }),
       ).resolves.toEqual(expect.objectContaining({ status: "APPLIED" }));
@@ -417,6 +459,29 @@ describe("tournament rewards and progression", () => {
       await expect(prisma.playGroupRun.findUnique({ where: { id: run.id } })).resolves.toEqual(
         expect.objectContaining({ historyCursor: nextSet.releaseDate }),
       );
+
+      const walletBeforeFreePackClaim = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: owner.id } },
+      });
+      const freePackClaim = await claimRewardPack(prisma, {
+        viewerId: owner.id,
+        runId: run.id,
+        rewardGrantId: ownerFreePackGrant!.id,
+      });
+      const walletAfterFreePackClaim = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: owner.id } },
+      });
+
+      expect(freePackClaim.batch).toEqual(
+        expect.objectContaining({
+          type: "REWARD",
+          quantity: 3,
+          totalCost: 0,
+          setId: nextSet.id,
+        }),
+      );
+      expect(freePackClaim.openings).toHaveLength(3);
+      expect(walletAfterFreePackClaim.balance).toBe(walletBeforeFreePackClaim.balance);
 
       const walletBeforeShopPurchase = await prisma.creditWallet.findUniqueOrThrow({
         where: { runId_userId: { runId: run.id, userId: owner.id } },

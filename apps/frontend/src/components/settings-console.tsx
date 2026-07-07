@@ -16,9 +16,10 @@ import {
 } from "@/lib/asset-cache-client";
 import { authClient } from "@/lib/auth-client";
 import { getApiErrorMessage } from "@/lib/api-client";
-import type { FriendRequestDto, ViewerSession } from "@/lib/app-dtos";
+import type { FriendRequestDto, PlayGroupRunDto, ViewerSession } from "@/lib/app-dtos";
 import { friendClient } from "@/lib/friend-client";
 import { profileClient } from "@/lib/profile-client";
+import { runClient } from "@/lib/run-client";
 
 type BinderOption = {
   id: string;
@@ -65,6 +66,7 @@ export function SettingsConsole({
   binderOptions,
   deviceSessions,
   friendRequests,
+  activeRun,
 }: {
   session: ViewerSession;
   profile: {
@@ -78,6 +80,7 @@ export function SettingsConsole({
   binderOptions: BinderOption[];
   deviceSessions: DeviceSession[];
   friendRequests: FriendRequestDto[];
+  activeRun: PlayGroupRunDto;
 }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(profile.displayName);
@@ -99,6 +102,13 @@ export function SettingsConsole({
   const [assetCacheBusy, setAssetCacheBusy] = useState(false);
   const [assetCacheFeedback, setAssetCacheFeedback] = useState<string | null>(null);
   const [assetCacheError, setAssetCacheError] = useState<string | null>(null);
+  const [defaultPackPrice, setDefaultPackPrice] = useState(String(activeRun.defaultPackPrice));
+  const [defaultDisplaySize, setDefaultDisplaySize] = useState(String(activeRun.defaultDisplaySize));
+  const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState(
+    String(activeRun.freePacksPerSetUnlock),
+  );
+  const [campaignSaving, setCampaignSaving] = useState(false);
+  const [campaignFeedback, setCampaignFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -180,6 +190,45 @@ export function SettingsConsole({
       graphicsMode,
     });
     setDesktopFeedback("Desktop-Modus gespeichert.");
+  }
+
+  async function saveCampaignSettings() {
+    setCampaignSaving(true);
+    setCampaignFeedback(null);
+
+    const parsedPackPrice = Number(defaultPackPrice);
+    const parsedDisplaySize = Number(defaultDisplaySize);
+    const parsedFreePacks = Number(freePacksPerSetUnlock);
+
+    if (
+      !Number.isInteger(parsedPackPrice) ||
+      !Number.isInteger(parsedDisplaySize) ||
+      !Number.isInteger(parsedFreePacks)
+    ) {
+      setCampaignSaving(false);
+      setCampaignFeedback("Bitte ganze Zahlen fuer Packpreis, Display-Groesse und Gratispacks eingeben.");
+      return;
+    }
+
+    try {
+      const updatedRun = await runClient.updateSettings(activeRun.id, {
+        defaultPackPrice: parsedPackPrice,
+        defaultDisplaySize: parsedDisplaySize,
+        freePacksPerSetUnlock: parsedFreePacks,
+      });
+
+      setDefaultPackPrice(String(updatedRun.defaultPackPrice));
+      setDefaultDisplaySize(String(updatedRun.defaultDisplaySize));
+      setFreePacksPerSetUnlock(String(updatedRun.freePacksPerSetUnlock));
+      setCampaignFeedback("Kampagnen-Einstellungen gespeichert.");
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setCampaignFeedback(
+        getApiErrorMessage(error, "Kampagnen-Einstellungen konnten nicht gespeichert werden."),
+      );
+    } finally {
+      setCampaignSaving(false);
+    }
   }
 
   async function refreshAssetCache(feedbackMessage?: string) {
@@ -320,6 +369,56 @@ export function SettingsConsole({
                   />
                 </label>
               </div>
+            </div>
+
+            <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+              <p className="ui-kicker">Kampagne</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Packpreis</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={defaultPackPrice}
+                    onChange={(event) => setDefaultPackPrice(event.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Display-Groesse</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={defaultDisplaySize}
+                    onChange={(event) => setDefaultDisplaySize(event.target.value)}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Gratispacks je neuem Pack</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={freePacksPerSetUnlock}
+                    onChange={(event) => setFreePacksPerSetUnlock(event.target.value)}
+                  />
+                </label>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#baa58a]">
+                Beim Freischalten eines neuen Booster-Sets bekommen alle Kampagnenmitglieder
+                diese Anzahl als kostenlose Reward-Packs. Standard ist ein Display.
+              </p>
+              {campaignFeedback ? (
+                <div className="mt-4 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
+                  {campaignFeedback}
+                </div>
+              ) : null}
+              <button
+                className="ui-button-secondary mt-4"
+                type="button"
+                disabled={campaignSaving}
+                onClick={() => void saveCampaignSettings()}
+              >
+                {campaignSaving ? "Speichert..." : "Kampagne speichern"}
+              </button>
             </div>
 
             <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">

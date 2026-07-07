@@ -24,6 +24,7 @@ import {
   runMemberSchema,
   runListResponseSchema,
   updateActiveRunRequestSchema,
+  updateRunSettingsRequestSchema,
   walletResponseSchema,
 } from "@ygo/contracts";
 import { DomainError, normalizeDuelistId } from "@ygo/domain";
@@ -54,6 +55,7 @@ import {
   serializeRun,
   serializeWallet,
   setActiveRun,
+  updateRunSettings,
 } from "@/lib/run-service";
 import { requireViewerSession } from "../lib/auth";
 import { sendApiError } from "../lib/errors";
@@ -179,6 +181,25 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       );
     } catch (error) {
       return sendApiError(reply, error, "Aktive Runde konnte nicht gesetzt werden.");
+    }
+  });
+
+  app.patch("/:runId/settings", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const body = updateRunSettingsRequestSchema.parse(request.body ?? {});
+      const run = await updateRunSettings(getSharedPrisma(), {
+        runId,
+        viewerId: session.userId,
+        defaultPackPrice: body.defaultPackPrice,
+        defaultDisplaySize: body.defaultDisplaySize,
+        freePacksPerSetUnlock: body.freePacksPerSetUnlock,
+      });
+
+      return reply.send(run);
+    } catch (error) {
+      return sendApiError(reply, error, "Kampagnen-Einstellungen konnten nicht gespeichert werden.");
     }
   });
 

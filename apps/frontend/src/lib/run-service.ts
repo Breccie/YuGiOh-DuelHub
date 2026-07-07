@@ -35,6 +35,7 @@ export function serializeRun(run: RunWithMemberships, viewerId: string) {
     historyCursor: run.historyCursor?.toISOString() ?? null,
     defaultPackPrice: run.defaultPackPrice,
     defaultDisplaySize: run.defaultDisplaySize,
+    freePacksPerSetUnlock: run.freePacksPerSetUnlock,
     startingCredits: run.startingCredits,
     viewerRole: viewerMembership?.role ?? ("PLAYER" as RunRole),
     memberCount: run._count.memberships,
@@ -341,6 +342,7 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
         description: DEFAULT_RUN_DESCRIPTION,
         defaultPackPrice: 100,
         defaultDisplaySize: 24,
+        freePacksPerSetUnlock: 24,
         startingCredits: 2400,
         memberships: {
           create: {
@@ -510,6 +512,7 @@ export async function createRun(
     startingCredits?: number;
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
+    freePacksPerSetUnlock?: number;
   },
 ) {
   return prisma.$transaction(async (tx) => {
@@ -521,6 +524,7 @@ export async function createRun(
         startingCredits: input.startingCredits ?? 2400,
         defaultPackPrice: input.defaultPackPrice ?? 100,
         defaultDisplaySize: input.defaultDisplaySize ?? 24,
+        freePacksPerSetUnlock: input.freePacksPerSetUnlock ?? 24,
         memberships: {
           create: {
             userId,
@@ -555,6 +559,44 @@ export async function createRun(
 
     return run;
   });
+}
+
+export async function updateRunSettings(
+  prisma: PrismaClient,
+  options: {
+    runId: string;
+    viewerId: string;
+    defaultPackPrice?: number;
+    defaultDisplaySize?: number;
+    freePacksPerSetUnlock?: number;
+  },
+) {
+  await requireRunMembership(prisma, {
+    runId: options.runId,
+    userId: options.viewerId,
+    organizerOnly: true,
+  });
+
+  const run = await prisma.playGroupRun.update({
+    where: {
+      id: options.runId,
+    },
+    data: {
+      defaultPackPrice: options.defaultPackPrice,
+      defaultDisplaySize: options.defaultDisplaySize,
+      freePacksPerSetUnlock: options.freePacksPerSetUnlock,
+    },
+    include: {
+      memberships: true,
+      _count: {
+        select: {
+          memberships: true,
+        },
+      },
+    },
+  });
+
+  return serializeRun(run, options.viewerId);
 }
 
 export async function setActiveRun(

@@ -135,6 +135,14 @@ function defaultRewardConfig(packSetId: string | null) {
   };
 }
 
+function buildSetUnlockFreePackReason(options: {
+  checkpointId: string;
+  unlockId: string;
+  setId: string;
+}) {
+  return `SET_UNLOCK_FREE_PACKS | ${options.checkpointId} | ${options.unlockId} | ${options.setId}`;
+}
+
 export function serializeProgressionUnlock(
   unlock: CheckpointWithUnlocks["unlocks"][number],
 ) {
@@ -620,6 +628,25 @@ export async function applyProgressionCheckpoint(
     applyState === "already_applied"
       ? checkpoint
       : await prisma.$transaction(async (tx) => {
+          const [run, memberships] = await Promise.all([
+            tx.playGroupRun.findUniqueOrThrow({
+              where: {
+                id: runId,
+              },
+              select: {
+                freePacksPerSetUnlock: true,
+              },
+            }),
+            tx.runMembership.findMany({
+              where: {
+                runId,
+              },
+              select: {
+                userId: true,
+              },
+            }),
+          ]);
+
           for (const unlock of checkpoint.unlocks) {
             if (unlock.type === "SET" && unlock.setId) {
               await tx.runSetUnlock.upsert({
@@ -638,6 +665,45 @@ export async function applyProgressionCheckpoint(
                   unlockedAt: new Date(),
                 },
               });
+
+              if (run.freePacksPerSetUnlock > 0) {
+                const reason = buildSetUnlockFreePackReason({
+                  checkpointId: checkpoint.id,
+                  unlockId: unlock.id,
+                  setId: unlock.setId,
+                });
+                const existingGrants = await tx.rewardGrant.findMany({
+                  where: {
+                    runId,
+                    packSetId: unlock.setId,
+                    reason,
+                  },
+                  select: {
+                    recipientId: true,
+                  },
+                });
+                const grantedRecipientIds = new Set(
+                  existingGrants.map((grant) => grant.recipientId),
+                );
+                const missingMemberships = memberships.filter(
+                  (membership) => !grantedRecipientIds.has(membership.userId),
+                );
+
+                if (missingMemberships.length > 0) {
+                  await tx.rewardGrant.createMany({
+                    data: missingMemberships.map((membership) => ({
+                      runId,
+                      recipientId: membership.userId,
+                      grantedById: viewerId,
+                      amountCredits: 0,
+                      packSetId: unlock.setId,
+                      packQuantity: run.freePacksPerSetUnlock,
+                      reason,
+                      status: "PENDING",
+                    })),
+                  });
+                }
+              }
             }
 
             if (unlock.type === "PROMO_SOURCE" && unlock.promoSourceId) {

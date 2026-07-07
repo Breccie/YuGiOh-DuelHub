@@ -2,6 +2,7 @@ export type {
   DeckExportResult,
   DuelRequestDto,
   FriendRequestDto,
+  PlayGroupRunDto,
   PublicProfile,
   TournamentOverviewDto,
   TournamentStandingsDto,

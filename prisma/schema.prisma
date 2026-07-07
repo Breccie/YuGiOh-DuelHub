@@ -253,6 +253,7 @@ model PlayGroupRun {
   historyCursor       DateTime?
   defaultPackPrice    Int                    @default(100)
   defaultDisplaySize  Int                    @default(24)
+  freePacksPerSetUnlock Int                  @default(24)
   startingCredits     Int                    @default(2400)
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
