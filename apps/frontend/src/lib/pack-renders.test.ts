@@ -25,4 +25,16 @@ describe("MVP pack renders", () => {
       ).toBe(true);
     }
   });
+
+  it("uses imported real images for special products without approved pack renders", () => {
+    const heroImageUrl = getPreferredPackHeroImage(
+      "DB1",
+      "Dark Beginning 1",
+      "https://images.ygoprodeck.com/images/sets/DB1.jpg",
+    );
+
+    expect(heroImageUrl).toBe(
+      "/api/assets/remote?url=https%3A%2F%2Fimages.ygoprodeck.com%2Fimages%2Fsets%2FDB1.jpg",
+    );
+  });
 });
