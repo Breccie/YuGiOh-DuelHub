@@ -96,6 +96,7 @@ export async function buildPackSelectionPayload(
     viewer: {
       displayName: snapshot.viewer.displayName,
     },
+    wallet: snapshot.wallet,
     activeRunId: runId ?? null,
     collectionProgress: {
       owned: ownedUniqueCards.length,

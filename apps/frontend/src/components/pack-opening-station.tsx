@@ -261,6 +261,7 @@ export function PackOpeningStation({
   const canInteractWithPack =
     !isSubmitting &&
     !isPending &&
+    Boolean(activeSet?.canBuy) &&
     (!isDisplaySequenceActive || currentOpening === null);
   const sliderProgress = `${((openingSpeed - 1) / (openingSpeeds.length - 1)) * 100}%`;
   const highestRarityTier = useMemo(
@@ -601,6 +602,12 @@ export function PackOpeningStation({
       </div>
     );
   }
+  const packPriceLabel =
+    activeSet.packPrice !== null ? `${activeSet.packPrice} Credits` : "frei";
+  const displayCostLabel =
+    activeSet.displayCost !== null ? `${activeSet.displayCost} Credits` : "nach Run-Regel";
+  const walletBalanceLabel =
+    snapshot.wallet ? `${snapshot.wallet.balance} Credits` : "kein Wallet";
 
   const packRenderAssets = getPackRenderAssets(
     activeSet.code,
@@ -661,6 +668,14 @@ export function PackOpeningStation({
               Release {formatDate(activeSet.releaseDate)}
             </StatusPill>
             <StatusPill tone="gold">{activeSet.cardPoolSize} Karten</StatusPill>
+            <StatusPill tone={activeSet.canBuy ? "teal" : "ember"}>
+              {activeSet.canBuy
+                ? `${packPriceLabel} pro Pack`
+                : activeSet.rewardOnly
+                  ? "Nur Reward"
+                  : "Gesperrt"}
+            </StatusPill>
+            <StatusPill tone="slate">Wallet {walletBalanceLabel}</StatusPill>
           </div>
         </div>
 
@@ -703,6 +718,9 @@ export function PackOpeningStation({
                 ? `${revealedCount}/${currentOpening.pulls.length} aufgedeckt`
                 : `${activeSet.packSize} Karten pro Pack`}
             </StatusPill>
+            {activeSet.canBuy ? (
+              <StatusPill tone="slate">Display {displayCostLabel}</StatusPill>
+            ) : null}
             <StatusPill tone="slate">
               {currentOpening
                 ? `Session ${formatDateTime(currentOpening.openedAt)}`
@@ -721,10 +739,15 @@ export function PackOpeningStation({
               onClick={() => {
                 void handleOpenPack();
               }}
-              disabled={isSubmitting || isPending || (isDisplaySequenceActive && !displaySequenceComplete)}
+              disabled={
+                !activeSet.canBuy ||
+                isSubmitting ||
+                isPending ||
+                (isDisplaySequenceActive && !displaySequenceComplete)
+              }
               className="ui-button-primary min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting || isPending ? "Pack wird geöffnet..." : "Pack öffnen"}
+              {isSubmitting || isPending ? "Pack wird geöffnet..." : "Pack kaufen"}
             </button>
 
             <button
@@ -732,7 +755,12 @@ export function PackOpeningStation({
               onClick={() => {
                 void handleOpenDisplay();
               }}
-              disabled={isSubmitting || isPending || (isDisplaySequenceActive && !displaySequenceComplete)}
+              disabled={
+                !activeSet.canBuy ||
+                isSubmitting ||
+                isPending ||
+                (isDisplaySequenceActive && !displaySequenceComplete)
+              }
               className="ui-button-neutral min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Display öffnen
@@ -776,6 +804,14 @@ export function PackOpeningStation({
       {batchNotice ? (
         <div className="paper-card-strong mt-4 rounded-[22px] border border-[rgba(211,166,94,0.28)] p-4 text-sm leading-7 text-[#efd7b8]">
           {batchNotice}
+        </div>
+      ) : null}
+
+      {!activeSet.canBuy ? (
+        <div className="paper-card-strong mt-4 rounded-[22px] border border-[rgba(204,97,78,0.28)] p-4 text-sm leading-7 text-[#f2c1b7]">
+          {activeSet.rewardOnly
+            ? "Dieses Pack ist ein Reward-Pack und kann nicht im Shop gekauft werden."
+            : "Dieses Pack ist in der Kampagne noch nicht freigeschaltet. Schließe ein Turnier ab und wende den nächsten Progression-Checkpoint an."}
         </div>
       ) : null}
 

@@ -29,6 +29,9 @@ export type PackDashboardSnapshot = {
     id: string;
     displayName: string;
   };
+  wallet: {
+    balance: number;
+  } | null;
   selectedSetId: string | null;
   sets: Array<{
     id: string;
@@ -41,6 +44,12 @@ export type PackDashboardSnapshot = {
     imageUrl: string | null;
     totalOpened: number;
     lastOpenedAt: string | null;
+    isUnlocked: boolean;
+    rewardOnly: boolean;
+    packPrice: number | null;
+    displaySize: number | null;
+    displayCost: number | null;
+    canBuy: boolean;
   }>;
   recentOpenings: PackOpeningSummary[];
 };
@@ -165,6 +174,35 @@ async function loadSetOrThrow(prisma: PackOpeningPrisma, setId?: string) {
   return set;
 }
 
+function assertSetIsPurchasableInRun(options: {
+  setId: string;
+  setName: string;
+  unlock: {
+    rewardOnly: boolean;
+  } | null;
+}) {
+  if (!options.unlock) {
+    throw new DomainError({
+      code: "pack_locked",
+      message: `"${options.setName}" ist in dieser Kampagne noch nicht freigeschaltet.`,
+      status: 403,
+      details: {
+        setId: options.setId,
+      },
+    });
+  }
+
+  if (options.unlock.rewardOnly) {
+    throw new DomainError({
+      code: "reward_only_pack",
+      message: "Dieses Pack ist nur als Reward verfügbar.",
+      status: 409,
+      details: {
+        setId: options.setId,
+      },
+    });
+  }
+}
 function buildPackPulls(
   set: Awaited<ReturnType<typeof loadSetOrThrow>>,
 ) {
@@ -391,7 +429,7 @@ export async function getPackDashboardSnapshot(
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
-  const [sets, openingStats, recentOpenings] = await Promise.all([
+  const [sets, openingStats, recentOpenings, run, wallet, setUnlocks] = await Promise.all([
     prisma.cardSet.findMany({
       orderBy: {
         releaseDate: "asc",
@@ -448,6 +486,36 @@ export async function getPackDashboardSnapshot(
         },
       },
     }),
+    runId
+      ? prisma.playGroupRun.findUnique({
+          where: {
+            id: runId,
+          },
+          select: {
+            defaultPackPrice: true,
+            defaultDisplaySize: true,
+          },
+        })
+      : Promise.resolve(null),
+    runId
+      ? getOrCreateWallet(prisma, {
+          runId,
+          userId: viewer.id,
+        })
+      : Promise.resolve(null),
+    runId
+      ? prisma.runSetUnlock.findMany({
+          where: {
+            runId,
+          },
+          select: {
+            setId: true,
+            packPrice: true,
+            displaySize: true,
+            rewardOnly: true,
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const openingStatsBySetId = new Map(
@@ -459,6 +527,7 @@ export async function getPackDashboardSnapshot(
       },
     ]),
   );
+  const unlockBySetId = new Map(setUnlocks.map((unlock) => [unlock.setId, unlock]));
 
   const hydratedSets = sets
     .map((set) => {
@@ -480,23 +549,59 @@ export async function getPackDashboardSnapshot(
       id: viewer.id,
       displayName: viewer.displayName,
     },
+    wallet: wallet
+      ? {
+          balance: wallet.balance,
+        }
+      : null,
     selectedSetId:
-      hydratedSets.find((set) => set.effectiveConfiguration.productType === "CORE_BOOSTER")
+      hydratedSets.find((set) => {
+        const unlock = unlockBySetId.get(set.id);
+
+        return (
+          set.effectiveConfiguration.productType === "CORE_BOOSTER" &&
+          (!runId || (unlock && !unlock.rewardOnly))
+        );
+      })
         ?.id ??
+      hydratedSets.find((set) => {
+        const unlock = unlockBySetId.get(set.id);
+
+        return !runId || (unlock && !unlock.rewardOnly);
+      })?.id ??
       hydratedSets[0]?.id ??
       null,
-    sets: hydratedSets.map((set) => ({
-      id: set.id,
-      code: set.code,
-      name: set.name,
-      releaseDate: set.releaseDate.toISOString(),
-      productType: set.effectiveConfiguration.productType,
-      packSize: set.effectiveConfiguration.packSize,
-      cardPoolSize: set.setCards.length,
-      imageUrl: resolveAppImageUrl(set.imageUrl),
-      totalOpened: openingStatsBySetId.get(set.id)?.totalOpened ?? 0,
-      lastOpenedAt: openingStatsBySetId.get(set.id)?.lastOpenedAt ?? null,
-    })),
+    sets: hydratedSets.map((set) => {
+      const unlock = unlockBySetId.get(set.id) ?? null;
+      const economy =
+        run && unlock
+          ? normalizePackEconomy({
+              packPrice: unlock.packPrice,
+              displaySize: unlock.displaySize,
+              defaultPackPrice: run.defaultPackPrice,
+              defaultDisplaySize: run.defaultDisplaySize,
+            })
+          : null;
+
+      return {
+        id: set.id,
+        code: set.code,
+        name: set.name,
+        releaseDate: set.releaseDate.toISOString(),
+        productType: set.effectiveConfiguration.productType,
+        packSize: set.effectiveConfiguration.packSize,
+        cardPoolSize: set.setCards.length,
+        imageUrl: resolveAppImageUrl(set.imageUrl),
+        totalOpened: openingStatsBySetId.get(set.id)?.totalOpened ?? 0,
+        lastOpenedAt: openingStatsBySetId.get(set.id)?.lastOpenedAt ?? null,
+        isUnlocked: runId ? Boolean(unlock) : true,
+        rewardOnly: unlock?.rewardOnly ?? false,
+        packPrice: economy?.packPrice ?? null,
+        displaySize: economy?.displaySize ?? null,
+        displayCost: economy?.displayCost ?? null,
+        canBuy: runId ? Boolean(unlock && !unlock.rewardOnly) : true,
+      };
+    }),
     recentOpenings: recentOpenings.map(serializeOpening),
   };
 }
@@ -880,13 +985,11 @@ export async function openPack(
         },
       });
 
-      if (unlock?.rewardOnly) {
-        throw new DomainError({
-          code: "reward_only_pack",
-            message: "Dieses Pack ist nur als Reward verfügbar.",
-          status: 409,
-        });
-      }
+      assertSetIsPurchasableInRun({
+        setId: set.id,
+        setName: set.name,
+        unlock,
+      });
 
       const economy = normalizePackEconomy({
         packPrice: unlock?.packPrice,
@@ -1042,13 +1145,11 @@ export async function openDisplay(
       },
     });
 
-    if (unlock?.rewardOnly) {
-      throw new DomainError({
-        code: "reward_only_pack",
-        message: "Dieses Pack ist nur als Reward verfügbar.",
-        status: 409,
-      });
-    }
+    assertSetIsPurchasableInRun({
+      setId: set.id,
+      setName: set.name,
+      unlock,
+    });
 
     const economy = normalizePackEconomy({
       packPrice: unlock?.packPrice,

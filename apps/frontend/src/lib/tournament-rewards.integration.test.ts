@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
-import { claimRewardPack, createRunRewardGrant } from "@/lib/pack-openings";
+import { claimRewardPack, createRunRewardGrant, openPack } from "@/lib/pack-openings";
 import {
   applyProgressionCheckpoint,
   generateRunProgression,
@@ -75,6 +75,16 @@ describe("tournament rewards and progression", () => {
             pullWeight: index === 1 ? 1 : 5,
           },
         });
+        await prisma.setCard.create({
+          data: {
+            setId: nextSet.id,
+            cardId: card.id,
+            setCode: `${nextSet.code}-${String(index).padStart(3, "0")}`,
+            rarity: index === 1 ? "Ultra Rare" : "Common",
+            collectorNumber: String(index),
+            pullWeight: index === 1 ? 1 : 5,
+          },
+        });
       }
 
       const owner = await prisma.user.create({
@@ -116,6 +126,14 @@ describe("tournament rewards and progression", () => {
         },
       });
       createdIds.runId = run.id;
+      await prisma.runSetUnlock.create({
+        data: {
+          runId: run.id,
+          setId: rewardPackSet.id,
+          rewardOnly: true,
+          note: `${tag} seeded reward-only unlock guard`,
+        },
+      });
 
       const tournament = await prisma.tournament.create({
         data: {
@@ -363,6 +381,15 @@ describe("tournament rewards and progression", () => {
           where: { runId_setId: { runId: run.id, setId: nextSet.id } },
         }),
       ).resolves.toBeNull();
+      await expect(
+        openPack(prisma, {
+          viewerId: owner.id,
+          runId: run.id,
+          setId: nextSet.id,
+        }),
+      ).rejects.toMatchObject({
+        code: "pack_locked",
+      });
 
       await completeTournament(prisma, owner.id, tournament.id);
       await expect(
@@ -390,6 +417,34 @@ describe("tournament rewards and progression", () => {
       await expect(prisma.playGroupRun.findUnique({ where: { id: run.id } })).resolves.toEqual(
         expect.objectContaining({ historyCursor: nextSet.releaseDate }),
       );
+
+      const walletBeforeShopPurchase = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: owner.id } },
+      });
+      const shopOpening = await openPack(prisma, {
+        viewerId: owner.id,
+        runId: run.id,
+        setId: nextSet.id,
+      });
+      const walletAfterShopPurchase = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: owner.id } },
+      });
+
+      expect(shopOpening.set.id).toBe(nextSet.id);
+      expect(walletAfterShopPurchase.balance).toBe(
+        walletBeforeShopPurchase.balance - run.defaultPackPrice,
+      );
+      await expect(
+        prisma.creditLedgerEntry.findFirst({
+          where: {
+            runId: run.id,
+            userId: owner.id,
+            source: "PACK_PURCHASE",
+            referenceType: "PackOpeningBatch",
+            note: `Pack gekauft: ${nextSet.name}`,
+          },
+        }),
+      ).resolves.toEqual(expect.objectContaining({ amount: -run.defaultPackPrice }));
     } finally {
       if (createdIds.runId) {
         await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });

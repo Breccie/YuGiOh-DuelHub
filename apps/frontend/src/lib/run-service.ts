@@ -6,6 +6,7 @@ const DEFAULT_RUN_DESCRIPTION =
   "Automatisch angelegte Freundesrunde für bestehende Duel-Hub-Daten.";
 const DEBUG_CREDIT_BALANCE = 999_999_999;
 const DEBUG_CREDIT_DUELIST_IDS = new Set(["YUGI-001", "YUGIMOTO", "YUGI001"]);
+const INITIAL_UNLOCK_COUNT = 5;
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
 
@@ -143,6 +144,68 @@ async function backfillLegacyUserData(
   ]);
 }
 
+function isTournamentPackLike(set: { code: string; name: string }) {
+  const code = set.code.toUpperCase();
+  const name = set.name.toLowerCase();
+
+  return (
+    /^T(P|U)\d/.test(code) ||
+    /^OTS/.test(code) ||
+    name.includes("tournament pack") ||
+    name.includes("turbo pack") ||
+    name.includes("ots tournament")
+  );
+}
+
+async function ensureInitialSetUnlocks(prisma: PrismaLike, runId: string) {
+  const existingUnlockCount = await prisma.runSetUnlock.count({
+    where: {
+      runId,
+    },
+  });
+
+  if (existingUnlockCount > 0) {
+    return;
+  }
+
+  const initialSets = (
+    await prisma.cardSet.findMany({
+      where: {
+        isOpenable: true,
+        productType: {
+          in: ["CORE_BOOSTER", "BOOSTER"],
+        },
+      },
+      orderBy: [{ releaseDate: "asc" }, { code: "asc" }],
+      take: 30,
+      select: {
+        id: true,
+        code: true,
+        name: true,
+      },
+    })
+  )
+    .filter((set) => !isTournamentPackLike(set))
+    .slice(0, INITIAL_UNLOCK_COUNT);
+
+  for (const set of initialSets) {
+    await prisma.runSetUnlock.upsert({
+      where: {
+        runId_setId: {
+          runId,
+          setId: set.id,
+        },
+      },
+      create: {
+        runId,
+        setId: set.id,
+        note: "Initialer Kampagnen-Shop-Unlock.",
+      },
+      update: {},
+    });
+  }
+}
+
 async function createStartingWallet(
   prisma: Prisma.TransactionClient,
   options: {
@@ -265,6 +328,8 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
       },
     });
 
+    await ensureInitialSetUnlocks(prisma, existingMembership.runId);
+
     return existingMembership.run;
   }
 
@@ -299,6 +364,7 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
       userId,
       startingCredits: run.startingCredits,
     });
+    await ensureInitialSetUnlocks(tx, run.id);
     await backfillLegacyUserData(tx, userId, run.id);
     await tx.user.update({
       where: {
@@ -477,6 +543,7 @@ export async function createRun(
       userId,
       startingCredits: run.startingCredits,
     });
+    await ensureInitialSetUnlocks(tx, run.id);
     await tx.user.update({
       where: {
         id: userId,

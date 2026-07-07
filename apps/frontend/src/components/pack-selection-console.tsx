@@ -26,6 +26,9 @@ type PackSelectionConsoleProps = {
   viewer: {
     displayName: string;
   };
+  wallet: {
+    balance: number;
+  } | null;
   activeRunId: string | null;
   collectionProgress: {
     owned: number;
@@ -43,6 +46,12 @@ type PackSelectionConsoleProps = {
     cardPoolSize: number;
     imageUrl: string | null;
     totalOpened: number;
+    isUnlocked: boolean;
+    rewardOnly: boolean;
+    packPrice: number | null;
+    displaySize: number | null;
+    displayCost: number | null;
+    canBuy: boolean;
   }>;
   recentCollectionCards: Array<{
     id: string;
@@ -475,6 +484,7 @@ function DeckCount({
 
 export function PackSelectionConsole({
   viewer,
+  wallet,
   activeRunId,
   collectionProgress,
   latestBanlistName,
@@ -526,6 +536,8 @@ export function PackSelectionConsole({
   const heroEra = getEraLabel(selectedSet.releaseDate);
   const visibleRecentCards = recentCollectionCards.slice(0, 8);
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
+  const selectedPackPrice =
+    selectedSet.packPrice !== null ? `${formatNumber(selectedSet.packPrice)} Credits` : "frei";
 
   function scrollTimeline(direction: "left" | "right") {
     stopTimelineMomentum();
@@ -753,6 +765,13 @@ export function PackSelectionConsole({
                     label="Banlist"
                     value={latestBanlistName}
                   />
+                  <MetricChip
+                    iconName="cart"
+                    label="Credits"
+                    value={
+                      wallet ? formatNumber(wallet.balance) : "Kein Run-Wallet"
+                    }
+                  />
                   <MetricChip iconName="hourglass" label="Aktive Ära" value={heroEra} />
 
                   <ConsoleProfileMenuChip viewer={{ displayName: viewer.displayName }} />
@@ -790,6 +809,16 @@ export function PackSelectionConsole({
                       <AssetIcon name="book" className="h-4 w-4 text-[#c7ae8d]" />
                       <span>{selectedSet.cardPoolSize} Karten</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <AssetIcon name="cart" className="h-4 w-4 text-[#c7ae8d]" />
+                      <span>
+                        {selectedSet.canBuy
+                          ? `${selectedPackPrice} pro Pack`
+                          : selectedSet.rewardOnly
+                            ? "Nur als Reward"
+                            : "Noch gesperrt"}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="mt-7 flex max-w-[320px] flex-col gap-3">
@@ -805,21 +834,35 @@ export function PackSelectionConsole({
                       </Link>
                     </div>
 
-                    <Link
-                      href={`/packs/${selectedSet.id}`}
-                      className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
-                    >
-                      <span>Booster öffnen</span>
-                      <AssetIcon name="package" className="h-5 w-5 text-current" />
-                    </Link>
+                    {selectedSet.canBuy ? (
+                      <>
+                        <Link
+                          href={`/packs/${selectedSet.id}`}
+                          className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
+                        >
+                          <span>Booster kaufen</span>
+                          <AssetIcon name="package" className="h-5 w-5 text-current" />
+                        </Link>
 
-                    <Link
-                      href={`/packs/${selectedSet.id}`}
-                      className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb]"
-                    >
-                      <span>Booster kaufen</span>
-                      <AssetIcon name="cart" className="h-4 w-4 text-current" />
-                    </Link>
+                        <Link
+                          href={`/packs/${selectedSet.id}`}
+                          className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb]"
+                        >
+                          <span>
+                            Display {selectedSet.displayCost !== null
+                              ? `${formatNumber(selectedSet.displayCost)} Credits`
+                              : "kaufen"}
+                          </span>
+                          <AssetIcon name="cart" className="h-4 w-4 text-current" />
+                        </Link>
+                      </>
+                    ) : (
+                      <div className="rounded-[10px] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm leading-6 text-[#c9b69e]">
+                        {selectedSet.rewardOnly
+                          ? "Dieses Pack ist nur als Turnier-Reward verfügbar."
+                          : "Dieses Pack wird erst durch Kampagnenfortschritt freigeschaltet."}
+                      </div>
+                    )}
 
                   </div>
                 </div>
@@ -900,7 +943,7 @@ export function PackSelectionConsole({
                       >
                         <div className="relative flex h-[150px] w-[98px] items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2">
                           {timelineImage ? (
-                            <Image
+                          <Image
                               src={timelineImage}
                               alt={set.name}
                               fill
@@ -916,6 +959,11 @@ export function PackSelectionConsole({
                             </div>
                           )}
                         </div>
+                        {!set.canBuy ? (
+                          <span className="absolute left-3 top-3 rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(5,7,10,0.82)] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.12em] text-[#d7c7b1]">
+                            {set.rewardOnly ? "Reward" : "Locked"}
+                          </span>
+                        ) : null}
 
                         {selected ? (
                           <div className="absolute inset-x-0 -bottom-2 flex justify-center">

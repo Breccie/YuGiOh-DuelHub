@@ -210,7 +210,7 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
 
     console.log("[e2e] Verifying packs page");
     await page.goto(`${baseUrl}/packs`);
-    await assertVisible(page.getByText("Booster öffnen").first(), "packs page");
+    await assertVisible(page.getByText("Booster kaufen").first(), "packs page");
     const hasSeededSet = await page.evaluate(async (setId) => {
       const response = await fetch("/api/pack-openings");
       const body = await response.json();

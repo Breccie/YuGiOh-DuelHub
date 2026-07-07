@@ -686,6 +686,11 @@ export const packDashboardSnapshotSchema = z.object({
     id: z.string(),
     displayName: z.string(),
   }),
+  wallet: z
+    .object({
+      balance: z.number().int(),
+    })
+    .nullable(),
   selectedSetId: z.string().nullable(),
   sets: z.array(
     z.object({
@@ -699,6 +704,12 @@ export const packDashboardSnapshotSchema = z.object({
       imageUrl: z.string().nullable(),
       totalOpened: z.number().int(),
       lastOpenedAt: z.string().nullable(),
+      isUnlocked: z.boolean(),
+      rewardOnly: z.boolean(),
+      packPrice: z.number().int().nullable(),
+      displaySize: z.number().int().nullable(),
+      displayCost: z.number().int().nullable(),
+      canBuy: z.boolean(),
     }),
   ),
   recentOpenings: z.array(packOpeningSummarySchema),
@@ -709,6 +720,7 @@ export const packSelectionResponseSchema = z.object({
   viewer: z.object({
     displayName: z.string(),
   }),
+  wallet: packDashboardSnapshotSchema.shape.wallet,
   activeRunId: z.string().nullable(),
   collectionProgress: z.object({
     owned: z.number().int(),
