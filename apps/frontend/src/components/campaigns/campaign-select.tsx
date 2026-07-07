@@ -32,6 +32,12 @@ function roleLabel(role: PlayGroupRunDto["viewerRole"]) {
   }
 }
 
+function parseIntegerField(value: string) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 export function CampaignSelect({
   activeRunId,
   runs,
@@ -40,6 +46,13 @@ export function CampaignSelect({
   const [pendingRunId, setPendingRunId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
+  const [startingCredits, setStartingCredits] = useState("2400");
+  const [defaultPackPrice, setDefaultPackPrice] = useState("100");
+  const [defaultDisplaySize, setDefaultDisplaySize] = useState("24");
+  const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState("24");
+  const [tournamentWinnerCredits, setTournamentWinnerCredits] = useState("900");
+  const [tournamentRunnerUpCredits, setTournamentRunnerUpCredits] = useState("500");
+  const [tournamentParticipationCredits, setTournamentParticipationCredits] = useState("250");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const activeRun = useMemo(
     () => runs.find((run) => run.id === activeRunId) ?? runs[0] ?? null,
@@ -75,16 +88,40 @@ export function CampaignSelect({
       return;
     }
 
+    const parsedStartingCredits = parseIntegerField(startingCredits);
+    const parsedPackPrice = parseIntegerField(defaultPackPrice);
+    const parsedDisplaySize = parseIntegerField(defaultDisplaySize);
+    const parsedFreePacks = parseIntegerField(freePacksPerSetUnlock);
+    const parsedWinnerCredits = parseIntegerField(tournamentWinnerCredits);
+    const parsedRunnerUpCredits = parseIntegerField(tournamentRunnerUpCredits);
+    const parsedParticipationCredits = parseIntegerField(tournamentParticipationCredits);
+
+    if (
+      parsedStartingCredits === null ||
+      parsedPackPrice === null ||
+      parsedDisplaySize === null ||
+      parsedFreePacks === null ||
+      parsedWinnerCredits === null ||
+      parsedRunnerUpCredits === null ||
+      parsedParticipationCredits === null
+    ) {
+      setErrorMessage("Bitte ganze Zahlen fuer alle Kampagnenwerte eingeben.");
+      return;
+    }
+
     setCreating(true);
     setErrorMessage(null);
 
     try {
       const response = await runClient.create({
         name: trimmedName,
-        startingCredits: 2400,
-        defaultPackPrice: 100,
-        defaultDisplaySize: 24,
-        freePacksPerSetUnlock: 24,
+        startingCredits: parsedStartingCredits,
+        defaultPackPrice: parsedPackPrice,
+        defaultDisplaySize: parsedDisplaySize,
+        freePacksPerSetUnlock: parsedFreePacks,
+        tournamentWinnerCredits: parsedWinnerCredits,
+        tournamentRunnerUpCredits: parsedRunnerUpCredits,
+        tournamentParticipationCredits: parsedParticipationCredits,
       });
 
       startTransition(() => {
@@ -151,12 +188,77 @@ export function CampaignSelect({
               {creating ? "Erstelle..." : "Erstellen"}
             </button>
           </div>
-          <div className="mt-5 grid gap-3 text-sm text-[#cdb79c] sm:grid-cols-2">
-            <span>Startcredits: 2.400</span>
-            <span>Gratispacks pro neuem Pack: 24</span>
-            <span>Packpreis: 100 Credits</span>
-            <span>Displaygröße: 24 Packs</span>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+            <label className="block">
+              <span className="ui-kicker">Startcredits</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={startingCredits}
+                onChange={(event) => setStartingCredits(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="ui-kicker">Packpreis</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={defaultPackPrice}
+                onChange={(event) => setDefaultPackPrice(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="ui-kicker">Displaygröße</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={defaultDisplaySize}
+                onChange={(event) => setDefaultDisplaySize(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="ui-kicker">Gratispacks</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={freePacksPerSetUnlock}
+                onChange={(event) => setFreePacksPerSetUnlock(event.target.value)}
+              />
+            </label>
           </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="ui-kicker">Credits Platz 1</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={tournamentWinnerCredits}
+                onChange={(event) => setTournamentWinnerCredits(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="ui-kicker">Credits Platz 2</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={tournamentRunnerUpCredits}
+                onChange={(event) => setTournamentRunnerUpCredits(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="ui-kicker">Credits Platz 3-8</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={tournamentParticipationCredits}
+                onChange={(event) => setTournamentParticipationCredits(event.target.value)}
+              />
+            </label>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-[#cdb79c]">
+            Gratispacks meint die kostenlosen Packs, die Spieler beim Freischalten
+            eines neuen Boosters direkt bekommen. Standard ist ein Display.
+          </p>
         </form>
       </section>
 
@@ -220,7 +322,7 @@ export function CampaignSelect({
                 </button>
                 <button
                   type="button"
-                  onClick={() => void activateRun(run.id, "/settings")}
+                  onClick={() => void activateRun(run.id, "/campaigns/settings")}
                   className="ui-button-neutral"
                   disabled={pending}
                 >

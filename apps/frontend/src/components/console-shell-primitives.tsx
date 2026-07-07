@@ -73,7 +73,7 @@ export function ConsoleSidebarUtilityActions() {
       <Link
         href="/settings"
         className="rounded-full p-3 text-[#9c8872] transition hover:bg-[rgba(255,255,255,0.04)] hover:text-[#f1deca]"
-        aria-label="Einstellungen"
+        aria-label="Profil-Einstellungen"
       >
         <AssetIcon name="settings" className="h-5 w-5 text-current" />
       </Link>
@@ -160,7 +160,14 @@ export function ConsoleProfileMenuChip({
               className="ui-button-neutral text-sm"
               onClick={() => setOpen(false)}
             >
-              Einstellungen
+              Profil-Einstellungen
+            </Link>
+            <Link
+              href="/campaigns/settings"
+              className="ui-button-neutral text-sm"
+              onClick={() => setOpen(false)}
+            >
+              Kampagnen-Einstellungen
             </Link>
             <Link
               href="/campaigns"
