@@ -4,7 +4,7 @@ Stand: 2026-07-07
 
 ## Ziel
 
-Der naechste sinnvolle Meilenstein ist ein stabiler lokaler Desktop-Demo-Loop. Er soll beweisen, dass Yu-Gi-Oh Duel Hub als Progression-Hub funktioniert, bevor Online-Mehrnutzer, Trades, Duelle, Turniere und weitere Politur wieder priorisiert werden.
+Der naechste sinnvolle Meilenstein ist ein stabiler lokaler Desktop-Demo-Loop. Er soll beweisen, dass Yu-Gi-Oh Duel Hub als Progression-, Sammlungs- und Deckbau-Hub funktioniert. Duelle laufen nicht in dieser App, sondern extern ueber EDOPro. Die App verwaltet die Voraussetzungen dafuer: Packs ziehen, Karten besitzen, Decks bauen, Decklegalitaet pruefen und `.ydk` exportieren.
 
 ## Muss koennen
 
@@ -15,17 +15,27 @@ Der naechste sinnvolle Meilenstein ist ein stabiler lokaler Desktop-Demo-Loop. E
 - Die gezogenen Karten als Sammlungseintraege speichern.
 - Die Sammlung anzeigen.
 - Ein Deck aus Sammlungs-Karten erstellen oder bearbeiten.
-- Deck-Legalitaet anzeigen.
+- Deck-Legalitaet gegen verschiedene Bannlisten anzeigen.
 - Einen EDOPro-kompatiblen `.ydk`-Export erzeugen.
 
 ## Bewusst nicht im MVP
 
 - Online-Multiplayer als primaerer Pfad.
 - PostgreSQL/API-Service als MVP-Blocker.
-- Friends, Trades, Duellanfragen und Turniere.
+- In-App-Duelle oder eine Duel-Engine.
+- Friends, Trades und Turniere als fertig polierte Online-Flows.
 - Vollstaendige Spezialprodukt- und Promo-Abdeckung.
 - Vollstaendige historische Errata-Timeline.
 - Finale Asset-Abdeckung fuer alle Booster.
+
+## Produktumfang nach dem Kern-MVP
+
+- Karten koennen zwischen Spielern getauscht werden.
+- Kampagnen organisieren mehrere Spieler, ihre Progression und die freigeschalteten Sets.
+- Turniere gehoeren zur Kampagne und werden in der App organisiert, aber die Matches selbst werden extern gespielt.
+- Turnierbelohnungen vergeben Waehrung.
+- Mit der Waehrung koennen aeltere Packs gekauft werden, um Sammlungen zu vervollstaendigen.
+- Neue Sets und Deckbau-Optionen werden nach abgeschlossenen Turnieren freigeschaltet.
 
 ## Primaerer Arbeitsmodus
 
@@ -65,7 +75,7 @@ Der Worktree war vor dieser MVP-Datei bereits umfangreich geaendert. Diese Aende
 | --- | --- | --- |
 | API-Service | `apps/api/prisma/schema.prisma`, `apps/api/src/server.ts`, `apps/api/src/routes/*`, `apps/api/src/lib/runtime-config*` | Bereits aktive Online/API-Arbeit; nicht Desktop-MVP-blockierend, aber testen. |
 | Frontend API-Routen | `apps/frontend/src/app/api/**` | Enthalten Desktop-Kompatibilitaetsrouten und neue `/api/v1/runs/*`-Routen; fuer Smoke relevant. |
-| Frontend Seiten | `apps/frontend/src/app/{decks,duels,settings,tournaments,trade}/**` | UI/SSR-Anpassungen; Desktop-Sichtpruefung nach Kernflow. |
+| Frontend Seiten | `apps/frontend/src/app/{decks,duels,settings,tournaments,trade}/**` | UI/SSR-Anpassungen; `/duels` darf hoechstens EDOPro-Koordination/Export-Kontext sein, keine In-App-Duelle. |
 | Frontend Domain/Services | `apps/frontend/src/lib/*` | Kernlogik fuer Collection, Decks, Packs, Progression, Trades, Turniere; MVP-relevant fuer Packs/Collection/Decks. |
 | Tests | `*.test.ts`, `*.integration.test.ts` in `apps` und `packages` | Positiv: vorhandene Regression-Absicherung. |
 | Scripts | `scripts/e2e-smoke.ts`, `scripts/e2e-online-smoke.ts`, Import-/Repair-Scripts | `e2e-smoke` ist MVP-Abnahme; Online-Smoke bleibt nachrangig. |

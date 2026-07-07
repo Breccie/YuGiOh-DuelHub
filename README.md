@@ -1,8 +1,10 @@
 # Yu-Gi-Oh Duel Hub
 
+Yu-Gi-Oh Duel Hub ist ein Progression-, Sammlungs- und Deckbau-Hub fuer Yu-Gi-Oh-Kampagnen. Duelle selbst laufen extern ueber EDOPro; diese App kuemmert sich um Packs, Sammlung, Deckbau, Bannlisten, `.ydk`-Export, Trades, Kampagnen und Turnierorganisation.
+
 Yu-Gi-Oh Duel Hub entwickelt sich jetzt in zwei klaren Modi:
 
-- `desktop-demo`: lokale Electron-Vorschau mit Demo-Daten für Binder, Decks, Trades, Duels und Turniere
+- `desktop-demo`: lokale Electron-Vorschau mit Demo-Daten für Binder, Decks, Trades, Kampagnen und Turniere
 - `online-dev`: frühe Mehrnutzer-Topologie mit getrenntem Frontend, API-Service und PostgreSQL
 
 ## Architektur
@@ -47,17 +49,17 @@ npm run online:dev
 
 `online:dev` startet PostgreSQL über Docker Compose, führt Prisma Generate/Migration/Base-Seed aus und startet danach API plus Frontend parallel. Dafür muss in `.env` mindestens `APP_MODE=online-dev`, `API_BASE_URL`, `API_DATABASE_URL`, `COOKIE_SECRET` und `CORS_ORIGIN` gesetzt sein.
 
-Der neue API-Standard liegt unter `/api/v1/*` im Service und wird schrittweise über die bestehenden Next-Kompatibilitätsrouten gespiegelt. Aktuell sind unter anderem `auth`, `dashboard`, `collection`, `decks`, `duels`, `friends`, `packs`, `profiles`, `rules`, `tournaments` und `trades` im Service verdrahtet. Wenn die API im Online-Modus nicht erreichbar ist, antworten die Proxies mit `service_unavailable` statt auf lokale Datenbanklogik zurückzufallen.
+Der neue API-Standard liegt unter `/api/v1/*` im Service und wird schrittweise über die bestehenden Next-Kompatibilitätsrouten gespiegelt. Aktuell sind unter anderem `auth`, `dashboard`, `collection`, `decks`, `duels`, `friends`, `packs`, `profiles`, `rules`, `tournaments` und `trades` im Service verdrahtet. `duels` ist dabei kein In-App-Spielclient, sondern hoechstens Koordination/Ergebnis- oder EDOPro-Kontext. Wenn die API im Online-Modus nicht erreichbar ist, antworten die Proxies mit `service_unavailable` statt auf lokale Datenbanklogik zurückzufallen.
 
 ## Wichtige Bereiche
 
 - `/login` für Duelist-Accounts und Sessions
 - `/collection` für Sammlung, Binder und Showcase
-- `/decks` für Deckbau, Legalität und `.ydk`-Export
+- `/decks` für Deckbau, Bannlisten-Legalität und `.ydk`-Export nach EDOPro
 - `/trade` für Trade-Threads und Abschlusslogik
-- `/duels` für Duellanfragen und Terminplanung
+- `/duels` nur fuer externe EDOPro-Koordination oder spaetere Ergebnisnotizen, nicht fuer In-App-Duelle
 - `/rules` für Progression, Saison, Banlist, Deckbau, EDOPro und Trade-Regeln
-- `/tournaments` für Swiss-Runden, Pairings und Standings
+- `/tournaments` für Kampagnen-Turniere, Pairings, Standings, Set-Freischaltungen und Waehrungsbelohnungen
 - `/settings` für Profil, Desktop-Präferenzen und Session-Verwaltung
 
 ## Daten und Import

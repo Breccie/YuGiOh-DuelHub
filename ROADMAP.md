@@ -26,7 +26,7 @@ Stand: 2026-07-07
 
 - Desktop-Kernseiten visuell gegen Referenzen pruefen: `/packs`, `/collection`, `/decks`, `/login`.
 - Collection/Binder-Flow manuell durchgehen: Binder waehlen, Slot setzen, speichern, erneut laden.
-- Deck-Flow manuell durchgehen: Karte hinzufuegen, Legalitaetszustand verstehen, `.ydk` herunterladen.
+- Deck-Flow manuell durchgehen: Karte hinzufuegen, Bannliste wechseln/verstehen, `.ydk` fuer EDOPro herunterladen.
 - Fehlermeldungen fuer Pack-Opening, Deck-Export und Login auf Nutzerverstaendlichkeit pruefen.
 
 ### P2: Daten und Assets verbessern
@@ -43,11 +43,14 @@ Stand: 2026-07-07
 - Den nachlaufenden Rewards-Request mit 401 nach Online-Smoke beobachten; aktuell kein Blocker.
 - API- und Frontend-Proxies fuer Collection, Packs, Decks und Runs weiter angleichen.
 
-### P4: Erweiterungen spaeter
+### P4: Kampagnen, Trades und Turniere
 
 - Trades produktreif machen.
-- Duellanfragen und EDOPro-Bruecke konkretisieren.
-- Turniere UI-seitig ausbauen.
+- Kampagnen als Progression-Rahmen ausbauen: aktive Spieler, erlaubte Sets, Turnierhistorie, Freischaltungen.
+- Turniere UI-seitig ausbauen: Anmeldung, Teilnehmer, Pairings, Ergebnisse, Abschluss.
+- Turnierbelohnungen als Waehrung und optional als Pack-/Promo-Belohnungen produktreif machen.
+- Pack-Shop fuer alte Sets bauen, damit Spieler mit Turnierwaehrung ihre Sammlung vervollstaendigen koennen.
+- EDOPro bleibt der Duel-Client; die App exportiert Decks und kann hoechstens externe Match-Ergebnisse dokumentieren.
 - Profile/Friends/Social erst nach stabilem Kernflow priorisieren.
 - 3D-/Animationspolitur nur dort fortsetzen, wo sie Kernseiten nicht verlangsamt.
 
