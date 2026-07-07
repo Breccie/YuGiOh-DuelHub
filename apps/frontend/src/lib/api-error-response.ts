@@ -20,6 +20,25 @@ export function toNextErrorResponse(error: unknown, fallbackMessage: string) {
     );
   }
 
+  if (
+    error instanceof Error &&
+    (error as Error & { status?: number }).status === 503
+  ) {
+    const apiError = {
+      code: "service_unavailable",
+      message: error.message || fallbackMessage,
+      status: 503,
+    };
+
+    return NextResponse.json(
+      {
+        error: apiError.message,
+        errorDetail: apiError,
+      },
+      { status: 503 },
+    );
+  }
+
   const apiError = toApiError(error, fallbackMessage);
   return NextResponse.json(
     {
