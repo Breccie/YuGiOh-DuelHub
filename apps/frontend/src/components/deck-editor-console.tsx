@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { DeckSectionValue } from "@ygo/contracts";
+import type { DragEvent, MouseEvent } from "react";
 import { useDeferredValue, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
@@ -24,6 +25,10 @@ type KindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
 type PreviewTarget =
   | { source: "collection"; cardId: string }
   | { source: "deck"; cardId: string; section: DeckSection };
+type DragCardPayload = {
+  source: "collection";
+  cardId: string;
+};
 
 function classes(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
@@ -121,6 +126,60 @@ function getLimitTone(value: number) {
   return "teal" as const;
 }
 
+function getLimitShortLabel(value: number) {
+  if (value <= 0) {
+    return "0";
+  }
+
+  if (value >= 3) {
+    return "3";
+  }
+
+  return String(value);
+}
+
+function isExtraDeckMonster(card: Pick<CollectionCard | DeckCard, "kind" | "monsterType">) {
+  if (card.kind !== "MONSTER" || !card.monsterType) {
+    return false;
+  }
+
+  return /\b(Fusion|Synchro|Xyz|Link)\b/i.test(card.monsterType);
+}
+
+function getDefaultSectionForCard(card: CollectionCard): DeckSection {
+  return isExtraDeckMonster(card) ? "EXTRA" : "MAIN";
+}
+
+function getSectionCopies(card: CollectionCard, section: DeckSection) {
+  if (section === "MAIN") {
+    return card.mainCopies;
+  }
+
+  if (section === "EXTRA") {
+    return card.extraCopies;
+  }
+
+  return card.sideCopies;
+}
+
+function encodeDragPayload(payload: DragCardPayload) {
+  return JSON.stringify(payload);
+}
+
+function decodeDragPayload(value: string) {
+  try {
+    const parsed = JSON.parse(value) as Partial<DragCardPayload>;
+
+    if (parsed.source === "collection" && typeof parsed.cardId === "string") {
+      return parsed as DragCardPayload;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 function pad2(value: number) {
   return String(value).padStart(2, "0");
 }
@@ -195,22 +254,55 @@ function BanlistSelect({
 function CollectionBrowserCard({
   card,
   selected,
-  onSelect,
+  disabled,
+  onAdd,
+  onRemove,
+  onPreview,
+  onDragStart,
 }: {
   card: CollectionCard;
   selected: boolean;
-  onSelect: () => void;
+  disabled: boolean;
+  onAdd: () => void;
+  onRemove: () => void;
+  onPreview: () => void;
+  onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
 }) {
+  const canAdd = card.availableCopies > card.deckCopies && card.legalLimit > card.deckCopies;
+  const canRemove = card.deckCopies > 0;
+
+  function handleClick() {
+    onPreview();
+
+    if (!disabled && canAdd) {
+      onAdd();
+    }
+  }
+
+  function handleContextMenu(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    onPreview();
+
+    if (!disabled && canRemove) {
+      onRemove();
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={onSelect}
+      draggable={!disabled && canAdd}
+      onDragStart={onDragStart}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      title="Linksklick: hinzufügen. Rechtsklick: entfernen. Ziehen: in eine Deckzone legen."
       className={classes(
-        "rounded-[24px] border p-3 text-left transition",
+        "rounded-[24px] border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
         selected
           ? "border-[rgba(207,91,66,0.34)] bg-[rgba(255,255,255,0.05)] shadow-[0_18px_34px_rgba(0,0,0,0.22)]"
           : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(207,91,66,0.18)] hover:bg-[rgba(255,255,255,0.04)]",
       )}
+      disabled={disabled && !canRemove}
     >
       <div className="relative aspect-[59/86] overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)]">
         {card.imageUrl ? (
@@ -230,10 +322,23 @@ function CollectionBrowserCard({
         <span className="absolute left-2 top-2 rounded-full bg-[rgba(8,10,14,0.8)] px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[#f1dfc8]">
           {card.availableCopies} frei
         </span>
+        <span
+          className={classes(
+            "absolute right-2 top-2 rounded-full border px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em]",
+            card.legalLimit <= 0
+              ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)] text-[#ffd5cd]"
+              : card.legalLimit < 3
+                ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)] text-[#ffe0af]"
+                : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)] text-[#c7f1f1]",
+          )}
+        >
+          {getLimitShortLabel(card.legalLimit)}
+        </span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <StatusPill tone="slate">{getKindLabel(card.kind)}</StatusPill>
+        {card.monsterType ? <StatusPill tone="slate">{card.monsterType}</StatusPill> : null}
         <StatusPill tone={getLimitTone(card.legalLimit)}>
           {getLimitLabel(card.legalLimit)}
         </StatusPill>
@@ -243,7 +348,7 @@ function CollectionBrowserCard({
         {card.name}
       </p>
       <p className="mt-2 text-xs text-[#bfae9a]">
-        Im Deck {card.deckCopies} · Gesamt {card.totalCopies}
+        Im Deck {card.deckCopies} · Erlaubt {card.legalLimit}
       </p>
     </button>
   );
@@ -254,18 +359,51 @@ function DeckZoneCompact({
   section,
   cards,
   selectedTarget,
+  isSubmitting,
   onSelect,
+  onDropCard,
+  onRemoveOne,
 }: {
   title: string;
   section: DeckSection;
   cards: DeckCard[];
   selectedTarget: PreviewTarget | null;
+  isSubmitting: boolean;
   onSelect: (target: PreviewTarget) => void;
+  onDropCard: (cardId: string, section: DeckSection) => void;
+  onRemoveOne: (card: DeckCard) => void;
 }) {
   const totalCards = cards.reduce((sum, card) => sum + card.quantity, 0);
 
+  function handleDragOver(event: DragEvent<HTMLElement>) {
+    if (isSubmitting) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDrop(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    const payload = decodeDragPayload(event.dataTransfer.getData("application/x-ygo-card"));
+
+    if (payload) {
+      onDropCard(payload.cardId, section);
+    }
+  }
+
   return (
-    <section className="paper-card-strong rounded-[26px] p-4">
+    <section
+      className="paper-card-strong rounded-[26px] p-4 transition hover:border-[rgba(207,91,66,0.22)]"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="ui-kicker">{title}</p>
@@ -295,6 +433,16 @@ function DeckZoneCompact({
                     section: card.section,
                   })
                 }
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  onSelect({
+                    source: "deck",
+                    cardId: card.cardId,
+                    section: card.section,
+                  });
+                  onRemoveOne(card);
+                }}
+                title="Rechtsklick entfernt eine Kopie."
                 className={classes(
                   "rounded-[18px] border p-2 text-left transition",
                   isSelected
@@ -321,6 +469,18 @@ function DeckZoneCompact({
                   <span className="absolute right-1.5 top-1.5 rounded-full bg-[rgba(8,10,14,0.82)] px-2 py-0.5 text-[0.62rem] font-semibold text-[#f2dfc8]">
                     ×{card.quantity}
                   </span>
+                  <span
+                    className={classes(
+                      "absolute left-1.5 top-1.5 rounded-full border px-2 py-0.5 text-[0.58rem] font-semibold text-[#f2dfc8]",
+                      card.allowedCopies <= 0
+                        ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)]"
+                        : card.allowedCopies < 3
+                          ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)]"
+                          : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)]",
+                    )}
+                  >
+                    {getLimitShortLabel(card.allowedCopies)}
+                  </span>
                 </div>
 
                 <p className="mt-2 line-clamp-2 text-[0.72rem] font-semibold leading-5 text-[#e8d6c1]">
@@ -328,6 +488,9 @@ function DeckZoneCompact({
                 </p>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  <StatusPill tone={getLimitTone(card.allowedCopies)}>
+                    {getLimitLabel(card.allowedCopies)}
+                  </StatusPill>
                   {card.issues.slice(0, 2).map((issue) => (
                     <StatusPill
                       key={`${card.cardId}-${card.section}-${issue}`}
@@ -405,6 +568,18 @@ export function DeckEditorConsole({
     [activeDeck?.cards],
   );
   const allDeckCards = useMemo(() => activeDeck?.cards ?? [], [activeDeck?.cards]);
+  const selectedBanlist = useMemo(
+    () => availableBanlists.find((banlist) => banlist.id === activeBanlistId) ?? null,
+    [activeBanlistId, availableBanlists],
+  );
+  const usesGenesisRules = useMemo(
+    () =>
+      Boolean(
+        selectedBanlist &&
+          /genesys|genesis/i.test(`${selectedBanlist.formatName} ${selectedBanlist.name}`),
+      ),
+    [selectedBanlist],
+  );
 
   const filteredCollectionCards = useMemo(
     () =>
@@ -533,6 +708,33 @@ export function DeckEditorConsole({
     });
   }
 
+  async function handleChangeActiveBanlist(nextBanlistId: string) {
+    const nextBanlist =
+      availableBanlists.find((banlist) => banlist.id === nextBanlistId) ?? null;
+
+    if (!activeDeck) {
+      setActiveBanlistId(nextBanlistId);
+      return;
+    }
+
+    setActiveBanlistId(nextBanlistId);
+
+    await runMutation(async () => {
+      const payload = await deckClient.update(activeDeck.id, {
+        name: activeDeckName,
+        banlistId: nextBanlistId || null,
+        snapshotDate: activeSnapshotDate || null,
+      });
+
+      setSuccess(
+        `Bannliste für "${payload.deck?.name ?? activeDeck.name}" wurde auf "${
+          nextBanlist?.name ?? "ausgewählte Liste"
+        }" aktualisiert.`,
+      );
+      router.refresh();
+    });
+  }
+
   async function handleDeleteDeck() {
     if (!activeDeck) {
       return;
@@ -577,6 +779,63 @@ export function DeckEditorConsole({
       });
       router.refresh();
     });
+  }
+
+  function findDeckCard(cardId: string, section: DeckSection) {
+    return allDeckCards.find(
+      (entry) => entry.cardId === cardId && entry.section === section,
+    );
+  }
+
+  async function handleAddCollectionCard(card: CollectionCard, section = getDefaultSectionForCard(card)) {
+    if (!activeDeck || isSubmitting || !canAddCollectionCard(card)) {
+      return;
+    }
+
+    const existing = findDeckCard(card.cardId, section);
+
+    await handleSetCardQuantity(
+      card.cardId,
+      section,
+      (existing?.quantity ?? getSectionCopies(card, section)) + 1,
+    );
+  }
+
+  async function handleAddCardToSection(cardId: string, section: DeckSection) {
+    const card = collectionCards.find((entry) => entry.cardId === cardId);
+
+    if (!card) {
+      return;
+    }
+
+    await handleAddCollectionCard(card, section);
+  }
+
+  async function handleRemoveOneDeckCard(card: DeckCard) {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (card.quantity <= 1) {
+      await handleRemoveCard(card.cardId, card.section);
+      return;
+    }
+
+    await handleSetCardQuantity(card.cardId, card.section, card.quantity - 1);
+  }
+
+  async function handleRemoveOneCollectionCard(card: CollectionCard) {
+    if (isSubmitting) {
+      return;
+    }
+
+    const existing =
+      findDeckCard(card.cardId, getDefaultSectionForCard(card)) ??
+      allDeckCards.find((entry) => entry.cardId === card.cardId);
+
+    if (existing) {
+      await handleRemoveOneDeckCard(existing);
+    }
   }
 
   function canAddCollectionCard(card: CollectionCard) {
@@ -652,7 +911,9 @@ export function DeckEditorConsole({
               label="Bannliste"
               availableBanlists={availableBanlists}
               selectedBanlistId={activeBanlistId}
-              onSelect={setActiveBanlistId}
+              onSelect={(banlistId) => {
+                void handleChangeActiveBanlist(banlistId);
+              }}
               disabled={isSubmitting}
             />
 
@@ -685,10 +946,17 @@ export function DeckEditorConsole({
                   {activeDeck.isLegal ? "Legal" : `${activeDeck.issues.length} Probleme`}
                 </StatusPill>
                 <StatusPill tone="gold">{activeDeck.banlistName}</StatusPill>
+                {usesGenesisRules ? (
+                  <StatusPill tone="slate">Genesis-Werte aktiv</StatusPill>
+                ) : null}
                 <StatusPill tone="slate">Main {activeDeck.mainCount}</StatusPill>
                 <StatusPill tone="slate">Extra {activeDeck.extraCount}</StatusPill>
                 <StatusPill tone="slate">Side {activeDeck.sideCount}</StatusPill>
               </div>
+              <p className="mt-3 text-sm leading-7 text-[#baa58a]">
+                Linksklick auf Karten fügt sie automatisch hinzu, Rechtsklick entfernt eine
+                Kopie. Ziehe Karten direkt auf Main, Extra oder Side.
+              </p>
             </div>
           </div>
         ) : (
@@ -797,16 +1065,30 @@ export function DeckEditorConsole({
                   <CollectionBrowserCard
                     key={card.cardId}
                     card={card}
+                    disabled={isSubmitting || !activeDeck}
                     selected={
                       resolvedPreview?.source === "collection" &&
                       resolvedPreview.card.cardId === card.cardId
                     }
-                    onSelect={() =>
+                    onPreview={() =>
                       setPreviewTarget({
                         source: "collection",
                         cardId: card.cardId,
                       })
                     }
+                    onAdd={() => {
+                      void handleAddCollectionCard(card);
+                    }}
+                    onRemove={() => {
+                      void handleRemoveOneCollectionCard(card);
+                    }}
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData(
+                        "application/x-ygo-card",
+                        encodeDragPayload({ source: "collection", cardId: card.cardId }),
+                      );
+                      event.dataTransfer.effectAllowed = "copy";
+                    }}
                   />
                 ))}
               </div>
@@ -846,12 +1128,38 @@ export function DeckEditorConsole({
                 </div>
               </div>
 
+              {activeDeck.issues.length ? (
+                <div className="rounded-[20px] border border-[rgba(204,97,78,0.24)] bg-[rgba(141,61,48,0.12)] p-4">
+                  <div className="flex items-center gap-2 text-[#f2c1b7]">
+                    <AssetIcon name="alert" className="h-4 w-4 text-current" />
+                    <p className="text-sm font-semibold">Aktuelle Legalitätsprobleme</p>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {activeDeck.issues.slice(0, 5).map((issue) => (
+                      <p
+                        key={`${issue.cardId}-${issue.type}-${issue.message}`}
+                        className="text-sm leading-6 text-[#f2c1b7]"
+                      >
+                        {getIssueLabel(issue.type)}: {issue.message}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <DeckZoneCompact
                 title="Main"
                 section="MAIN"
                 cards={mainCards}
                 selectedTarget={previewTarget}
+                isSubmitting={isSubmitting}
                 onSelect={setPreviewTarget}
+                onDropCard={(cardId, section) => {
+                  void handleAddCardToSection(cardId, section);
+                }}
+                onRemoveOne={(card) => {
+                  void handleRemoveOneDeckCard(card);
+                }}
               />
 
               <DeckZoneCompact
@@ -859,7 +1167,14 @@ export function DeckEditorConsole({
                 section="EXTRA"
                 cards={extraCards}
                 selectedTarget={previewTarget}
+                isSubmitting={isSubmitting}
                 onSelect={setPreviewTarget}
+                onDropCard={(cardId, section) => {
+                  void handleAddCardToSection(cardId, section);
+                }}
+                onRemoveOne={(card) => {
+                  void handleRemoveOneDeckCard(card);
+                }}
               />
 
               <DeckZoneCompact
@@ -867,7 +1182,14 @@ export function DeckEditorConsole({
                 section="SIDE"
                 cards={sideCards}
                 selectedTarget={previewTarget}
+                isSubmitting={isSubmitting}
                 onSelect={setPreviewTarget}
+                onDropCard={(cardId, section) => {
+                  void handleAddCardToSection(cardId, section);
+                }}
+                onRemoveOne={(card) => {
+                  void handleRemoveOneDeckCard(card);
+                }}
               />
             </div>
           ) : (
@@ -948,9 +1270,19 @@ export function DeckEditorConsole({
                       value={String(resolvedPreview.card.availableCopies)}
                     />
                     <InfoRow
+                      label={usesGenesisRules ? "Genesis-Wert" : "Erlaubte Kopien"}
+                      value={String(resolvedPreview.card.legalLimit)}
+                    />
+                    <InfoRow
                       label="Reserviert"
                       value={String(resolvedPreview.card.reservedCopies)}
                     />
+                    {resolvedPreview.card.monsterType ? (
+                      <InfoRow
+                        label="Monsterart"
+                        value={resolvedPreview.card.monsterType}
+                      />
+                    ) : null}
                     <InfoRow
                       label="Getauscht"
                       value={String(resolvedPreview.card.tradedCopies)}
@@ -1031,9 +1363,15 @@ export function DeckEditorConsole({
 
                   <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-1">
                     <InfoRow
-                      label="Erlaubte Kopien"
+                      label={usesGenesisRules ? "Genesis-Wert" : "Erlaubte Kopien"}
                       value={String(resolvedPreview.card.allowedCopies)}
                     />
+                    {resolvedPreview.card.monsterType ? (
+                      <InfoRow
+                        label="Monsterart"
+                        value={resolvedPreview.card.monsterType}
+                      />
+                    ) : null}
                     <InfoRow
                       label="Verfügbare Kopien"
                       value={String(resolvedPreview.card.availableCopies)}

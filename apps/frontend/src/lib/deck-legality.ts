@@ -13,6 +13,7 @@ type LoadedDeck = Awaited<ReturnType<typeof loadDecks>>[number];
 type OwnershipSummary = {
   cardName: string;
   kind: CardKind;
+  monsterType: string | null;
   imageUrl: string | null;
   currentOracleText: string | null;
   firstErrataDate: Date | null;
@@ -35,6 +36,7 @@ export type DeckCardResolution = {
   cardId: string;
   cardName: string;
   kind: CardKind;
+  monsterType: string | null;
   imageUrl: string | null;
   section: DeckSection;
   quantity: number;
@@ -98,6 +100,7 @@ export type DeckLegalitySnapshot = {
       cardId: string;
       name: string;
       kind: CardKind;
+      monsterType: string | null;
       imageUrl: string | null;
       oracleText: string | null;
       errataCutoff: string | null;
@@ -387,6 +390,7 @@ function evaluateDeck(
     const ownership = ownershipByCardId.get(deckCard.cardId) ?? {
       cardName: deckCard.card.name,
       kind: deckCard.card.kind,
+      monsterType: deckCard.card.monsterType,
       imageUrl: getCardAssetUrl(deckCard.card.externalCardId),
       firstErrataDate: getFirstErrataDate(deckCard.card.textVersions),
       totalCopies: 0,
@@ -437,6 +441,7 @@ function evaluateDeck(
       cardId: deckCard.cardId,
       cardName: deckCard.card.name,
       kind: deckCard.card.kind,
+      monsterType: deckCard.card.monsterType,
       imageUrl: ownership.imageUrl,
       section: deckCard.section,
       quantity: deckCard.quantity,
@@ -494,6 +499,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
           select: {
             name: true,
             kind: true,
+            monsterType: true,
             externalCardId: true,
             currentOracleText: true,
             textVersions: {
@@ -527,6 +533,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       ownershipByCardId.set(entry.cardId, {
         cardName: entry.card.name,
         kind: entry.card.kind,
+        monsterType: entry.card.monsterType,
         imageUrl: getCardAssetUrl(entry.card.externalCardId),
         currentOracleText: entry.card.currentOracleText,
         firstErrataDate,
@@ -638,6 +645,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
           cardId,
           name: ownership.cardName,
           kind: ownership.kind,
+          monsterType: ownership.monsterType,
           imageUrl: ownership.imageUrl,
           oracleText: ownership.currentOracleText,
           errataCutoff: ownership.firstErrataDate
