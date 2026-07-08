@@ -14,6 +14,10 @@ export function getAppMode(env: NodeJS.ProcessEnv = process.env): AppMode {
     return rawMode;
   }
 
+  if (env.VERCEL || env.NODE_ENV === "production") {
+    return "production";
+  }
+
   return "desktop-demo";
 }
 
@@ -23,6 +27,10 @@ export function isOnlineAppMode(mode: AppMode = getAppMode()) {
 
 export function getConfiguredApiBaseUrl(env: NodeJS.ProcessEnv = process.env) {
   const rawUrl = env.API_BASE_URL?.trim();
+
+  if (!rawUrl && (env.VERCEL || env.NODE_ENV === "production")) {
+    return "https://yugioh-duel-hub-api.onrender.com/";
+  }
 
   if (!rawUrl) {
     return null;
