@@ -1,114 +1,89 @@
-# Desktop-Demo-MVP
+# Online-kompatibler Release-MVP
 
-Stand: 2026-07-07
+Stand: 2026-07-08
 
 ## Ziel
 
-Der naechste sinnvolle Meilenstein ist ein stabiler lokaler Desktop-Demo-Loop. Er soll beweisen, dass Yu-Gi-Oh Duel Hub als Progression-, Sammlungs- und Deckbau-Hub funktioniert. Duelle laufen nicht in dieser App, sondern extern ueber EDOPro. Die App verwaltet die Voraussetzungen dafuer: Packs ziehen, Karten besitzen, Decks bauen, Decklegalitaet pruefen und `.ydk` exportieren.
+Der naechste Release ist ein online-kompatibler Freundeskreis-Hub. Browser und Desktop sollen dieselbe API, dieselbe Kampagne und dieselbe PostgreSQL-Datenbank nutzen. EDOPro bleibt die Duel-Engine; diese App organisiert Packs, Sammlung, Deckbau, Bannlisten, `.ydk`-Export, Trades, Turniere, externe Ergebnisbestaetigung und Belohnungen.
 
 ## Muss koennen
 
-- Demo-Account anmelden oder anlegen.
-- Einen aktiven Progression-Run laden.
-- Eine Pack-Auswahl anzeigen.
-- Ein Pack oeffnen.
-- Die gezogenen Karten als Sammlungseintraege speichern.
-- Die Sammlung anzeigen.
-- Ein Deck aus Sammlungs-Karten erstellen oder bearbeiten.
-- Deck-Legalitaet gegen verschiedene Bannlisten anzeigen.
-- Einen EDOPro-kompatiblen `.ydk`-Export erzeugen.
+- Registrieren und Login gegen den API-Service.
+- Kampagne erstellen, beitreten oder aktive Kampagne auswaehlen.
+- Kampagneneinstellungen verwalten: Startcredits, Packpreis, Displaygroesse, Gratispacks pro Set, Turnierbelohnungen.
+- Packs online oeffnen und Sammlungseintraege kampagnengebunden speichern.
+- Beliebig viele Decks und Binder pro Kampagne nutzen.
+- Decks gegen Banlists und Genesys-Werte pruefen.
+- Decks als `.ydk` fuer EDOPro exportieren.
+- Trades zwischen zwei Accounts erstellen, reservieren, akzeptieren und von beiden Seiten bestaetigen.
+- Turniere erstellen, Teilnehmer verwalten, Pairings erzeugen, externe Scores melden und vom Gegner bestaetigen lassen.
+- Turnierabschluss vergibt Credits/Rewards und kann naechste Sets/Packs freischalten.
 
-## Bewusst nicht im MVP
+## Bewusst nicht im Release-MVP
 
-- Online-Multiplayer als primaerer Pfad.
-- PostgreSQL/API-Service als MVP-Blocker.
 - In-App-Duelle oder eine Duel-Engine.
-- Friends, Trades und Turniere als fertig polierte Online-Flows.
-- Vollstaendige Spezialprodukt- und Promo-Abdeckung.
-- Vollstaendige historische Errata-Timeline.
-- Finale Asset-Abdeckung fuer alle Booster.
-
-## Produktumfang nach dem Kern-MVP
-
-- Karten koennen zwischen Spielern getauscht werden.
-- Kampagnen organisieren mehrere Spieler, ihre Progression und die freigeschalteten Sets.
-- Turniere gehoeren zur Kampagne und werden in der App organisiert, aber die Matches selbst werden extern gespielt.
-- Turnierbelohnungen vergeben Waehrung.
-- Mit der Waehrung koennen aeltere Packs gekauft werden, um Sammlungen zu vervollstaendigen.
-- Neue Sets und Deckbau-Optionen werden nach abgeschlossenen Turnieren freigeschaltet.
+- Oeffentlicher Massendienst mit Produktions-SLA.
+- Vollstaendige Spezialprodukt-/Promo-Abdeckung fuer alle historischen Produkte.
+- Vollstaendige historische Errata-Timeline ohne Known Issues.
+- Offline-Desktop als Quelle der Wahrheit fuer echte Online-Kampagnen.
 
 ## Primaerer Arbeitsmodus
 
-- `APP_MODE=desktop-demo`
-- lokale Next.js/Electron-Demo mit SQLite
-- API-Service nur als separates Risiko nach dem Desktop-MVP
+- Online: Supabase Free Postgres + Render Free API + Vercel Frontend.
+- `APP_MODE=production` oder `APP_MODE=online-dev` nutzt `API_BASE_URL`.
+- Next-Kompatibilitaetsrouten proxien im Online-Modus konsequent auf `/api/v1/*`.
+- SQLite bleibt `desktop-demo` fuer lokale Vorschau und Regression.
 
 ## Reproduzierbare Befehle
 
 ```bash
 npm run db:generate
-npm run db:seed:demo
-npm run test:e2e:smoke
 npm run typecheck
-npm run test
 npm run lint
+npm run test
+npm run build
 ```
 
-`npm run test:e2e:smoke` ist die fuehrende technische MVP-Abnahme, weil sie den lokalen Desktop/Web-Kernflow im Browser prueft und einen isolierten Smoke-Datenbankstand nutzt.
+Online lokal:
+
+```bash
+npm run online:infra
+npm run db:migrate
+npm run db:seed:base
+npm run test:e2e:online
+```
+
+Desktop-Demo-Regression:
+
+```bash
+npm run db:seed:demo
+npm run test:e2e:smoke
+```
 
 ## Akzeptanzkriterien
 
-- `npm run db:generate` laeuft erfolgreich.
-- `npm run db:seed:demo` laeuft erfolgreich.
-- `npm run test:e2e:smoke` laeuft erfolgreich.
-- `npm run typecheck`, `npm run test` und `npm run lint` laufen erfolgreich.
-- Der Smoke-Flow weist nach, dass Pack-Opening Sammlungseintraege erzeugt.
-- Ein Deck kann per App-API erstellt und mit einer Sammlungs-Karte befuellt werden.
-- Ein `.ydk`-Export wird erzeugt.
-- P0/P1-Fehler im Desktop-MVP sind entweder behoben oder explizit als Blocker dokumentiert.
+- Kein Online-Flow faellt bei `APP_MODE=online-dev` oder `production` still auf lokale SQLite-Daten zurueck.
+- Zwei Accounts koennen dieselbe Kampagne nutzen.
+- Pack-Opening erzeugt Collection-Eintraege in der aktiven Kampagne.
+- Trades reservieren Karten, verhindern freie Weiternutzung und uebertragen Besitz erst nach beiden Bestaetigungen.
+- Turnierergebnisse werden von einem Spieler gemeldet und vom Gegner bestaetigt.
+- Turnierabschluss vergibt Credits/Rewards und kann Kampagnenfortschritt freigeben.
+- Deckbau, Legalitaetspruefung und `.ydk`-Export funktionieren gegen dieselbe Online-Kampagne.
 
-## Git-Arbeitsstand-Inventar
+## Aktuelle Online-Abnahme
 
-Der Worktree war vor dieser MVP-Datei bereits umfangreich geaendert. Diese Aenderungen werden nicht verworfen.
+Der Online-Smoke prueft jetzt den Release-Kern gegen Next -> Fastify -> API-Postgres:
 
-| Gruppe | Dateien / Muster | Bewertung |
-| --- | --- | --- |
-| API-Service | `apps/api/prisma/schema.prisma`, `apps/api/src/server.ts`, `apps/api/src/routes/*`, `apps/api/src/lib/runtime-config*` | Bereits aktive Online/API-Arbeit; nicht Desktop-MVP-blockierend, aber testen. |
-| Frontend API-Routen | `apps/frontend/src/app/api/**` | Enthalten Desktop-Kompatibilitaetsrouten und neue `/api/v1/runs/*`-Routen; fuer Smoke relevant. |
-| Frontend Seiten | `apps/frontend/src/app/{decks,duels,settings,tournaments,trade}/**` | UI/SSR-Anpassungen; `/duels` darf hoechstens EDOPro-Koordination/Export-Kontext sein, keine In-App-Duelle. |
-| Frontend Domain/Services | `apps/frontend/src/lib/*` | Kernlogik fuer Collection, Decks, Packs, Progression, Trades, Turniere; MVP-relevant fuer Packs/Collection/Decks. |
-| Tests | `*.test.ts`, `*.integration.test.ts` in `apps` und `packages` | Positiv: vorhandene Regression-Absicherung. |
-| Scripts | `scripts/e2e-smoke.ts`, `scripts/e2e-online-smoke.ts`, Import-/Repair-Scripts | `e2e-smoke` ist MVP-Abnahme; Online-Smoke bleibt nachrangig. |
-| Contracts | `packages/contracts/src/index.ts` | API-/DTO-Vertrag; bei P0/P1-Fixes mitpruefen. |
-| Dependencies | `package.json`, `package-lock.json` | Scripts und Dependencies geaendert; nach Abschluss bewusst committen oder separat pruefen. |
-| Generierte/lokale Artefakte | SQLite-DBs, `.next`, Logs, `output`, `tmp` | Nicht als MVP-Quellcode behandeln; nicht manuell kuratieren, ausser fuer QA-Belege. |
+- zwei echte Browser-Sessions
+- Registrierung und Sessions
+- gemeinsame aktive Kampagne
+- Pack-Opening fuer beide Accounts
+- Sammlungseintraege in der API-Datenbank
+- Trade erstellen, annehmen, beidseitig bestaetigen und Besitzerwechsel pruefen
+- Turnier erstellen, Teilnehmer hinzufuegen, Pairing erzeugen
+- Score melden, Gegnerbestaetigung speichern, Turnier abschliessen
+- Reward-Grant und Credit-Ledger fuer Turnierbelohnung pruefen
 
-## Risiko-Liste
+## Hosting-Grenzen
 
-| Risiko | Prioritaet | Umgang |
-| --- | --- | --- |
-| Desktop-Kernflow bricht | P0 | Sofort fixen. |
-| Kernflow funktioniert nur durch direkte API-Aufrufe, aber UI-Seite ist sichtbar instabil | P1 | Fixen, wenn Login/Packs/Collection/Decks betroffen sind. |
-| Online-Register/API-Smoke liefert 500 | P2 fuer Desktop-MVP | Dokumentieren und erst nach Desktop-MVP isolieren. |
-| Pack-Assets fuer spaetere Booster unfertig | P2 | MVP nur auf fruehe Kern-Booster begrenzen. |
-| Vollstaendige Errata-Historie fehlt | P2 | MVP-Regeln nicht von kompletter Errata-Timeline abhaengig machen. |
-| Worktree ist schwer zu ueberblicken | P1 | Aenderungen gruppiert committen oder vor weiterer Feature-Arbeit bereinigen. |
-
-## Naechste Arbeitsregel
-
-Bis dieser MVP gruen ist, werden nur P0/P1-Probleme am Desktop-Kernflow behoben. Neue Features, Online-Mehrnutzer-Ausbau und visuelle Politur ausserhalb der Kernseiten werden zurueckgestellt.
-
-## Letzte Abnahme
-
-2026-07-07:
-
-- `npm run db:generate`: bestanden.
-- `npm run db:seed:demo`: bestanden.
-- `npm run test:e2e:smoke`: bestanden.
-- `npm run test:e2e:online` mit `E2E_API_PORT=3235` und `E2E_ONLINE_PORT=3212`: bestanden.
-- `npm run build`: bestanden.
-- `npm run data:audit:promos`: bestanden, 635 Sets und 169 PromoSources geprueft, 0 Fehler, 0 Warnungen.
-- Gefundene P0/P1-Blocker: keine.
-- Die frueheren Next.js-LCP-Hinweise fuer initial sichtbare Pack- und Binderbilder wurden durch eager loading der Above-the-fold-Bilder adressiert.
-- Hinweis: Der fruehere Online-Register-500 auf Port `3234` wurde auf einem frischen Online-Smoke-Port nicht reproduziert. Port `3234` war danach nicht mehr erreichbar; der alte Befund wird als Altprozess-/Portzustandsrisiko behandelt, nicht als aktueller Register-Codeblocker.
-- Hinweis: Desktop- und Online-Smoke muessen sequenziell laufen. Parallel blockiert Next.js den zweiten Dev-Server fuer dasselbe App-Verzeichnis.
+Der erste Release ist fuer Freundeskreise. Render Free kann schlafen, Supabase Free und Vercel Free haben Speicher-, Laufzeit- und Bandbreitenlimits. Der erste Request nach Sleep kann langsam sein; das ist fuer den Hobby-Release akzeptiert.

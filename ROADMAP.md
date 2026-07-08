@@ -1,67 +1,43 @@
-# Roadmap nach Desktop-MVP
+# Roadmap zum Online-Release
 
-Stand: 2026-07-07
+Stand: 2026-07-08
 
-## Abschluss der Arbeitsphasen
+## Release-Reihenfolge
 
-| Phase | Status | Ergebnis |
+| Phase | Ziel | Status |
 | --- | --- | --- |
-| 1. Ueberblick herstellen | Fertig | Projektanalyse, belegte Bereiche, Risiken und MVP-Grenze geklaert. |
-| 2. Desktop-MVP stabilisieren | Fertig | `db:generate`, Demo-Seed, Desktop-Smoke, Typecheck, Tests und Lint gruen. |
-| 3. Worktree sortieren | Fertig | `WORKTREE_INVENTORY.md` mit Commit-Gruppen und Risiken erstellt. |
-| 4. Kernflow produktreif machen | Fertig fuer aktuellen Stand | Production-Build und Desktop-Smoke gruen; LCP-Hinweise fuer initial sichtbare Pack-/Binderbilder adressiert. |
-| 5. Daten & Assets bereinigen | Fertig fuer aktuellen Stand | Promo-Daten-Audit gruen; Pack-Asset-Luecken sind bekannt und nicht MVP-blockierend. |
-| 6. Online-Dev stabilisieren | Fertig fuer aktuellen Stand | Online-Smoke auf freien Ports gruen; alter Register-500 nicht reproduziert. |
-| 7. Erweiterungen priorisieren | Fertig | Diese Roadmap legt die naechste Reihenfolge fest. |
+| 1. Online-Basis | Env-Profile, Render/Vercel/Supabase-Doku, API-Health | In Arbeit |
+| 2. Datenparitaet | Auth, Kampagnen, Packs, Collection, Binder, Decks, Trades, Turniere, Rewards ueber API | In Arbeit |
+| 3. Kampagnenflow | Login -> Kampagnenauswahl -> aktive Kampagne -> Dashboard-Aufgaben | Groesstenteils vorhanden, weiter haerten |
+| 4. Trade-MVP | Online erstellen, reservieren, akzeptieren, beidseitig bestaetigen | Implementiert, Smoke erweitert |
+| 5. Turnier-MVP | Externe Scores melden/bestaetigen, Standings, Abschluss, Rewards | Implementiert, Smoke erweitert |
+| 6. Deck/Export | Bannlisten/Genesys live pruefen, `.ydk` exportieren | Vorhanden, Online-Smoke noch erweiterbar |
+| 7. Deployment-Abnahme | Supabase/Render/Vercel setzen, Smoke gegen echte URLs | Wartet auf echte Projekt-Credentials |
 
-## Naechste Prioritaeten
+## P0 vor externem Deployment
 
-### P0: Nicht starten, bevor der Worktree sauber ist
+- `npm run db:generate`, `typecheck`, `lint`, `test`, `build` muessen gruen sein.
+- `npm run test:e2e:online` muss lokal gegen Postgres gruen sein.
+- Render `/health` muss mit `APP_MODE=production` starten.
+- Vercel muss `API_BASE_URL` verwenden und darf ohne lokale DB keine Kampagnendaten anzeigen.
+- `CORS_ORIGIN` muss exakt auf die Vercel-URL zeigen.
 
-- Die Gruppen aus `WORKTREE_INVENTORY.md` einzeln reviewen und committen.
-- Zuerst Dokumentation und Smoke-/Safety-Infrastruktur sichern.
-- Danach API-/Run-/Service-Aenderungen in getrennten Commits reviewen.
+## P1 fuer den Freundeskreis-Release
 
-### P1: Kernprodukt abrunden
+- Kampagnenauswahl nach Login manuell durchtesten.
+- Dashboard pro Kampagne auf offene Aktionen pruefen: Gratispacks, freigeschaltete Packs, Rewards, Trades, Match-Reports.
+- Deckeditor mit echter Online-Kampagne durchspielen: Karte hinzufuegen/entfernen, Banlist wechseln, Genesys-Werte sehen, `.ydk` exportieren.
+- Trade-UI manuell mit zwei Accounts testen: wer ist dran, was ist reserviert, was wird uebertragen.
+- Turnier-UI manuell testen: Einladung, Pairing, Score melden, Gegner bestaetigt, Abschluss, Credits.
 
-- Desktop-Kernseiten visuell gegen Referenzen pruefen: `/packs`, `/collection`, `/decks`, `/login`.
-- Collection/Binder-Flow manuell durchgehen: Binder waehlen, Slot setzen, speichern, erneut laden.
-- Deck-Flow manuell durchgehen: Karte hinzufuegen, Bannliste wechseln/verstehen, `.ydk` fuer EDOPro herunterladen.
-- Fehlermeldungen fuer Pack-Opening, Deck-Export und Login auf Nutzerverstaendlichkeit pruefen.
+## P2 nach erstem Release
 
-### P2: Daten und Assets verbessern
+- Deployment-Smoke gegen echte Vercel/Render-URLs automatisieren.
+- Pack-/Promo-Daten weiter vervollstaendigen.
+- Nicht matchbare offizielle Genesys-Karten als Known Issue pflegen.
+- E-Mail/Passwort-Reset oder bessere Account-Wiederherstellung ergaenzen.
+- Organizer-Rechte und Kampagnenbeitritt UX-seitig verbessern.
 
-- Fruehe Core-Booster priorisieren: LON, LOD, DCR, AST, SOD normalisieren.
-- Niedrigqualitative Booster-Quellen wie PGD, MFC, RDS, FET, TLM als Generierungs-Backlog behalten.
-- Errata-Timeline bewusst klein starten: nur Karten ergaenzen, die fuer den MVP-Test relevant sind.
-- `audit-pack-assets` nur laufen lassen, wenn Report-/Manifest-Aenderungen bewusst gewollt sind.
+## Nicht-Ziel
 
-### P3: Online-Dev ausbauen
-
-- Online-Smoke standardisieren, damit Portkonflikte wie `3234` automatisch vermieden oder klar gemeldet werden.
-- Desktop- und Online-Smoke nicht parallel starten, weil Next.js nur einen Dev-Server pro App-Verzeichnis erlaubt.
-- Den nachlaufenden Rewards-Request mit 401 nach Online-Smoke beobachten; aktuell kein Blocker.
-- API- und Frontend-Proxies fuer Collection, Packs, Decks und Runs weiter angleichen.
-
-### P4: Kampagnen, Trades und Turniere
-
-- Trades produktreif machen.
-- Kampagnen als Progression-Rahmen ausbauen: aktive Spieler, erlaubte Sets, Turnierhistorie, Freischaltungen.
-- Turniere UI-seitig ausbauen: Anmeldung, Teilnehmer, Pairings, Ergebnisse, Abschluss.
-- Turnierbelohnungen als Waehrung und optional als Pack-/Promo-Belohnungen produktreif machen.
-- Pack-Shop fuer alte Sets bauen, damit Spieler mit Turnierwaehrung ihre Sammlung vervollstaendigen koennen.
-- EDOPro bleibt der Duel-Client; die App exportiert Decks und kann hoechstens externe Match-Ergebnisse dokumentieren.
-- Profile/Friends/Social erst nach stabilem Kernflow priorisieren.
-- 3D-/Animationspolitur nur dort fortsetzen, wo sie Kernseiten nicht verlangsamt.
-
-## Definition von "fertig" fuer diesen Abschnitt
-
-Dieser Abschnitt ist fertig, wenn:
-
-- alle sieben Arbeitsphasen dokumentiert sind,
-- Desktop- und Online-Smoke gruen sind,
-- Promo-Daten fehlerfrei auditiert sind,
-- Pack-Asset-Restarbeiten priorisiert sind,
-- der Worktree eine klare Commit-Reihenfolge hat.
-
-Dieser Zustand ist erreicht.
+Keine In-App-Duelle. EDOPro bleibt extern; Duel Hub speichert nur Organisation, Deckexporte, Match-Reports, Bestaetigungen und Rewards.

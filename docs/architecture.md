@@ -16,23 +16,20 @@ Der Duel-Simulator bleibt später extern:
 
 ## Client-Strategie
 
-Der App-Core bleibt in Next.js:
+Der Online-Release trennt den App-Core in zwei Schichten:
 
-- UI
-- API-Routen
-- Datenbankzugriff
-- Regellogik
+- Next.js UI und Kompatibilitaetsrouten
+- Fastify API-Service unter `/api/v1/*`
+- PostgreSQL als gemeinsame Kampagnen-Datenbank
+- gemeinsame Contracts und Domain-Regeln
 
-Wenn eine Desktop-App gewünscht ist, kommt nur eine dünne Shell dazu:
+Wenn eine Desktop-App gewünscht ist, bleibt sie eine dünne Shell:
 
 - Electron als Desktop-Container
+- im echten Online-Betrieb gegen dieselbe `API_BASE_URL`
+- in `desktop-demo` mit lokaler SQLite-Vorschau
 
-So vermeiden wir, dass die eigentliche Fachlogik später doppelt in:
-
-- Web
-- Desktop
-
-gepflegt werden muss.
+So vermeiden wir, dass Web und Desktop verschiedene Quellen der Wahrheit bekommen.
 
 ## Warum Electron und nicht Tauri als erster Weg
 
@@ -191,8 +188,10 @@ Weil du damit sofort entwickeln und validieren kannst:
 - keine externe DB
 - schneller Seed
 
-Wenn die App später online oder mit mehreren Spielern gleichzeitig laufen soll:
+Wenn die App online oder mit mehreren Spielern gleichzeitig laufen soll:
 
-- Prisma-Datasource auf PostgreSQL umstellen
+- `apps/api/prisma/schema.prisma` auf PostgreSQL/Supabase nutzen
+- Frontend im `online-dev`/`production`-Modus nur ueber `API_BASE_URL` betreiben
+- SQLite nur als `desktop-demo` behandeln
 
 Das Domänenmodell selbst bleibt dabei weitgehend stabil.

@@ -4,8 +4,8 @@ Yu-Gi-Oh Duel Hub ist ein Progression-, Sammlungs- und Deckbau-Hub fuer Yu-Gi-Oh
 
 Yu-Gi-Oh Duel Hub entwickelt sich jetzt in zwei klaren Modi:
 
+- `production` / `online-dev`: Online-Release-Pfad mit Browser/Desktop gegen denselben API-Service und dieselbe PostgreSQL-Kampagne
 - `desktop-demo`: lokale Electron-Vorschau mit Demo-Daten für Binder, Decks, Trades, Kampagnen und Turniere
-- `online-dev`: frühe Mehrnutzer-Topologie mit getrenntem Frontend, API-Service und PostgreSQL
 
 ## Architektur
 
@@ -41,13 +41,15 @@ npm run desktop:dist
 
 Die Desktop-Builds bundlen nur noch den expliziten Demo-Seed und nicht die aktive Entwicklungsdatenbank.
 
-## Online-Dev
+## Online-Release
 
 ```bash
 npm run online:dev
 ```
 
-`online:dev` startet PostgreSQL über Docker Compose, führt Prisma Generate/Migration/Base-Seed aus und startet danach API plus Frontend parallel. Dafür muss in `.env` mindestens `APP_MODE=online-dev`, `API_BASE_URL`, `API_DATABASE_URL`, `COOKIE_SECRET` und `CORS_ORIGIN` gesetzt sein.
+`online:dev` startet PostgreSQL über Docker Compose, führt Prisma Generate/Migration/Base-Seed aus und startet danach API plus Frontend parallel. Dafür muss in `.env` mindestens `APP_MODE=online-dev`, `API_BASE_URL`, `API_DATABASE_URL`, `COOKIE_SECRET` und `CORS_ORIGIN` gesetzt sein. `npm run db:migrate` ist bewusst nicht-interaktiv und nutzt `prisma migrate deploy`; neue lokale Migrationen werden mit `npm run db:migrate:dev` erzeugt.
+
+Der Ziel-Stack für den ersten Freundeskreis-Release ist Supabase Free Postgres, Render Free API und Vercel Frontend. Die passenden Vorlagen liegen in `.env.online-api.example` und `.env.online-frontend.example`; für Prisma/Supabase wird die Supavisor Session-pooler-URL auf Port `5432` genutzt. Details stehen in [docs/online-release.md](/C:/Users/Emil/Documents/Yu-Gi-Oh/docs/online-release.md).
 
 Der neue API-Standard liegt unter `/api/v1/*` im Service und wird schrittweise über die bestehenden Next-Kompatibilitätsrouten gespiegelt. Aktuell sind unter anderem `auth`, `dashboard`, `collection`, `decks`, `duels`, `friends`, `packs`, `profiles`, `rules`, `tournaments` und `trades` im Service verdrahtet. `duels` ist dabei kein In-App-Spielclient, sondern hoechstens Koordination/Ergebnis- oder EDOPro-Kontext. Wenn die API im Online-Modus nicht erreichbar ist, antworten die Proxies mit `service_unavailable` statt auf lokale Datenbanklogik zurückzufallen.
 
@@ -81,6 +83,7 @@ Feinsteuerung für historische Korrekturen bleibt in:
 - `npm run typecheck` prüft Frontend, API-Service und gemeinsame Packages
 - `npm run lint` prüft Frontend, API, Packages und Build-Skripte
 - `npm run test` führt die neuen Vitest-Checks für Domain- und API-Bausteine aus
+- `npm run test:e2e:online` prüft den Online-Kernflow mit zwei Accounts, gemeinsamer Kampagne, Pack-Opening, Trade, Turnier-Score-Bestaetigung und Reward
 - `npm run db:studio` öffnet Prisma Studio für das neue API-Schema
 
 Mehr Architektur-Details stehen in [docs/architecture.md](/C:/Users/Emil/Documents/Yu-Gi-Oh/docs/architecture.md).

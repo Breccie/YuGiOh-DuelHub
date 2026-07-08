@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: yugioh-duel-hub-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run db:generate
+    startCommand: node ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts
+    healthCheckPath: /health
+    envVars:
+      - key: APP_MODE
+        value: production
+      - key: NODE_ENV
+        value: production
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 10000
+      - key: API_DATABASE_URL
+        sync: false
+      - key: COOKIE_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
