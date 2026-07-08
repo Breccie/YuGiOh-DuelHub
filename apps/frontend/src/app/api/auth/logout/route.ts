@@ -15,9 +15,7 @@ export async function POST(request: Request) {
     if (shouldProxyToApiService()) {
       const serviceResponse = await fetchApiRoute(request, "/api/v1/auth/logout");
 
-      if (!serviceResponse.ok) {
-        return toProxiedNextResponse(serviceResponse);
-      }
+      return toProxiedNextResponse(serviceResponse);
     }
 
     await destroyCurrentSession(getPrisma());
