@@ -335,7 +335,9 @@ function CollectionBrowserCard({
         <span
           className={classes(
             "absolute right-2 top-2 rounded-full border px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em]",
-            usesPointLimit
+            usesPointLimit && card.legalLimit <= 0
+              ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)] text-[#ffd5cd]"
+              : usesPointLimit
               ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)] text-[#ffe0af]"
               : card.legalLimit <= 0
               ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)] text-[#ffd5cd]"
@@ -344,14 +346,20 @@ function CollectionBrowserCard({
                 : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)] text-[#c7f1f1]",
           )}
         >
-          {usesPointLimit ? formatPointValue(card.pointValue) : getLimitShortLabel(card.legalLimit)}
+          {usesPointLimit && card.legalLimit <= 0
+            ? "0"
+            : usesPointLimit
+              ? formatPointValue(card.pointValue)
+              : getLimitShortLabel(card.legalLimit)}
         </span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <StatusPill tone="slate">{getKindLabel(card.kind)}</StatusPill>
         {card.monsterType ? <StatusPill tone="slate">{card.monsterType}</StatusPill> : null}
-        {usesPointLimit ? (
+        {usesPointLimit && card.legalLimit <= 0 ? (
+          <StatusPill tone="ember">Nicht erlaubt</StatusPill>
+        ) : usesPointLimit ? (
           <StatusPill tone="gold">{formatPointValue(card.pointValue)}</StatusPill>
         ) : (
           <StatusPill tone={getLimitTone(card.legalLimit)}>
@@ -365,7 +373,11 @@ function CollectionBrowserCard({
       </p>
       <p className="mt-2 text-xs text-[#bfae9a]">
         Im Deck {card.deckCopies} ·{" "}
-        {usesPointLimit ? `${card.pointValue} Punkte` : `Erlaubt ${card.legalLimit}`}
+        {usesPointLimit && card.legalLimit <= 0
+          ? "Nicht erlaubt"
+          : usesPointLimit
+            ? `${card.pointValue} Punkte`
+            : `Erlaubt ${card.legalLimit}`}
       </p>
     </button>
   );
@@ -491,7 +503,9 @@ function DeckZoneCompact({
                   <span
                     className={classes(
                       "absolute left-1.5 top-1.5 rounded-full border px-2 py-0.5 text-[0.58rem] font-semibold text-[#f2dfc8]",
-                      usesPointLimit
+                      usesPointLimit && card.allowedCopies <= 0
+                        ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)]"
+                        : usesPointLimit
                         ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)]"
                         : card.allowedCopies <= 0
                         ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)]"
@@ -500,7 +514,11 @@ function DeckZoneCompact({
                           : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)]",
                     )}
                   >
-                    {usesPointLimit ? formatPointValue(card.pointValue) : getLimitShortLabel(card.allowedCopies)}
+                    {usesPointLimit && card.allowedCopies <= 0
+                      ? "0"
+                      : usesPointLimit
+                        ? formatPointValue(card.pointValue)
+                        : getLimitShortLabel(card.allowedCopies)}
                   </span>
                 </div>
 
@@ -509,7 +527,9 @@ function DeckZoneCompact({
                 </p>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {usesPointLimit ? (
+                  {usesPointLimit && card.allowedCopies <= 0 ? (
+                    <StatusPill tone="ember">Nicht erlaubt</StatusPill>
+                  ) : usesPointLimit ? (
                     <StatusPill tone="gold">{formatPointValue(card.pointValue)}</StatusPill>
                   ) : (
                     <StatusPill tone={getLimitTone(card.allowedCopies)}>
@@ -1283,7 +1303,9 @@ export function DeckEditorConsole({
                     <StatusPill tone="slate">
                       {getKindLabel(resolvedPreview.card.kind)}
                     </StatusPill>
-                    {usesGenesisRules ? (
+                    {usesGenesisRules && resolvedPreview.card.legalLimit <= 0 ? (
+                      <StatusPill tone="ember">Nicht erlaubt</StatusPill>
+                    ) : usesGenesisRules ? (
                       <StatusPill tone="gold">
                         {formatPointValue(resolvedPreview.card.pointValue)}
                       </StatusPill>
@@ -1315,9 +1337,11 @@ export function DeckEditorConsole({
                       value={String(resolvedPreview.card.availableCopies)}
                     />
                     <InfoRow
-                      label={usesGenesisRules ? "Genesis-Punkte" : "Erlaubte Kopien"}
+                      label={usesGenesisRules ? "Genesis-Status" : "Erlaubte Kopien"}
                       value={
-                        usesGenesisRules
+                        usesGenesisRules && resolvedPreview.card.legalLimit <= 0
+                          ? "Nicht erlaubt"
+                          : usesGenesisRules
                           ? formatPointValue(resolvedPreview.card.pointValue)
                           : String(resolvedPreview.card.legalLimit)
                       }
@@ -1395,7 +1419,9 @@ export function DeckEditorConsole({
                     <StatusPill tone={getSectionTone(resolvedPreview.card.section)}>
                       {getSectionLabel(resolvedPreview.card.section)}
                     </StatusPill>
-                    {usesGenesisRules ? (
+                    {usesGenesisRules && resolvedPreview.card.allowedCopies <= 0 ? (
+                      <StatusPill tone="ember">Nicht erlaubt</StatusPill>
+                    ) : usesGenesisRules ? (
                       <StatusPill tone="gold">
                         {formatPointValue(resolvedPreview.card.pointValue)}
                       </StatusPill>
@@ -1418,9 +1444,11 @@ export function DeckEditorConsole({
 
                   <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-1">
                     <InfoRow
-                      label={usesGenesisRules ? "Genesis-Punkte" : "Erlaubte Kopien"}
+                      label={usesGenesisRules ? "Genesis-Status" : "Erlaubte Kopien"}
                       value={
-                        usesGenesisRules
+                        usesGenesisRules && resolvedPreview.card.allowedCopies <= 0
+                          ? "Nicht erlaubt"
+                          : usesGenesisRules
                           ? formatPointValue(resolvedPreview.card.pointValue)
                           : String(resolvedPreview.card.allowedCopies)
                       }

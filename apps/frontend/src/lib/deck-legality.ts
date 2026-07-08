@@ -16,6 +16,7 @@ type OwnershipSummary = {
   monsterType: string | null;
   imageUrl: string | null;
   currentOracleText: string | null;
+  currentPendulumText: string | null;
   firstErrataDate: Date | null;
   totalCopies: number;
   availableCopies: number;
@@ -138,6 +139,16 @@ function clampSnippet(text: string | null) {
   }
 
   return text.length > 140 ? `${text.slice(0, 137)}...` : text;
+}
+
+function isForbiddenInPointFormat(card: {
+  monsterType: string | null;
+  currentPendulumText?: string | null;
+}) {
+  return (
+    Boolean(card.currentPendulumText) ||
+    (card.monsterType !== null && /\bLink\b/i.test(card.monsterType))
+  );
 }
 
 async function loadDecks(prisma: PrismaClient, userId: string, runId: string) {
@@ -405,6 +416,8 @@ function evaluateDeck(
       kind: deckCard.card.kind,
       monsterType: deckCard.card.monsterType,
       imageUrl: getCardAssetUrl(deckCard.card.externalCardId),
+      currentOracleText: deckCard.card.currentOracleText,
+      currentPendulumText: deckCard.card.currentPendulumText,
       firstErrataDate: getFirstErrataDate(deckCard.card.textVersions),
       totalCopies: 0,
       availableCopies: 0,
@@ -418,14 +431,26 @@ function evaluateDeck(
     const banlistEntry = effectiveBanlist?.entries.find(
       (entry) => entry.cardId === deckCard.cardId,
     );
-    const allowedCopies = errataBan ? 0 : banlistEntry?.allowedCopies ?? 3;
+    const pointFormatBan =
+      pointLimit !== null && isForbiddenInPointFormat(deckCard.card);
+    const allowedCopies =
+      errataBan || pointFormatBan ? 0 : banlistEntry?.allowedCopies ?? 3;
     const pointValue = banlistEntry?.pointValue ?? 0;
     const plannedCopies = plannedCopiesByCardId.get(deckCard.cardId) ?? deckCard.quantity;
     const cardIssues: DeckIssueType[] = [];
 
     pointTotal += pointValue * deckCard.quantity;
 
-    if (errataBan) {
+    if (pointFormatBan) {
+      cardIssues.push("BANLIST");
+      issues.push({
+        cardId: deckCard.cardId,
+        cardName: deckCard.card.name,
+        type: "BANLIST",
+        message:
+          "Link- und Pendulum-Monster sind in Genesys nicht erlaubt.",
+      });
+    } else if (errataBan) {
       cardIssues.push("ERRATA");
       issues.push({
         cardId: deckCard.cardId,
@@ -531,6 +556,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
             monsterType: true,
             externalCardId: true,
             currentOracleText: true,
+            currentPendulumText: true,
             textVersions: {
               select: {
                 effectiveFrom: true,
@@ -565,6 +591,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
         monsterType: entry.card.monsterType,
         imageUrl: getCardAssetUrl(entry.card.externalCardId),
         currentOracleText: entry.card.currentOracleText,
+        currentPendulumText: entry.card.currentPendulumText,
         firstErrataDate,
         totalCopies: 0,
         availableCopies: 0,
@@ -676,6 +703,10 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
           activeEvaluation?.errataPolicy === ErrataPolicy.BAN_ON_ERRATA &&
           ownership.firstErrataDate !== null &&
           activeEvaluation.snapshotDate.getTime() >= ownership.firstErrataDate.getTime();
+        const pointFormatBlocked =
+          activeEvaluation?.pointLimit !== undefined &&
+          activeEvaluation.pointLimit !== null &&
+          isForbiddenInPointFormat(ownership);
 
         return {
           cardId,
@@ -695,7 +726,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
           mainCopies: activeCopies.main,
           extraCopies: activeCopies.extra,
           sideCopies: activeCopies.side,
-          legalLimit: errataBlocked
+          legalLimit: errataBlocked || pointFormatBlocked
             ? 0
             : activeBanlistAllowanceByCardId.get(cardId) ?? 3,
           pointValue: activeBanlistPointsByCardId.get(cardId) ?? 0,

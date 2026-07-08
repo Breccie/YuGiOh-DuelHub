@@ -14,9 +14,11 @@ describe("deck legality", () => {
     const createdIds: {
       userId?: string;
       runId?: string;
-      cardId?: string;
+      cardIds: string[];
       formatProfileId?: string;
-    } = {};
+    } = {
+      cardIds: [],
+    };
 
     try {
       const user = await prisma.user.create({
@@ -53,16 +55,28 @@ describe("deck legality", () => {
         },
       });
 
-      const card = await prisma.card.create({
-        data: {
-          slug: `${tag}-staple`,
-          externalCardId: `${tag}-staple`,
-          name: `${tag} Staple`,
-          kind: CardKind.SPELL,
-          currentOracleText: "Test card.",
-        },
-      });
-      createdIds.cardId = card.id;
+      const [card, linkCard] = await Promise.all([
+        prisma.card.create({
+          data: {
+            slug: `${tag}-staple`,
+            externalCardId: `${tag}-staple`,
+            name: `${tag} Staple`,
+            kind: CardKind.SPELL,
+            currentOracleText: "Test card.",
+          },
+        }),
+        prisma.card.create({
+          data: {
+            slug: `${tag}-link`,
+            externalCardId: `${tag}-link`,
+            name: `${tag} Link Monster`,
+            kind: CardKind.MONSTER,
+            monsterType: "Cyberse / Link",
+            currentOracleText: "Test Link Monster.",
+          },
+        }),
+      ]);
+      createdIds.cardIds.push(card.id, linkCard.id);
 
       const formatProfile = await prisma.formatProfile.create({
         data: {
@@ -83,11 +97,18 @@ describe("deck legality", () => {
           errataPolicy: "USE_LATEST_TEXT",
           pointLimit: 100,
           entries: {
-            create: {
-              cardId: card.id,
-              allowedCopies: 3,
-              pointValue: 60,
-            },
+            create: [
+              {
+                cardId: card.id,
+                allowedCopies: 3,
+                pointValue: 60,
+              },
+              {
+                cardId: linkCard.id,
+                allowedCopies: 3,
+                pointValue: 0,
+              },
+            ],
           },
         },
       });
@@ -106,6 +127,12 @@ describe("deck legality", () => {
             cardId: card.id,
             source: "MANUAL_GRANT",
           },
+          {
+            userId: user.id,
+            runId: run.id,
+            cardId: linkCard.id,
+            source: "MANUAL_GRANT",
+          },
         ],
       });
 
@@ -117,11 +144,18 @@ describe("deck legality", () => {
           banlistId: banlist.id,
           name: `${tag} deck`,
           cards: {
-            create: {
-              cardId: card.id,
-              section: "MAIN",
-              quantity: 2,
-            },
+            create: [
+              {
+                cardId: card.id,
+                section: "MAIN",
+                quantity: 2,
+              },
+              {
+                cardId: linkCard.id,
+                section: "EXTRA",
+                quantity: 1,
+              },
+            ],
           },
         },
       });
@@ -147,11 +181,25 @@ describe("deck legality", () => {
           expect.objectContaining({
             type: "POINTS",
           }),
+          expect.objectContaining({
+            cardId: linkCard.id,
+            type: "BANLIST",
+          }),
         ]),
       );
-      expect(snapshot.editor.collectionCards[0]).toEqual(
+      expect(
+        snapshot.editor.collectionCards.find((entry) => entry.cardId === card.id),
+      ).toEqual(
         expect.objectContaining({
           pointValue: 60,
+        }),
+      );
+      expect(
+        snapshot.editor.collectionCards.find((entry) => entry.cardId === linkCard.id),
+      ).toEqual(
+        expect.objectContaining({
+          legalLimit: 0,
+          pointValue: 0,
         }),
       );
     } finally {
@@ -179,10 +227,12 @@ describe("deck legality", () => {
         });
       }
 
-      if (createdIds.cardId) {
+      if (createdIds.cardIds.length > 0) {
         await prisma.card.deleteMany({
           where: {
-            id: createdIds.cardId,
+            id: {
+              in: createdIds.cardIds,
+            },
           },
         });
       }
