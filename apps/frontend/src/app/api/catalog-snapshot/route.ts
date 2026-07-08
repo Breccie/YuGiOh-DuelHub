@@ -53,6 +53,7 @@ export async function GET() {
         ? {
             name: latestBanlist.name,
             effectiveFrom: latestBanlist.effectiveFrom,
+            pointLimit: latestBanlist.pointLimit,
             errataPolicy:
               latestBanlist.errataPolicy ??
               latestBanlist.formatProfile.defaultErrataPolicy,
@@ -60,6 +61,7 @@ export async function GET() {
             entries: latestBanlist.entries.map((entry) => ({
               card: entry.card.name,
               allowedCopies: entry.allowedCopies,
+              pointValue: entry.pointValue,
             })),
           }
         : null,

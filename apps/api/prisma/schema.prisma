@@ -799,6 +799,7 @@ model Banlist {
   effectiveFrom   DateTime
   effectiveTo     DateTime?
   errataPolicy    ErrataPolicy?
+  pointLimit      Int?
   notes           String?
   createdAt       DateTime       @default(now())
   formatProfile   FormatProfile  @relation(fields: [formatProfileId], references: [id], onDelete: Cascade)
@@ -814,6 +815,7 @@ model BanlistEntry {
   banlistId     String
   cardId        String
   allowedCopies Int     @default(3)
+  pointValue    Int?
   note          String?
   banlist       Banlist @relation(fields: [banlistId], references: [id], onDelete: Cascade)
   card          Card    @relation(fields: [cardId], references: [id], onDelete: Cascade)

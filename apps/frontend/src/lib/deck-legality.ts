@@ -23,7 +23,12 @@ type OwnershipSummary = {
   tradedCopies: number;
 };
 
-export type DeckIssueType = "BANLIST" | "ERRATA" | "OWNERSHIP" | "DECK_SIZE";
+export type DeckIssueType =
+  | "BANLIST"
+  | "ERRATA"
+  | "OWNERSHIP"
+  | "DECK_SIZE"
+  | "POINTS";
 
 export type DeckIssueSummary = {
   cardId: string;
@@ -41,6 +46,7 @@ export type DeckCardResolution = {
   section: DeckSection;
   quantity: number;
   allowedCopies: number;
+  pointValue: number;
   availableCopies: number;
   reservedCopies: number;
   tradedCopies: number;
@@ -78,6 +84,9 @@ export type DeckLegalitySnapshot = {
     formatName: string | null;
     banlistId: string | null;
     banlistName: string;
+    pointLimit: number | null;
+    pointTotal: number;
+    usesPointLimit: boolean;
     errataPolicy: ErrataPolicy;
     isLegal: boolean;
     cardCount: number;
@@ -95,6 +104,7 @@ export type DeckLegalitySnapshot = {
       formatName: string;
       formatProfileId: string;
       errataPolicy: ErrataPolicy;
+      pointLimit: number | null;
     }>;
     collectionCards: Array<{
       cardId: string;
@@ -113,6 +123,7 @@ export type DeckLegalitySnapshot = {
       extraCopies: number;
       sideCopies: number;
       legalLimit: number;
+      pointValue: number;
     }>;
   };
 };
@@ -377,6 +388,8 @@ function evaluateDeck(
   const counts = buildDeckCounts(deck);
   const plannedCopiesByCardId = buildPlannedCopiesByCardId(deck);
   const issues: DeckIssueSummary[] = [];
+  const pointLimit = effectiveBanlist?.pointLimit ?? null;
+  let pointTotal = 0;
 
   addDeckSizeIssues(issues, counts);
 
@@ -402,11 +415,15 @@ function evaluateDeck(
       errataPolicy === ErrataPolicy.BAN_ON_ERRATA &&
       firstErrataDate !== null &&
       firstErrataDate.getTime() <= snapshotDate.getTime();
-    const allowedCopies = errataBan
-      ? 0
-      : effectiveBanlist?.entries.find((entry) => entry.cardId === deckCard.cardId)?.allowedCopies ?? 3;
+    const banlistEntry = effectiveBanlist?.entries.find(
+      (entry) => entry.cardId === deckCard.cardId,
+    );
+    const allowedCopies = errataBan ? 0 : banlistEntry?.allowedCopies ?? 3;
+    const pointValue = banlistEntry?.pointValue ?? 0;
     const plannedCopies = plannedCopiesByCardId.get(deckCard.cardId) ?? deckCard.quantity;
     const cardIssues: DeckIssueType[] = [];
+
+    pointTotal += pointValue * deckCard.quantity;
 
     if (errataBan) {
       cardIssues.push("ERRATA");
@@ -446,6 +463,7 @@ function evaluateDeck(
       section: deckCard.section,
       quantity: deckCard.quantity,
       allowedCopies,
+      pointValue,
       availableCopies: ownership.availableCopies,
       reservedCopies: ownership.reservedCopies,
       tradedCopies: ownership.tradedCopies,
@@ -458,10 +476,21 @@ function evaluateDeck(
     } satisfies DeckCardResolution;
   });
 
+  if (pointLimit !== null && pointTotal > pointLimit) {
+    issues.push({
+      cardId: "deck-points",
+      cardName: "Genesys-Punkte",
+      type: "POINTS",
+      message: `Das Deck hat ${pointTotal} Genesys-Punkte, erlaubt sind maximal ${pointLimit}.`,
+    });
+  }
+
   return {
     snapshotDate,
     effectiveBanlist,
     errataPolicy,
+    pointLimit,
+    pointTotal,
     counts,
     cards,
     issues: dedupeIssues(issues),
@@ -617,6 +646,12 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       entry.allowedCopies,
     ]) ?? [],
   );
+  const activeBanlistPointsByCardId = new Map<string, number>(
+    activeEvaluation?.effectiveBanlist?.entries.map((entry) => [
+      entry.cardId,
+      entry.pointValue ?? 0,
+    ]) ?? [],
+  );
 
   const editor = {
     availableBanlists: availableBanlists.map((banlist) => ({
@@ -627,6 +662,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       formatProfileId: banlist.formatProfileId,
       errataPolicy:
         banlist.errataPolicy ?? banlist.formatProfile.defaultErrataPolicy,
+      pointLimit: banlist.pointLimit,
     })),
     collectionCards: [...ownershipByCardId.entries()]
       .map(([cardId, ownership]) => {
@@ -662,6 +698,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
           legalLimit: errataBlocked
             ? 0
             : activeBanlistAllowanceByCardId.get(cardId) ?? 3,
+          pointValue: activeBanlistPointsByCardId.get(cardId) ?? 0,
         };
       })
       .sort((left, right) => {
@@ -703,6 +740,9 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       formatName: selectedDeck.formatProfile?.name ?? null,
       banlistId: activeEvaluation.effectiveBanlist?.id ?? selectedDeck.banlistId ?? null,
       banlistName: activeEvaluation.effectiveBanlist?.name ?? "Keine Bannliste gewählt",
+      pointLimit: activeEvaluation.pointLimit,
+      pointTotal: activeEvaluation.pointTotal,
+      usesPointLimit: activeEvaluation.pointLimit !== null,
       errataPolicy: activeEvaluation.errataPolicy,
       isLegal: activeEvaluation.issues.length === 0,
       cardCount: activeEvaluation.counts.cardCount,

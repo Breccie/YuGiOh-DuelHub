@@ -1,0 +1,2897 @@
+{
+  "source": "Konami Official Genesys Card Points",
+  "sourceUrl": "https://www.yugioh-card.com/en/genesys/",
+  "updated": "6/23/2026",
+  "effectiveFrom": "2026-06-23",
+  "pointLimit": 100,
+  "entries": [
+    {
+      "cardName": "\"A Case for K9\"",
+      "points": 20
+    },
+    {
+      "cardName": "Abyss Dweller",
+      "points": 100
+    },
+    {
+      "cardName": "Abyss of the Sacred Beasts",
+      "points": 1
+    },
+    {
+      "cardName": "Adamancipator Risen - Dragite",
+      "points": 20
+    },
+    {
+      "cardName": "Agido the Ancient Sentinel",
+      "points": 50
+    },
+    {
+      "cardName": "Aiwass, Divine Spirit of the Law",
+      "points": 2
+    },
+    {
+      "cardName": "Albion the Branded Dragon",
+      "points": 5
+    },
+    {
+      "cardName": "Albion the Sanctifire Dragon",
+      "points": 33
+    },
+    {
+      "cardName": "Aleister the Reminiscent",
+      "points": 4
+    },
+    {
+      "cardName": "Allure of Darkness",
+      "points": 5
+    },
+    {
+      "cardName": "Ame no Habakiri no Mitsurugi",
+      "points": 100
+    },
+    {
+      "cardName": "Amorphactor Pain, the Imagination Dracoverlord",
+      "points": 100
+    },
+    {
+      "cardName": "Ancient Gear Advance",
+      "points": 33
+    },
+    {
+      "cardName": "Ancient Gear Statue",
+      "points": 33
+    },
+    {
+      "cardName": "And the Band Played On",
+      "points": 100
+    },
+    {
+      "cardName": "Angel O7",
+      "points": 100
+    },
+    {
+      "cardName": "Angelechy Destrier",
+      "points": 1
+    },
+    {
+      "cardName": "Anti-Spell Fragrance",
+      "points": 100
+    },
+    {
+      "cardName": "Appointer of the Red Lotus",
+      "points": 50
+    },
+    {
+      "cardName": "Arcana Force XXI - The World",
+      "points": 100
+    },
+    {
+      "cardName": "Archlord Kristya",
+      "points": 100
+    },
+    {
+      "cardName": "Archnemeses Eschatos",
+      "points": 100
+    },
+    {
+      "cardName": "Archnemeses Protos",
+      "points": 100
+    },
+    {
+      "cardName": "Artifact Lancea",
+      "points": 1
+    },
+    {
+      "cardName": "Artifact Scythe",
+      "points": 100
+    },
+    {
+      "cardName": "Artmage Impasto -Recapture-",
+      "points": 10
+    },
+    {
+      "cardName": "Artmage Non-Finito",
+      "points": 15
+    },
+    {
+      "cardName": "Artmage Vandalism -Assault-",
+      "points": 3
+    },
+    {
+      "cardName": "Artmage Varnish -Alteration-",
+      "points": 3
+    },
+    {
+      "cardName": "Ash Blossom & Joyous Spring",
+      "points": 20
+    },
+    {
+      "cardName": "Assault Synchron",
+      "points": 1
+    },
+    {
+      "cardName": "Astral Kuriboh",
+      "points": 3
+    },
+    {
+      "cardName": "Atlantean Dragoons",
+      "points": 40
+    },
+    {
+      "cardName": "Azamina Ilia Silvia",
+      "points": 20
+    },
+    {
+      "cardName": "Azamina Mu Rcielago",
+      "points": 33
+    },
+    {
+      "cardName": "Bahamut Shark",
+      "points": 81
+    },
+    {
+      "cardName": "Banquet of Millions",
+      "points": 51
+    },
+    {
+      "cardName": "Baronne de Fleur",
+      "points": 80
+    },
+    {
+      "cardName": "Barrier of the Voiceless Voice",
+      "points": 15
+    },
+    {
+      "cardName": "Barrier Statue of the Abyss",
+      "points": 70
+    },
+    {
+      "cardName": "Barrier Statue of the Drought",
+      "points": 70
+    },
+    {
+      "cardName": "Barrier Statue of the Heavens",
+      "points": 70
+    },
+    {
+      "cardName": "Barrier Statue of the Inferno",
+      "points": 70
+    },
+    {
+      "cardName": "Barrier Statue of the Stormwinds",
+      "points": 70
+    },
+    {
+      "cardName": "Barrier Statue of the Torrent",
+      "points": 70
+    },
+    {
+      "cardName": "Beatrice, Lady of the Eternal",
+      "points": 100
+    },
+    {
+      "cardName": "Beelze of the Diabolic Dragons",
+      "points": 100
+    },
+    {
+      "cardName": "Big Welcome Labrynth",
+      "points": 15
+    },
+    {
+      "cardName": "Black Chaos",
+      "points": 20
+    },
+    {
+      "cardName": "Black Garden",
+      "points": 51
+    },
+    {
+      "cardName": "Black-Winged Assault Dragon",
+      "points": 1
+    },
+    {
+      "cardName": "Blackwing - Boreastorm the Wicked Wind",
+      "points": 20
+    },
+    {
+      "cardName": "Blackwing - Zephyros the Elite",
+      "points": 13
+    },
+    {
+      "cardName": "Blaster, Dragon Ruler of Infernos",
+      "points": 5
+    },
+    {
+      "cardName": "Blaze Fenix, the Burning Bombardment Bird",
+      "points": 70
+    },
+    {
+      "cardName": "Blazing Cartesia, the Virtuous",
+      "points": 3
+    },
+    {
+      "cardName": "Block Dragon",
+      "points": 33
+    },
+    {
+      "cardName": "Bonfire",
+      "points": 33
+    },
+    {
+      "cardName": "Book of Eclipse",
+      "points": 4
+    },
+    {
+      "cardName": "Book of Moon",
+      "points": 3
+    },
+    {
+      "cardName": "Brain Research Lab",
+      "points": 100
+    },
+    {
+      "cardName": "Bramble Rose Dragon",
+      "points": 1
+    },
+    {
+      "cardName": "Branded Expulsion",
+      "points": 33
+    },
+    {
+      "cardName": "Branded Fusion",
+      "points": 40
+    },
+    {
+      "cardName": "Branded Lost",
+      "points": 66
+    },
+    {
+      "cardName": "Brilliant Fusion",
+      "points": 33
+    },
+    {
+      "cardName": "Broww, Huntsman of Dark World",
+      "points": 3
+    },
+    {
+      "cardName": "Butterfly Dagger - Elma",
+      "points": 1
+    },
+    {
+      "cardName": "Bystial Baldrake",
+      "points": 30
+    },
+    {
+      "cardName": "Bystial Dis Pater",
+      "points": 10
+    },
+    {
+      "cardName": "Bystial Druiswurm",
+      "points": 30
+    },
+    {
+      "cardName": "Bystial Magnamhut",
+      "points": 33
+    },
+    {
+      "cardName": "Bystial Saronir",
+      "points": 20
+    },
+    {
+      "cardName": "Called by the Grave",
+      "points": 20
+    },
+    {
+      "cardName": "Card Destruction",
+      "points": 40
+    },
+    {
+      "cardName": "Card of Demise",
+      "points": 40
+    },
+    {
+      "cardName": "Card of Safe Return",
+      "points": 33
+    },
+    {
+      "cardName": "Catapult Turtle",
+      "points": 100
+    },
+    {
+      "cardName": "Celestial Observatory",
+      "points": 5
+    },
+    {
+      "cardName": "Celtic Mystic",
+      "points": 20
+    },
+    {
+      "cardName": "Centur-Ion Auxila",
+      "points": 33
+    },
+    {
+      "cardName": "Centur-Ion Primera",
+      "points": 2
+    },
+    {
+      "cardName": "Centur-Ion Trudea",
+      "points": 1
+    },
+    {
+      "cardName": "Chain Strike",
+      "points": 50
+    },
+    {
+      "cardName": "Change of Heart",
+      "points": 3
+    },
+    {
+      "cardName": "Chaofeng, Phantom of the Yang Zing",
+      "points": 13
+    },
+    {
+      "cardName": "Chaos Angel",
+      "points": 20
+    },
+    {
+      "cardName": "Chaos Ruler, the Chaotic Magical Dragon",
+      "points": 50
+    },
+    {
+      "cardName": "Chaos Space",
+      "points": 40
+    },
+    {
+      "cardName": "Charge of the Light Brigade",
+      "points": 25
+    },
+    {
+      "cardName": "Chicken Game",
+      "points": 10
+    },
+    {
+      "cardName": "Clown Crew Biancaviso",
+      "points": 1
+    },
+    {
+      "cardName": "Clown Crew Malabarisme",
+      "points": 10
+    },
+    {
+      "cardName": "Clown Crew Matinee Operatics",
+      "points": 20
+    },
+    {
+      "cardName": "Cold Wave",
+      "points": 100
+    },
+    {
+      "cardName": "Conduction Warrior Linear Magnum Plus Minus",
+      "points": 6
+    },
+    {
+      "cardName": "Confiscation",
+      "points": 100
+    },
+    {
+      "cardName": "Constellar Castor",
+      "points": 6
+    },
+    {
+      "cardName": "Contact \"C\"",
+      "points": 100
+    },
+    {
+      "cardName": "Cornfield Coatl",
+      "points": 33
+    },
+    {
+      "cardName": "Cosmic Blazar Dragon",
+      "points": 21
+    },
+    {
+      "cardName": "Cosmic Cyclone",
+      "points": 1
+    },
+    {
+      "cardName": "Crackle Blitzclique",
+      "points": 4
+    },
+    {
+      "cardName": "Creature Swap",
+      "points": 1
+    },
+    {
+      "cardName": "Crimson Blade Dragon",
+      "points": 10
+    },
+    {
+      "cardName": "Crimson Dragon",
+      "points": 80
+    },
+    {
+      "cardName": "Crossout Designator",
+      "points": 20
+    },
+    {
+      "cardName": "Crystron Inclusion",
+      "points": 20
+    },
+    {
+      "cardName": "Crystron Sulfador",
+      "points": 3
+    },
+    {
+      "cardName": "CXyz Gimmick Puppet Fanatix Machinix",
+      "points": 100
+    },
+    {
+      "cardName": "Cyber Angel Benten",
+      "points": 40
+    },
+    {
+      "cardName": "Cyber Dragon Infinity",
+      "points": 20
+    },
+    {
+      "cardName": "Cyber Jar",
+      "points": 33
+    },
+    {
+      "cardName": "Cyber-Stein",
+      "points": 27
+    },
+    {
+      "cardName": "D.D. Crow",
+      "points": 1
+    },
+    {
+      "cardName": "D.D. Dynamite",
+      "points": 51
+    },
+    {
+      "cardName": "D/D/D Duo-Dawn King Kali Yuga",
+      "points": 77
+    },
+    {
+      "cardName": "D/D/D Wave High King Caesar",
+      "points": 20
+    },
+    {
+      "cardName": "Daigusto Emeral",
+      "points": 1
+    },
+    {
+      "cardName": "Danger! Bigfoot!",
+      "points": 3
+    },
+    {
+      "cardName": "Danger! Chupacabra!",
+      "points": 3
+    },
+    {
+      "cardName": "Danger! Dogman!",
+      "points": 3
+    },
+    {
+      "cardName": "Danger! Mothman!",
+      "points": 3
+    },
+    {
+      "cardName": "Danger! Nessie!",
+      "points": 7
+    },
+    {
+      "cardName": "Danger! Ogopogo!",
+      "points": 3
+    },
+    {
+      "cardName": "Danger! Thunderbird!",
+      "points": 3
+    },
+    {
+      "cardName": "Danger!? Jackalope?",
+      "points": 7
+    },
+    {
+      "cardName": "Danger!? Tsuchinoko?",
+      "points": 7
+    },
+    {
+      "cardName": "Dark Eradicator Warlock",
+      "points": 100
+    },
+    {
+      "cardName": "Dark Hole",
+      "points": 1
+    },
+    {
+      "cardName": "Dark Magician of Destruction",
+      "points": 15
+    },
+    {
+      "cardName": "Dark Ruler No More",
+      "points": 2
+    },
+    {
+      "cardName": "Dark World Archives",
+      "points": 5
+    },
+    {
+      "cardName": "Dark World Dealings",
+      "points": 5
+    },
+    {
+      "cardName": "Darklord Djehuty",
+      "points": 5
+    },
+    {
+      "cardName": "Darklord Ixchel",
+      "points": 7
+    },
+    {
+      "cardName": "Deception of the Sinful Spoils",
+      "points": 40
+    },
+    {
+      "cardName": "Deck Lockdown",
+      "points": 100
+    },
+    {
+      "cardName": "Deep Sea Aria",
+      "points": 33
+    },
+    {
+      "cardName": "Delinquent Duo",
+      "points": 100
+    },
+    {
+      "cardName": "Demise of the Land",
+      "points": 1
+    },
+    {
+      "cardName": "Denglong, First of the Yang Zing",
+      "points": 10
+    },
+    {
+      "cardName": "Denko Sekka",
+      "points": 20
+    },
+    {
+      "cardName": "Destiny HERO - Destroyer Phoenix Enforcer",
+      "points": 20
+    },
+    {
+      "cardName": "Destiny HERO - Plasma",
+      "points": 20
+    },
+    {
+      "cardName": "Destructive Daruma Karma Cannon",
+      "points": 1
+    },
+    {
+      "cardName": "Diabell, Queen of the White Forest",
+      "points": 25
+    },
+    {
+      "cardName": "Diabellstar the Black Witch",
+      "points": 20
+    },
+    {
+      "cardName": "Different Dimension Ground",
+      "points": 10
+    },
+    {
+      "cardName": "Dimension Fusion",
+      "points": 40
+    },
+    {
+      "cardName": "Dimension Shifter",
+      "points": 10
+    },
+    {
+      "cardName": "Dimensional Barrier",
+      "points": 100
+    },
+    {
+      "cardName": "Dimensional Fissure",
+      "points": 10
+    },
+    {
+      "cardName": "Dinomorphia Domain",
+      "points": 1
+    },
+    {
+      "cardName": "Dinomorphia Frenzy",
+      "points": 1
+    },
+    {
+      "cardName": "Dinomorphia Intact",
+      "points": 1
+    },
+    {
+      "cardName": "Dinomorphia Rexterm",
+      "points": 91
+    },
+    {
+      "cardName": "Dinowrestler Pankratops",
+      "points": 5
+    },
+    {
+      "cardName": "Divine Arsenal AA-ZEUS - Sky Thunder",
+      "points": 20
+    },
+    {
+      "cardName": "Diviner of the Herald",
+      "points": 33
+    },
+    {
+      "cardName": "Djinn Releaser of Rituals",
+      "points": 100
+    },
+    {
+      "cardName": "Dodododo Warrior",
+      "points": 70
+    },
+    {
+      "cardName": "Dogmatika Ecclesia, the Virtuous",
+      "points": 3
+    },
+    {
+      "cardName": "Domain of the True Monarchs",
+      "points": 50
+    },
+    {
+      "cardName": "Dominus Impulse",
+      "points": 20
+    },
+    {
+      "cardName": "Dominus Purge",
+      "points": 10
+    },
+    {
+      "cardName": "Dominus Spark",
+      "points": 10
+    },
+    {
+      "cardName": "DoomZ XIII Over - Graflareio",
+      "points": 20
+    },
+    {
+      "cardName": "Dracotail Arthalion",
+      "points": 20
+    },
+    {
+      "cardName": "Dracotail Faimena",
+      "points": 30
+    },
+    {
+      "cardName": "Dracotail Flame",
+      "points": 3
+    },
+    {
+      "cardName": "Dracotail Mululu",
+      "points": 7
+    },
+    {
+      "cardName": "Dragon Master Magia",
+      "points": 100
+    },
+    {
+      "cardName": "Dragon's Bind",
+      "points": 100
+    },
+    {
+      "cardName": "Dragon's Light and Darkness",
+      "points": 1
+    },
+    {
+      "cardName": "Dragon's Mind",
+      "points": 7
+    },
+    {
+      "cardName": "Dragonic Diagram",
+      "points": 10
+    },
+    {
+      "cardName": "Dragonmaid Sheou",
+      "points": 10
+    },
+    {
+      "cardName": "Dragonmaid Tidying",
+      "points": 1
+    },
+    {
+      "cardName": "Droll & Lock Bird",
+      "points": 20
+    },
+    {
+      "cardName": "Drytron Alpha Thuban",
+      "points": 33
+    },
+    {
+      "cardName": "Drytron Mu Beta Fafnir",
+      "points": 33
+    },
+    {
+      "cardName": "Duality",
+      "points": 1
+    },
+    {
+      "cardName": "Earthbound Immortal Aslla piscu",
+      "points": 51
+    },
+    {
+      "cardName": "Earthbound Prisoner Stone Sweeper",
+      "points": 5
+    },
+    {
+      "cardName": "Ecclesia and the Dark Dragon",
+      "points": 3
+    },
+    {
+      "cardName": "Eclipse Wyvern",
+      "points": 33
+    },
+    {
+      "cardName": "Effect Veiler",
+      "points": 8
+    },
+    {
+      "cardName": "Eidos the Underworld Monarch",
+      "points": 5
+    },
+    {
+      "cardName": "El Shaddoll Apkallone",
+      "points": 10
+    },
+    {
+      "cardName": "El Shaddoll Winda",
+      "points": 60
+    },
+    {
+      "cardName": "Elder Entity N'tss",
+      "points": 7
+    },
+    {
+      "cardName": "Elder Entity Norden",
+      "points": 91
+    },
+    {
+      "cardName": "Elemental HERO Cosmo Neos",
+      "points": 21
+    },
+    {
+      "cardName": "Elfnote June Pride",
+      "points": 25
+    },
+    {
+      "cardName": "Elfnote Power Patron",
+      "points": 15
+    },
+    {
+      "cardName": "Elfnote Regina",
+      "points": 40
+    },
+    {
+      "cardName": "Elzette, Azamina of the White Forest",
+      "points": 22
+    },
+    {
+      "cardName": "Emergency Teleport",
+      "points": 35
+    },
+    {
+      "cardName": "EMERGENCY!",
+      "points": 33
+    },
+    {
+      "cardName": "Eva",
+      "points": 1
+    },
+    {
+      "cardName": "Evenly Matched",
+      "points": 7
+    },
+    {
+      "cardName": "Evigishki Gustkraken",
+      "points": 100
+    },
+    {
+      "cardName": "Evigishki Mind Augus",
+      "points": 1
+    },
+    {
+      "cardName": "Evilswarm Ouroboros",
+      "points": 100
+    },
+    {
+      "cardName": "Evolzar Lars",
+      "points": 20
+    },
+    {
+      "cardName": "Exceptional Schedule",
+      "points": 10
+    },
+    {
+      "cardName": "Exosister Betrayal",
+      "points": 7
+    },
+    {
+      "cardName": "Exosister Mikailis",
+      "points": 10
+    },
+    {
+      "cardName": "Exosister Pax",
+      "points": 5
+    },
+    {
+      "cardName": "Expurrely Noir",
+      "points": 33
+    },
+    {
+      "cardName": "Ext Ryzeal",
+      "points": 25
+    },
+    {
+      "cardName": "F.A. Dawn Dragster",
+      "points": 20
+    },
+    {
+      "cardName": "Fairy Tail - Snow",
+      "points": 85
+    },
+    {
+      "cardName": "Fallen of the White Dragon",
+      "points": 30
+    },
+    {
+      "cardName": "Fiber Jar",
+      "points": 30
+    },
+    {
+      "cardName": "Filia Regis",
+      "points": 7
+    },
+    {
+      "cardName": "Final Countdown",
+      "points": 100
+    },
+    {
+      "cardName": "Fire Formation - Tenki",
+      "points": 35
+    },
+    {
+      "cardName": "Fire King Courtier Ulcanix",
+      "points": 15
+    },
+    {
+      "cardName": "Fire King High Avatar Kirin",
+      "points": 7
+    },
+    {
+      "cardName": "Fishborg Blaster",
+      "points": 33
+    },
+    {
+      "cardName": "Floowandereeze & Robina",
+      "points": 33
+    },
+    {
+      "cardName": "Floowandereeze and the Advent of Adventure",
+      "points": 33
+    },
+    {
+      "cardName": "Floowandereeze and the Magnificent Map",
+      "points": 33
+    },
+    {
+      "cardName": "Flying \"C\"",
+      "points": 7
+    },
+    {
+      "cardName": "Foolish Burial",
+      "points": 25
+    },
+    {
+      "cardName": "Foolish Burial Goods",
+      "points": 7
+    },
+    {
+      "cardName": "Forbidden Chalice",
+      "points": 1
+    },
+    {
+      "cardName": "Forbidden Crown",
+      "points": 10
+    },
+    {
+      "cardName": "Forbidden Droplet",
+      "points": 10
+    },
+    {
+      "cardName": "Forbidden Lance",
+      "points": 1
+    },
+    {
+      "cardName": "Fossil Dig",
+      "points": 33
+    },
+    {
+      "cardName": "Fossil Dyna Pachycephalo",
+      "points": 100
+    },
+    {
+      "cardName": "Frightfur Patchwork",
+      "points": 33
+    },
+    {
+      "cardName": "Fusion Destiny",
+      "points": 33
+    },
+    {
+      "cardName": "Fydraulis Harmonia",
+      "points": 50
+    },
+    {
+      "cardName": "Gagagaga Girl",
+      "points": 15
+    },
+    {
+      "cardName": "Galaxy Photon Dragon",
+      "points": 15
+    },
+    {
+      "cardName": "Galaxy-Eyes Tachyon Primal",
+      "points": 5
+    },
+    {
+      "cardName": "Gallant Granite",
+      "points": 33
+    },
+    {
+      "cardName": "Gameciel, the Sea Turtle Kaiju",
+      "points": 3
+    },
+    {
+      "cardName": "Garura, Wings of Resonant Life",
+      "points": 4
+    },
+    {
+      "cardName": "Gateway of the Six",
+      "points": 100
+    },
+    {
+      "cardName": "Gem-Knight Lady Lapis Lazuli",
+      "points": 51
+    },
+    {
+      "cardName": "Gem-Knight Master Diamond",
+      "points": 66
+    },
+    {
+      "cardName": "Ghost Belle & Haunted Mansion",
+      "points": 6
+    },
+    {
+      "cardName": "Ghost Meets Girl - A Masterful Mayakashi Shiranui Saga",
+      "points": 100
+    },
+    {
+      "cardName": "Ghost Mourner & Moonlit Chill",
+      "points": 5
+    },
+    {
+      "cardName": "Ghost Ogre & Snow Rabbit",
+      "points": 4
+    },
+    {
+      "cardName": "Ghost Sister & Spooky Dogwood",
+      "points": 3
+    },
+    {
+      "cardName": "Giant Trunade",
+      "points": 40
+    },
+    {
+      "cardName": "Gigantic Spright",
+      "points": 7
+    },
+    {
+      "cardName": "Gimmick Puppet Nightmare",
+      "points": 70
+    },
+    {
+      "cardName": "Gishki Aquamirror",
+      "points": 1
+    },
+    {
+      "cardName": "Gishki Nekromirror",
+      "points": 1
+    },
+    {
+      "cardName": "Give and Take",
+      "points": 91
+    },
+    {
+      "cardName": "Gladiator Beast Tamer Editor",
+      "points": 80
+    },
+    {
+      "cardName": "Glitch Clutch Nullgainer",
+      "points": 10
+    },
+    {
+      "cardName": "Glow-Up Bulb",
+      "points": 15
+    },
+    {
+      "cardName": "Goblin Biker Big Gabonga",
+      "points": 12
+    },
+    {
+      "cardName": "Goblin Biker Grand Breakout",
+      "points": 7
+    },
+    {
+      "cardName": "Goblin Biker Grand Entrance",
+      "points": 20
+    },
+    {
+      "cardName": "Gold Sarcophagus",
+      "points": 10
+    },
+    {
+      "cardName": "Golden Cloud Beast - Malong",
+      "points": 4
+    },
+    {
+      "cardName": "Gozen Match",
+      "points": 100
+    },
+    {
+      "cardName": "Graceful Charity",
+      "points": 40
+    },
+    {
+      "cardName": "Grapha, Dragon Lord of Dark World",
+      "points": 5
+    },
+    {
+      "cardName": "Grapha, Dragon Overlord of Dark World",
+      "points": 5
+    },
+    {
+      "cardName": "Griffoh",
+      "points": 10
+    },
+    {
+      "cardName": "Grisaille Prison",
+      "points": 10
+    },
+    {
+      "cardName": "Guardian Chimera",
+      "points": 20
+    },
+    {
+      "cardName": "Guiding Quem, the Virtuous",
+      "points": 3
+    },
+    {
+      "cardName": "Harpie's Feather Duster",
+      "points": 9
+    },
+    {
+      "cardName": "Harpie's Feather Storm",
+      "points": 100
+    },
+    {
+      "cardName": "Heart of the Blue-Eyes",
+      "points": 5
+    },
+    {
+      "cardName": "Heat Wave",
+      "points": 100
+    },
+    {
+      "cardName": "Heavy Polymerization",
+      "points": 3
+    },
+    {
+      "cardName": "Heavy Storm",
+      "points": 6
+    },
+    {
+      "cardName": "Herald of Green Light",
+      "points": 2
+    },
+    {
+      "cardName": "Herald of Orange Light",
+      "points": 3
+    },
+    {
+      "cardName": "Herald of Purple Light",
+      "points": 1
+    },
+    {
+      "cardName": "Herald of the Arc Light",
+      "points": 50
+    },
+    {
+      "cardName": "Hideout in the Sky, Coulomb",
+      "points": 5
+    },
+    {
+      "cardName": "Hot Red Dragon Archfiend Abyss",
+      "points": 20
+    },
+    {
+      "cardName": "Hot Red Dragon Archfiend King Calamity",
+      "points": 21
+    },
+    {
+      "cardName": "Hyper Rank-Up-Magic Utopiforce",
+      "points": 1
+    },
+    {
+      "cardName": "Hyperinvoked Aeon",
+      "points": 15
+    },
+    {
+      "cardName": "Ice Ryzeal",
+      "points": 20
+    },
+    {
+      "cardName": "Ichiki Sayori-Hime",
+      "points": 5
+    },
+    {
+      "cardName": "Ido the Supreme Magical Force",
+      "points": 100
+    },
+    {
+      "cardName": "Illusion Gate",
+      "points": 10
+    },
+    {
+      "cardName": "Imperial Order",
+      "points": 100
+    },
+    {
+      "cardName": "Imsety, Glory of Horus",
+      "points": 33
+    },
+    {
+      "cardName": "Incredible Ecclesia, the Virtuous",
+      "points": 3
+    },
+    {
+      "cardName": "Infernal Flame Banshee",
+      "points": 33
+    },
+    {
+      "cardName": "Infernity Launcher",
+      "points": 88
+    },
+    {
+      "cardName": "Infernoid Evil",
+      "points": 7
+    },
+    {
+      "cardName": "Infinite Impermanence",
+      "points": 11
+    },
+    {
+      "cardName": "Inspector Boarder",
+      "points": 20
+    },
+    {
+      "cardName": "Instant Fusion",
+      "points": 100
+    },
+    {
+      "cardName": "Into the Void",
+      "points": 10
+    },
+    {
+      "cardName": "Invoked Caliga",
+      "points": 100
+    },
+    {
+      "cardName": "Iron Thunder",
+      "points": 3
+    },
+    {
+      "cardName": "Jet Synchron",
+      "points": 1
+    },
+    {
+      "cardName": "Jowgen the Spiritualist",
+      "points": 100
+    },
+    {
+      "cardName": "Junk Meister",
+      "points": 6
+    },
+    {
+      "cardName": "Junk Speeder",
+      "points": 100
+    },
+    {
+      "cardName": "K9- Lupis",
+      "points": 5
+    },
+    {
+      "cardName": "K9-04 Noroi",
+      "points": 15
+    },
+    {
+      "cardName": "K9-17 \"Ripper\"",
+      "points": 30
+    },
+    {
+      "cardName": "K9-17 Izuna",
+      "points": 20
+    },
+    {
+      "cardName": "K9-66a Jokul",
+      "points": 33
+    },
+    {
+      "cardName": "K9-X \"Ripper/M\"",
+      "points": 10
+    },
+    {
+      "cardName": "K9-X \"Werewolf\"",
+      "points": 10
+    },
+    {
+      "cardName": "Kaiser Colosseum",
+      "points": 100
+    },
+    {
+      "cardName": "Kashtira Arise-Heart",
+      "points": 97
+    },
+    {
+      "cardName": "Kashtira Fenrir",
+      "points": 30
+    },
+    {
+      "cardName": "Kashtira Unicorn",
+      "points": 30
+    },
+    {
+      "cardName": "Kelbek the Ancient Vanguard",
+      "points": 50
+    },
+    {
+      "cardName": "Keldo the Sacred Protector",
+      "points": 2
+    },
+    {
+      "cardName": "Ketu Dracotail",
+      "points": 15
+    },
+    {
+      "cardName": "Kewl Tune B2B",
+      "points": 40
+    },
+    {
+      "cardName": "Kewl Tune Clip",
+      "points": 7
+    },
+    {
+      "cardName": "Kewl Tune Crackle",
+      "points": 70
+    },
+    {
+      "cardName": "Kewl Tune Cue",
+      "points": 7
+    },
+    {
+      "cardName": "Kewl Tune Mix",
+      "points": 5
+    },
+    {
+      "cardName": "Kewl Tune Reco",
+      "points": 5
+    },
+    {
+      "cardName": "Kewl Tune Rotary",
+      "points": 40
+    },
+    {
+      "cardName": "Kewl Tune Synchro",
+      "points": 10
+    },
+    {
+      "cardName": "King of the Feral Imps",
+      "points": 33
+    },
+    {
+      "cardName": "King's Sarcophagus",
+      "points": 33
+    },
+    {
+      "cardName": "Knight Armed Dragon, the Armored Knight Dragon",
+      "points": 3
+    },
+    {
+      "cardName": "Knightmare Corruptor Iblee",
+      "points": 100
+    },
+    {
+      "cardName": "Koa'ki Meiru Drago",
+      "points": 75
+    },
+    {
+      "cardName": "Koa'ki Meiru Guardian",
+      "points": 3
+    },
+    {
+      "cardName": "Koa'ki Meiru Overload",
+      "points": 3
+    },
+    {
+      "cardName": "Koa'ki Meiru Sandman",
+      "points": 3
+    },
+    {
+      "cardName": "Koa'ki Meiru Wall",
+      "points": 3
+    },
+    {
+      "cardName": "Lady Labrynth of the Silver Castle",
+      "points": 40
+    },
+    {
+      "cardName": "Lady's Dragonmaid",
+      "points": 10
+    },
+    {
+      "cardName": "Laevatein, Generaider Boss of Shadows",
+      "points": 1
+    },
+    {
+      "cardName": "Last Turn",
+      "points": 100
+    },
+    {
+      "cardName": "Last Will",
+      "points": 100
+    },
+    {
+      "cardName": "Lavalval Chain",
+      "points": 80
+    },
+    {
+      "cardName": "Left Arm Offering",
+      "points": 7
+    },
+    {
+      "cardName": "Legendary Fire King Ponix",
+      "points": 10
+    },
+    {
+      "cardName": "Legendary Lord Six Samurai - Shi En",
+      "points": 10
+    },
+    {
+      "cardName": "Legendary Six Samurai - Shi En",
+      "points": 10
+    },
+    {
+      "cardName": "Lev Shaddoll Fusion",
+      "points": 10
+    },
+    {
+      "cardName": "Level Eater",
+      "points": 100
+    },
+    {
+      "cardName": "Life Equalizer",
+      "points": 100
+    },
+    {
+      "cardName": "Light and Darkness Dragonlord",
+      "points": 20
+    },
+    {
+      "cardName": "Light and Darkness Ritual",
+      "points": 5
+    },
+    {
+      "cardName": "Light Barrier",
+      "points": 1
+    },
+    {
+      "cardName": "Light End Sublimation Dragon",
+      "points": 1
+    },
+    {
+      "cardName": "Lightning Storm",
+      "points": 12
+    },
+    {
+      "cardName": "Lightsworn Dragonling",
+      "points": 10
+    },
+    {
+      "cardName": "Lonefire Blossom",
+      "points": 33
+    },
+    {
+      "cardName": "Lose 1 Turn",
+      "points": 100
+    },
+    {
+      "cardName": "Lubellion the Searing Dragon",
+      "points": 10
+    },
+    {
+      "cardName": "Lunalight Liger Dancer",
+      "points": 51
+    },
+    {
+      "cardName": "Lyrilusc - Beryl Canary",
+      "points": 5
+    },
+    {
+      "cardName": "Lyrilusc - Bird Call",
+      "points": 5
+    },
+    {
+      "cardName": "Lyrilusc - Independent Nightingale",
+      "points": 1
+    },
+    {
+      "cardName": "Lyrilusc - Sapphire Swallow",
+      "points": 3
+    },
+    {
+      "cardName": "Lyrilusc - Turquoise Warbler",
+      "points": 3
+    },
+    {
+      "cardName": "M-X-Saber Invoker",
+      "points": 33
+    },
+    {
+      "cardName": "Magical Explosion",
+      "points": 75
+    },
+    {
+      "cardName": "Magical Mallet",
+      "points": 3
+    },
+    {
+      "cardName": "Magical Mid-Breaker Field",
+      "points": 60
+    },
+    {
+      "cardName": "Magical Scientist",
+      "points": 95
+    },
+    {
+      "cardName": "Magician of Black Chaos MAX",
+      "points": 100
+    },
+    {
+      "cardName": "Magicians' Souls",
+      "points": 10
+    },
+    {
+      "cardName": "Magnet Bonding",
+      "points": 5
+    },
+    {
+      "cardName": "Majesty's Fiend",
+      "points": 100
+    },
+    {
+      "cardName": "Manju of the Ten Thousand Hands",
+      "points": 1
+    },
+    {
+      "cardName": "Mansion of the Dreadful Dolls",
+      "points": 100
+    },
+    {
+      "cardName": "Martyr of the Sacred Beasts",
+      "points": 2
+    },
+    {
+      "cardName": "Masked HERO Dark Law",
+      "points": 70
+    },
+    {
+      "cardName": "Masked HERO Fountain",
+      "points": 6
+    },
+    {
+      "cardName": "Masquerade the Blazing Dragon",
+      "points": 16
+    },
+    {
+      "cardName": "Mass Driver",
+      "points": 100
+    },
+    {
+      "cardName": "Master Peace, the True Dracoslaying King",
+      "points": 33
+    },
+    {
+      "cardName": "Mathmech Circular",
+      "points": 15
+    },
+    {
+      "cardName": "Mathmech Sigma",
+      "points": 5
+    },
+    {
+      "cardName": "Maxx \"C\"",
+      "points": 50
+    },
+    {
+      "cardName": "Medius the Pure",
+      "points": 5
+    },
+    {
+      "cardName": "Megalith Anastasis",
+      "points": 33
+    },
+    {
+      "cardName": "Mementomictlan Tecuhtlica - Creation King",
+      "points": 33
+    },
+    {
+      "cardName": "Mementotlan Bone Party",
+      "points": 33
+    },
+    {
+      "cardName": "Mementotlan Twin Dragon",
+      "points": 33
+    },
+    {
+      "cardName": "Mercurium the Living Quicksilver",
+      "points": 10
+    },
+    {
+      "cardName": "Mereologic Aggregator",
+      "points": 4
+    },
+    {
+      "cardName": "Metamorphosis",
+      "points": 3
+    },
+    {
+      "cardName": "Metaverse",
+      "points": 3
+    },
+    {
+      "cardName": "Mikanko Shinbu - Noble Twins",
+      "points": 18
+    },
+    {
+      "cardName": "Mikanko Water Arabesque",
+      "points": 10
+    },
+    {
+      "cardName": "Millennium Ankh",
+      "points": 3
+    },
+    {
+      "cardName": "Mimighoul Dungeon",
+      "points": 5
+    },
+    {
+      "cardName": "Mind Drain",
+      "points": 100
+    },
+    {
+      "cardName": "Mind Master",
+      "points": 1
+    },
+    {
+      "cardName": "Mind Shuffle",
+      "points": 40
+    },
+    {
+      "cardName": "Miracle Ejector",
+      "points": 5
+    },
+    {
+      "cardName": "Mirrorjade the Iceblade Dragon",
+      "points": 10
+    },
+    {
+      "cardName": "Miscellaneousaurus",
+      "points": 67
+    },
+    {
+      "cardName": "Mistake",
+      "points": 100
+    },
+    {
+      "cardName": "Mistaken Arrest",
+      "points": 10
+    },
+    {
+      "cardName": "Mitsurugi Prayers",
+      "points": 51
+    },
+    {
+      "cardName": "Mitsurugi Ritual",
+      "points": 51
+    },
+    {
+      "cardName": "Monster Gate",
+      "points": 50
+    },
+    {
+      "cardName": "Monster Reborn",
+      "points": 3
+    },
+    {
+      "cardName": "Morphing Jar",
+      "points": 33
+    },
+    {
+      "cardName": "Morphtronic Telefon",
+      "points": 55
+    },
+    {
+      "cardName": "Mortilux Heruvur",
+      "points": 20
+    },
+    {
+      "cardName": "Moulinglacia the Elemental Lord",
+      "points": 100
+    },
+    {
+      "cardName": "Mudora the Sword Oracle",
+      "points": 2
+    },
+    {
+      "cardName": "Mulcharmy Fuwalos",
+      "points": 8
+    },
+    {
+      "cardName": "Mulcharmy Meowls",
+      "points": 2
+    },
+    {
+      "cardName": "Mulcharmy Purulia",
+      "points": 9
+    },
+    {
+      "cardName": "Multi-Universe",
+      "points": 3
+    },
+    {
+      "cardName": "Mystic Mine",
+      "points": 100
+    },
+    {
+      "cardName": "N.As.H. Knight",
+      "points": 13
+    },
+    {
+      "cardName": "Nadir Servant",
+      "points": 20
+    },
+    {
+      "cardName": "Naturia Barkion",
+      "points": 10
+    },
+    {
+      "cardName": "Naturia Beast",
+      "points": 50
+    },
+    {
+      "cardName": "Naturia Exterio",
+      "points": 100
+    },
+    {
+      "cardName": "Necrovalley",
+      "points": 25
+    },
+    {
+      "cardName": "Neptabyss, the Atlantean Prince",
+      "points": 33
+    },
+    {
+      "cardName": "Nerva the Power Patron of Creation",
+      "points": 5
+    },
+    {
+      "cardName": "Nibiru, the Primal Being",
+      "points": 8
+    },
+    {
+      "cardName": "Nightmare Apprentice",
+      "points": 20
+    },
+    {
+      "cardName": "Nightmare Throne",
+      "points": 13
+    },
+    {
+      "cardName": "Noh-P.U.N.K. Foxy Tune",
+      "points": 7
+    },
+    {
+      "cardName": "Noh-P.U.N.K. Rising Scale",
+      "points": 3
+    },
+    {
+      "cardName": "Number 1: Infection Buzzking",
+      "points": 85
+    },
+    {
+      "cardName": "Number 1: Numeron Gate Ekam",
+      "points": 10
+    },
+    {
+      "cardName": "Number 100: Numeron Dragon",
+      "points": 21
+    },
+    {
+      "cardName": "Number 16: Shock Master",
+      "points": 100
+    },
+    {
+      "cardName": "Number 2: Numeron Gate Dve",
+      "points": 10
+    },
+    {
+      "cardName": "Number 3: Cicada King",
+      "points": 10
+    },
+    {
+      "cardName": "Number 3: Numeron Gate Trini",
+      "points": 10
+    },
+    {
+      "cardName": "Number 38: Hope Harbinger Dragon Titanic Galaxy",
+      "points": 20
+    },
+    {
+      "cardName": "Number 39: Utopia Double",
+      "points": 80
+    },
+    {
+      "cardName": "Number 4: Numeron Gate Catvari",
+      "points": 10
+    },
+    {
+      "cardName": "Number 40: Gimmick Puppet of Strings",
+      "points": 50
+    },
+    {
+      "cardName": "Number 41: Bagooska the Terribly Tired Tapir",
+      "points": 100
+    },
+    {
+      "cardName": "Number 43: Manipulator of Souls",
+      "points": 100
+    },
+    {
+      "cardName": "Number 59: Crooked Cook",
+      "points": 100
+    },
+    {
+      "cardName": "Number 60: Dugares the Timeless",
+      "points": 10
+    },
+    {
+      "cardName": "Number 67: Pair-a-Dice Smasher",
+      "points": 67
+    },
+    {
+      "cardName": "Number 69: Heraldry Crest",
+      "points": 1
+    },
+    {
+      "cardName": "Number 75: Bamboozling Gossip Shadow",
+      "points": 70
+    },
+    {
+      "cardName": "Number 86: Heroic Champion - Rhongomyniad",
+      "points": 68
+    },
+    {
+      "cardName": "Number 89: Diablosis the Mind Hacker",
+      "points": 85
+    },
+    {
+      "cardName": "Number 90: Galaxy-Eyes Photon Lord",
+      "points": 10
+    },
+    {
+      "cardName": "Number 95: Galaxy-Eyes Dark Matter Dragon",
+      "points": 50
+    },
+    {
+      "cardName": "Number 97: Draglubion",
+      "points": 80
+    },
+    {
+      "cardName": "Number 99: Utopia Dragonar",
+      "points": 80
+    },
+    {
+      "cardName": "Number C1: Numeron Chaos Gate Sunya",
+      "points": 10
+    },
+    {
+      "cardName": "Number C40: Gimmick Puppet of Dark Strings",
+      "points": 50
+    },
+    {
+      "cardName": "Number F0: Utopic Draco Future",
+      "points": 25
+    },
+    {
+      "cardName": "Number F0: Utopic Future Zexal",
+      "points": 5
+    },
+    {
+      "cardName": "Number S0: Utopic ZEXAL",
+      "points": 100
+    },
+    {
+      "cardName": "Numbers Eveil",
+      "points": 70
+    },
+    {
+      "cardName": "Numeron Calling",
+      "points": 30
+    },
+    {
+      "cardName": "Numeron Network",
+      "points": 33
+    },
+    {
+      "cardName": "Obedience Schooled",
+      "points": 40
+    },
+    {
+      "cardName": "Officiator of Doom Samuel",
+      "points": 10
+    },
+    {
+      "cardName": "Ohime the Manifested Mikanko",
+      "points": 33
+    },
+    {
+      "cardName": "Ojama Duo",
+      "points": 2
+    },
+    {
+      "cardName": "Ojama Trio",
+      "points": 3
+    },
+    {
+      "cardName": "One Day of Peace",
+      "points": 11
+    },
+    {
+      "cardName": "One for One",
+      "points": 91
+    },
+    {
+      "cardName": "Onomatopaira",
+      "points": 33
+    },
+    {
+      "cardName": "Original Sinful Spoils - Snake-Eye",
+      "points": 100
+    },
+    {
+      "cardName": "Outer Entity Azathot",
+      "points": 100
+    },
+    {
+      "cardName": "Over Tuning",
+      "points": 10
+    },
+    {
+      "cardName": "P.U.N.K. JAM Dragon Drive",
+      "points": 15
+    },
+    {
+      "cardName": "Painful Choice",
+      "points": 95
+    },
+    {
+      "cardName": "Phantom Fortress Enterblathnir",
+      "points": 13
+    },
+    {
+      "cardName": "Phantom Knights' Rank-Up-Magic Force",
+      "points": 1
+    },
+    {
+      "cardName": "Phantom of Yubel",
+      "points": 88
+    },
+    {
+      "cardName": "Phara the Primordial Goddess",
+      "points": 20
+    },
+    {
+      "cardName": "Pilgrim Reaper",
+      "points": 50
+    },
+    {
+      "cardName": "Planet Pathfinder",
+      "points": 3
+    },
+    {
+      "cardName": "Pot of Desires",
+      "points": 15
+    },
+    {
+      "cardName": "Pot of Extravagance",
+      "points": 10
+    },
+    {
+      "cardName": "Pot of Greed",
+      "points": 30
+    },
+    {
+      "cardName": "Pot of Prosperity",
+      "points": 40
+    },
+    {
+      "cardName": "Pot of Sloth",
+      "points": 10
+    },
+    {
+      "cardName": "Power Vice Dragon",
+      "points": 6
+    },
+    {
+      "cardName": "Powersink Stone",
+      "points": 100
+    },
+    {
+      "cardName": "Pre-Preparation of Rites",
+      "points": 10
+    },
+    {
+      "cardName": "Premature Burial",
+      "points": 2
+    },
+    {
+      "cardName": "Preparation of Rites",
+      "points": 5
+    },
+    {
+      "cardName": "Pressured Planet Wraitsoth",
+      "points": 33
+    },
+    {
+      "cardName": "Primathmech Alembertian",
+      "points": 20
+    },
+    {
+      "cardName": "Primeval Planet Perlereino",
+      "points": 50
+    },
+    {
+      "cardName": "Primite Lordly Lode",
+      "points": 33
+    },
+    {
+      "cardName": "Prohibition",
+      "points": 100
+    },
+    {
+      "cardName": "Pseudo Space",
+      "points": 3
+    },
+    {
+      "cardName": "Psi-Blocker",
+      "points": 61
+    },
+    {
+      "cardName": "PSY-Framegear Delta",
+      "points": 7
+    },
+    {
+      "cardName": "PSY-Framegear Epsilon",
+      "points": 7
+    },
+    {
+      "cardName": "PSY-Framegear Gamma",
+      "points": 15
+    },
+    {
+      "cardName": "PSY-Framelord Omega",
+      "points": 100
+    },
+    {
+      "cardName": "Psychic End Punisher",
+      "points": 20
+    },
+    {
+      "cardName": "Purrely",
+      "points": 10
+    },
+    {
+      "cardName": "Purrely Sleepy Memory",
+      "points": 10
+    },
+    {
+      "cardName": "Purrelyly",
+      "points": 7
+    },
+    {
+      "cardName": "QQ Enneagon",
+      "points": 1
+    },
+    {
+      "cardName": "Question",
+      "points": 11
+    },
+    {
+      "cardName": "Quick Launch",
+      "points": 33
+    },
+    {
+      "cardName": "Ra's Disciple",
+      "points": 1
+    },
+    {
+      "cardName": "Radiant Typhoon Chant",
+      "points": 10
+    },
+    {
+      "cardName": "Radiant Typhoon Eldam",
+      "points": 7
+    },
+    {
+      "cardName": "Radiant Typhoon Krosea",
+      "points": 7
+    },
+    {
+      "cardName": "Radiant Typhoon Vision",
+      "points": 10
+    },
+    {
+      "cardName": "Ragged Records of Rites",
+      "points": 10
+    },
+    {
+      "cardName": "Rahu Dracotail",
+      "points": 10
+    },
+    {
+      "cardName": "Raider's Knight",
+      "points": 80
+    },
+    {
+      "cardName": "Raigeki",
+      "points": 4
+    },
+    {
+      "cardName": "Rank-Up-Magic - The Seventh One",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Admiration of the Thousands",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Argent Chaos Force",
+      "points": 5
+    },
+    {
+      "cardName": "Rank-Up-Magic Astral Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Barian's Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Cipher Ascension",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Doom Double Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Limited Barian's Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Magical Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Numeron Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Quick Chaos",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Raid Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Raptor's Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Revolution Force",
+      "points": 1
+    },
+    {
+      "cardName": "Rank-Up-Magic Skip Force",
+      "points": 5
+    },
+    {
+      "cardName": "Rank-Up-Magic Soul Shave Force",
+      "points": 5
+    },
+    {
+      "cardName": "Rank-Up-Magic Zexal Force",
+      "points": 1
+    },
+    {
+      "cardName": "Reasoning",
+      "points": 50
+    },
+    {
+      "cardName": "Red Reboot",
+      "points": 50
+    },
+    {
+      "cardName": "Red-Eyes Black Fullmetal Dragon",
+      "points": 33
+    },
+    {
+      "cardName": "Red-Eyes Dark Dragoon",
+      "points": 100
+    },
+    {
+      "cardName": "Red-Eyes Flare Metal Dragon",
+      "points": 1
+    },
+    {
+      "cardName": "Redox, Dragon Ruler of Boulders",
+      "points": 5
+    },
+    {
+      "cardName": "Regenesis",
+      "points": 10
+    },
+    {
+      "cardName": "Regenesis Archfiend",
+      "points": 10
+    },
+    {
+      "cardName": "Regenesis Code",
+      "points": 10
+    },
+    {
+      "cardName": "Regenesis Sage",
+      "points": 7
+    },
+    {
+      "cardName": "Regenesis Warrior",
+      "points": 3
+    },
+    {
+      "cardName": "Reinforcement of the Army",
+      "points": 33
+    },
+    {
+      "cardName": "Rescue-ACE Air Lifter",
+      "points": 3
+    },
+    {
+      "cardName": "Rescue-ACE Impulse",
+      "points": 5
+    },
+    {
+      "cardName": "Rescue-ACE Preventer",
+      "points": 7
+    },
+    {
+      "cardName": "Retaliating \"C\"",
+      "points": 5
+    },
+    {
+      "cardName": "Return from the Different Dimension",
+      "points": 20
+    },
+    {
+      "cardName": "Return of the Dragon Lords",
+      "points": 3
+    },
+    {
+      "cardName": "Reversal Quiz",
+      "points": 100
+    },
+    {
+      "cardName": "Rise Rank-Up-Magic Raidraptor's Force",
+      "points": 1
+    },
+    {
+      "cardName": "Ritual Beast Tamer Elder",
+      "points": 3
+    },
+    {
+      "cardName": "Rivalry of Warlords",
+      "points": 100
+    },
+    {
+      "cardName": "Ronintoadin",
+      "points": 60
+    },
+    {
+      "cardName": "Royal Decree",
+      "points": 10
+    },
+    {
+      "cardName": "Royal Magical Library",
+      "points": 100
+    },
+    {
+      "cardName": "Royal Oppression",
+      "points": 100
+    },
+    {
+      "cardName": "Runick Tip",
+      "points": 10
+    },
+    {
+      "cardName": "Ryzeal Detonator",
+      "points": 20
+    },
+    {
+      "cardName": "Ryzeal Duo Drive",
+      "points": 20
+    },
+    {
+      "cardName": "Sacred Beasts Thunderclap",
+      "points": 2
+    },
+    {
+      "cardName": "Sales Ban",
+      "points": 100
+    },
+    {
+      "cardName": "Sandwich Day",
+      "points": 3
+    },
+    {
+      "cardName": "Sangen Kaimen",
+      "points": 50
+    },
+    {
+      "cardName": "Sangen Summoning",
+      "points": 100
+    },
+    {
+      "cardName": "Sauravis, the Ancient and Ascended",
+      "points": 3
+    },
+    {
+      "cardName": "Schwarzschild Infinity Dragon",
+      "points": 33
+    },
+    {
+      "cardName": "Secret Village of the Spellcasters",
+      "points": 100
+    },
+    {
+      "cardName": "Self-Destruct Button",
+      "points": 100
+    },
+    {
+      "cardName": "Sengenjin Wakes from a Millennium",
+      "points": 33
+    },
+    {
+      "cardName": "Senju of the Thousand Hands",
+      "points": 1
+    },
+    {
+      "cardName": "Set Rotation",
+      "points": 33
+    },
+    {
+      "cardName": "Shaddoll Schism",
+      "points": 10
+    },
+    {
+      "cardName": "Shared Ride",
+      "points": 1
+    },
+    {
+      "cardName": "Shien's Smoke Signal",
+      "points": 20
+    },
+    {
+      "cardName": "Shiina, Twin Tempests of Celestial Thunder",
+      "points": 10
+    },
+    {
+      "cardName": "Shooting Riser Dragon",
+      "points": 33
+    },
+    {
+      "cardName": "Sillva, Warlord of Dark World",
+      "points": 100
+    },
+    {
+      "cardName": "Silvy of the White Forest",
+      "points": 5
+    },
+    {
+      "cardName": "Sixth Sense",
+      "points": 65
+    },
+    {
+      "cardName": "Skill Drain",
+      "points": 100
+    },
+    {
+      "cardName": "Sky Striker Mobilize - Engage!",
+      "points": 7
+    },
+    {
+      "cardName": "Smoke Grenade of the Thief",
+      "points": 87
+    },
+    {
+      "cardName": "Snatch Steal",
+      "points": 2
+    },
+    {
+      "cardName": "Snoww, Unlight of Dark World",
+      "points": 33
+    },
+    {
+      "cardName": "Solemn Accusation",
+      "points": 12
+    },
+    {
+      "cardName": "Solemn Judgment",
+      "points": 7
+    },
+    {
+      "cardName": "Solemn Scolding",
+      "points": 5
+    },
+    {
+      "cardName": "Solemn Strike",
+      "points": 5
+    },
+    {
+      "cardName": "Solemn Warning",
+      "points": 5
+    },
+    {
+      "cardName": "Songs of the Dominators",
+      "points": 10
+    },
+    {
+      "cardName": "Soul Charge",
+      "points": 50
+    },
+    {
+      "cardName": "Soul Drain",
+      "points": 100
+    },
+    {
+      "cardName": "Speedroid Terrortop",
+      "points": 7
+    },
+    {
+      "cardName": "Spell Canceller",
+      "points": 20
+    },
+    {
+      "cardName": "Spell Card \"Soul Exchange\"",
+      "points": 13
+    },
+    {
+      "cardName": "Spenta, the Magistus Sealer",
+      "points": 15
+    },
+    {
+      "cardName": "Spiritual Beast Tamer Lara",
+      "points": 10
+    },
+    {
+      "cardName": "Spright Starter",
+      "points": 10
+    },
+    {
+      "cardName": "Stand Up Centur-Ion!",
+      "points": 5
+    },
+    {
+      "cardName": "Star Seraph Scepter",
+      "points": 5
+    },
+    {
+      "cardName": "Star Seraph Sovereignty",
+      "points": 5
+    },
+    {
+      "cardName": "Stardust Sifr Divine Dragon",
+      "points": 21
+    },
+    {
+      "cardName": "Starliege Seyfert",
+      "points": 33
+    },
+    {
+      "cardName": "Steel-Stringed Sacrifice",
+      "points": 3
+    },
+    {
+      "cardName": "Stray Purrely Street",
+      "points": 5
+    },
+    {
+      "cardName": "Subspace Battle",
+      "points": 5
+    },
+    {
+      "cardName": "Substitoad",
+      "points": 60
+    },
+    {
+      "cardName": "Subterror Guru",
+      "points": 5
+    },
+    {
+      "cardName": "Summon Limit",
+      "points": 100
+    },
+    {
+      "cardName": "Summoner of the Sacred Beasts",
+      "points": 5
+    },
+    {
+      "cardName": "Super Polymerization",
+      "points": 13
+    },
+    {
+      "cardName": "Super Quantal Mech King Great Magnus",
+      "points": 33
+    },
+    {
+      "cardName": "Super Starslayer TY-PHON - Sky Crisis",
+      "points": 10
+    },
+    {
+      "cardName": "Superconductive Plasma Blast",
+      "points": 5
+    },
+    {
+      "cardName": "Supreme King Dragon Starving Venom",
+      "points": 1
+    },
+    {
+      "cardName": "Surge Blitzclique",
+      "points": 4
+    },
+    {
+      "cardName": "Swap Frog",
+      "points": 33
+    },
+    {
+      "cardName": "Sword Ryzeal",
+      "points": 20
+    },
+    {
+      "cardName": "Swordsoul Emergence",
+      "points": 7
+    },
+    {
+      "cardName": "Swordsoul Grandmaster - Chixiao",
+      "points": 10
+    },
+    {
+      "cardName": "Swordsoul Strategist Longyuan",
+      "points": 1
+    },
+    {
+      "cardName": "Swordsoul Supreme Sovereign - Chengying",
+      "points": 10
+    },
+    {
+      "cardName": "T.G. Hyper Librarian",
+      "points": 20
+    },
+    {
+      "cardName": "Tearlaments Havnis",
+      "points": 50
+    },
+    {
+      "cardName": "Tearlaments Kitkallos",
+      "points": 50
+    },
+    {
+      "cardName": "Tearlaments Merrli",
+      "points": 50
+    },
+    {
+      "cardName": "Tearlaments Reinoheart",
+      "points": 50
+    },
+    {
+      "cardName": "Tearlaments Scheiren",
+      "points": 50
+    },
+    {
+      "cardName": "Telekinetic Charging Cell",
+      "points": 100
+    },
+    {
+      "cardName": "Tellarknight Constellar Delteros",
+      "points": 10
+    },
+    {
+      "cardName": "Tellarknight Cygnian",
+      "points": 6
+    },
+    {
+      "cardName": "Tellarknight Ptolemaeus",
+      "points": 100
+    },
+    {
+      "cardName": "Tempest, Dragon Ruler of Storms",
+      "points": 5
+    },
+    {
+      "cardName": "Tenpai Dragon Chundra",
+      "points": 50
+    },
+    {
+      "cardName": "Tenpai Dragon Genroku",
+      "points": 25
+    },
+    {
+      "cardName": "Terraforming",
+      "points": 33
+    },
+    {
+      "cardName": "That Grass Looks Greener",
+      "points": 50
+    },
+    {
+      "cardName": "The Black Goat Laughs",
+      "points": 10
+    },
+    {
+      "cardName": "The Bystial Lubellion",
+      "points": 30
+    },
+    {
+      "cardName": "The Crimson King",
+      "points": 10
+    },
+    {
+      "cardName": "The Dragon that Devours the Dogma",
+      "points": 5
+    },
+    {
+      "cardName": "The Fallen & The Virtuous",
+      "points": 40
+    },
+    {
+      "cardName": "The Forceful Sentry",
+      "points": 100
+    },
+    {
+      "cardName": "The Gates of Dark World",
+      "points": 5
+    },
+    {
+      "cardName": "The Gaze of Timaeus",
+      "points": 1
+    },
+    {
+      "cardName": "The Last Warrior from Another Planet",
+      "points": 100
+    },
+    {
+      "cardName": "The Melody of Awakening Dragon",
+      "points": 25
+    },
+    {
+      "cardName": "The Monarchs Erupt",
+      "points": 50
+    },
+    {
+      "cardName": "The Phantom Knights of Decayed Cloak",
+      "points": 4
+    },
+    {
+      "cardName": "The Phantom Knights of Doomed Soleret",
+      "points": 5
+    },
+    {
+      "cardName": "The Phantom Knights of Malevolent Scythe",
+      "points": 12
+    },
+    {
+      "cardName": "The Phantom Knights' Rank-Up-Magic Launch",
+      "points": 1
+    },
+    {
+      "cardName": "The Phantom Knights' Rank-Up-Magic Requiem",
+      "points": 1
+    },
+    {
+      "cardName": "The Three Champions of Swordsoul",
+      "points": 10
+    },
+    {
+      "cardName": "The Tyrant Neptune",
+      "points": 100
+    },
+    {
+      "cardName": "The Unstoppable Exodia Incarnate",
+      "points": 20
+    },
+    {
+      "cardName": "The Zombie Vampire",
+      "points": 50
+    },
+    {
+      "cardName": "Theorealize",
+      "points": 5
+    },
+    {
+      "cardName": "Theorealize Past Lull",
+      "points": 5
+    },
+    {
+      "cardName": "There Can Be Only One",
+      "points": 100
+    },
+    {
+      "cardName": "Therion \"King\" Regulus",
+      "points": 20
+    },
+    {
+      "cardName": "Thunder Dragon Colossus",
+      "points": 67
+    },
+    {
+      "cardName": "Thunder King Rai-Oh",
+      "points": 20
+    },
+    {
+      "cardName": "Thundercrash Snarecrow",
+      "points": 10
+    },
+    {
+      "cardName": "Tidal, Dragon Ruler of Waterfalls",
+      "points": 5
+    },
+    {
+      "cardName": "Toadally Awesome",
+      "points": 20
+    },
+    {
+      "cardName": "Toon Table of Contents",
+      "points": 7
+    },
+    {
+      "cardName": "Totem Bird",
+      "points": 10
+    },
+    {
+      "cardName": "Tour Guide From the Underworld",
+      "points": 3
+    },
+    {
+      "cardName": "Trade-In",
+      "points": 5
+    },
+    {
+      "cardName": "Transaction Rollback",
+      "points": 7
+    },
+    {
+      "cardName": "Trap Dustshoot",
+      "points": 94
+    },
+    {
+      "cardName": "Trap Holic",
+      "points": 7
+    },
+    {
+      "cardName": "Trap Trick",
+      "points": 3
+    },
+    {
+      "cardName": "Traptrix Rafflesia",
+      "points": 20
+    },
+    {
+      "cardName": "Treasures of the Kings",
+      "points": 5
+    },
+    {
+      "cardName": "Tri-Brigade Mercourier",
+      "points": 5
+    },
+    {
+      "cardName": "Triple Tactics Talent",
+      "points": 93
+    },
+    {
+      "cardName": "Triple Tactics Thrust",
+      "points": 13
+    },
+    {
+      "cardName": "Trishula, Dragon of the Ice Barrier",
+      "points": 13
+    },
+    {
+      "cardName": "True King of All Calamities",
+      "points": 100
+    },
+    {
+      "cardName": "Tyrant's Tirade",
+      "points": 100
+    },
+    {
+      "cardName": "Ultimate Slayer",
+      "points": 1
+    },
+    {
+      "cardName": "Ultimaya Tzolkin",
+      "points": 100
+    },
+    {
+      "cardName": "Union Hangar",
+      "points": 5
+    },
+    {
+      "cardName": "Upstart Goblin",
+      "points": 10
+    },
+    {
+      "cardName": "Uzuhime the Manifested Mikanko",
+      "points": 18
+    },
+    {
+      "cardName": "Vanity's Emptiness",
+      "points": 100
+    },
+    {
+      "cardName": "Vanity's Fiend",
+      "points": 100
+    },
+    {
+      "cardName": "Vanity's Ruler",
+      "points": 100
+    },
+    {
+      "cardName": "Vanquish Soul Hollie Sue",
+      "points": 33
+    },
+    {
+      "cardName": "Vanquish Soul Jiaolong",
+      "points": 11
+    },
+    {
+      "cardName": "Vanquish Soul Razen",
+      "points": 11
+    },
+    {
+      "cardName": "Varudras, the Final Bringer of the End Times",
+      "points": 20
+    },
+    {
+      "cardName": "Virakam, the Divine Spirit of Artifice",
+      "points": 2
+    },
+    {
+      "cardName": "Virtual World Kyubi - Shenshen",
+      "points": 20
+    },
+    {
+      "cardName": "Void Unleashing",
+      "points": 10
+    },
+    {
+      "cardName": "Wandering Gryphon Rider",
+      "points": 50
+    },
+    {
+      "cardName": "WANTED: Seeker of Sinful Spoils",
+      "points": 33
+    },
+    {
+      "cardName": "Welcome Labrynth",
+      "points": 15
+    },
+    {
+      "cardName": "Wind-Up Carrier Zenmaity",
+      "points": 15
+    },
+    {
+      "cardName": "Wind-Up Hunter",
+      "points": 86
+    },
+    {
+      "cardName": "Wishes for Eyes of Blue",
+      "points": 33
+    },
+    {
+      "cardName": "Witch of the White Forest",
+      "points": 33
+    },
+    {
+      "cardName": "Witness of the Ancient",
+      "points": 33
+    },
+    {
+      "cardName": "World Legacy Monstrosity",
+      "points": 1
+    },
+    {
+      "cardName": "Zaborg the Mega Monarch",
+      "points": 100
+    },
+    {
+      "cardName": "Zalen the Shackled Dragon",
+      "points": 12
+    },
+    {
+      "cardName": "Zoodiac Barrage",
+      "points": 33
+    },
+    {
+      "cardName": "Zoodiac Broadbull",
+      "points": 66
+    },
+    {
+      "cardName": "Zoodiac Drident",
+      "points": 20
+    },
+    {
+      "cardName": "Zoodiac Ratpier",
+      "points": 50
+    }
+  ]
+}

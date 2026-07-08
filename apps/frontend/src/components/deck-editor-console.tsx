@@ -95,6 +95,10 @@ function getIssueLabel(type: DeckIssueType) {
     return "Deckgröße";
   }
 
+  if (type === "POINTS") {
+    return "Punkte";
+  }
+
   return "Besitz";
 }
 
@@ -136,6 +140,10 @@ function getLimitShortLabel(value: number) {
   }
 
   return String(value);
+}
+
+function formatPointValue(value: number) {
+  return `${value} P`;
 }
 
 function isExtraDeckMonster(card: Pick<CollectionCard | DeckCard, "kind" | "monsterType">) {
@@ -255,6 +263,7 @@ function CollectionBrowserCard({
   card,
   selected,
   disabled,
+  usesPointLimit,
   onAdd,
   onRemove,
   onPreview,
@@ -263,6 +272,7 @@ function CollectionBrowserCard({
   card: CollectionCard;
   selected: boolean;
   disabled: boolean;
+  usesPointLimit: boolean;
   onAdd: () => void;
   onRemove: () => void;
   onPreview: () => void;
@@ -325,30 +335,37 @@ function CollectionBrowserCard({
         <span
           className={classes(
             "absolute right-2 top-2 rounded-full border px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em]",
-            card.legalLimit <= 0
+            usesPointLimit
+              ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)] text-[#ffe0af]"
+              : card.legalLimit <= 0
               ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)] text-[#ffd5cd]"
               : card.legalLimit < 3
                 ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)] text-[#ffe0af]"
                 : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)] text-[#c7f1f1]",
           )}
         >
-          {getLimitShortLabel(card.legalLimit)}
+          {usesPointLimit ? formatPointValue(card.pointValue) : getLimitShortLabel(card.legalLimit)}
         </span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <StatusPill tone="slate">{getKindLabel(card.kind)}</StatusPill>
         {card.monsterType ? <StatusPill tone="slate">{card.monsterType}</StatusPill> : null}
-        <StatusPill tone={getLimitTone(card.legalLimit)}>
-          {getLimitLabel(card.legalLimit)}
-        </StatusPill>
+        {usesPointLimit ? (
+          <StatusPill tone="gold">{formatPointValue(card.pointValue)}</StatusPill>
+        ) : (
+          <StatusPill tone={getLimitTone(card.legalLimit)}>
+            {getLimitLabel(card.legalLimit)}
+          </StatusPill>
+        )}
       </div>
 
       <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-[#f6ebdb]">
         {card.name}
       </p>
       <p className="mt-2 text-xs text-[#bfae9a]">
-        Im Deck {card.deckCopies} · Erlaubt {card.legalLimit}
+        Im Deck {card.deckCopies} ·{" "}
+        {usesPointLimit ? `${card.pointValue} Punkte` : `Erlaubt ${card.legalLimit}`}
       </p>
     </button>
   );
@@ -360,6 +377,7 @@ function DeckZoneCompact({
   cards,
   selectedTarget,
   isSubmitting,
+  usesPointLimit,
   onSelect,
   onDropCard,
   onRemoveOne,
@@ -369,6 +387,7 @@ function DeckZoneCompact({
   cards: DeckCard[];
   selectedTarget: PreviewTarget | null;
   isSubmitting: boolean;
+  usesPointLimit: boolean;
   onSelect: (target: PreviewTarget) => void;
   onDropCard: (cardId: string, section: DeckSection) => void;
   onRemoveOne: (card: DeckCard) => void;
@@ -472,14 +491,16 @@ function DeckZoneCompact({
                   <span
                     className={classes(
                       "absolute left-1.5 top-1.5 rounded-full border px-2 py-0.5 text-[0.58rem] font-semibold text-[#f2dfc8]",
-                      card.allowedCopies <= 0
+                      usesPointLimit
+                        ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)]"
+                        : card.allowedCopies <= 0
                         ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)]"
                         : card.allowedCopies < 3
                           ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)]"
                           : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)]",
                     )}
                   >
-                    {getLimitShortLabel(card.allowedCopies)}
+                    {usesPointLimit ? formatPointValue(card.pointValue) : getLimitShortLabel(card.allowedCopies)}
                   </span>
                 </div>
 
@@ -488,9 +509,13 @@ function DeckZoneCompact({
                 </p>
 
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  <StatusPill tone={getLimitTone(card.allowedCopies)}>
-                    {getLimitLabel(card.allowedCopies)}
-                  </StatusPill>
+                  {usesPointLimit ? (
+                    <StatusPill tone="gold">{formatPointValue(card.pointValue)}</StatusPill>
+                  ) : (
+                    <StatusPill tone={getLimitTone(card.allowedCopies)}>
+                      {getLimitLabel(card.allowedCopies)}
+                    </StatusPill>
+                  )}
                   {card.issues.slice(0, 2).map((issue) => (
                     <StatusPill
                       key={`${card.cardId}-${card.section}-${issue}`}
@@ -574,11 +599,10 @@ export function DeckEditorConsole({
   );
   const usesGenesisRules = useMemo(
     () =>
-      Boolean(
-        selectedBanlist &&
-          /genesys|genesis/i.test(`${selectedBanlist.formatName} ${selectedBanlist.name}`),
-      ),
-    [selectedBanlist],
+      selectedBanlist
+        ? selectedBanlist.pointLimit !== null
+        : Boolean(activeDeck?.usesPointLimit),
+    [activeDeck?.usesPointLimit, selectedBanlist],
   );
 
   const filteredCollectionCards = useMemo(
@@ -947,7 +971,16 @@ export function DeckEditorConsole({
                 </StatusPill>
                 <StatusPill tone="gold">{activeDeck.banlistName}</StatusPill>
                 {usesGenesisRules ? (
-                  <StatusPill tone="slate">Genesis-Werte aktiv</StatusPill>
+                  <StatusPill
+                    tone={
+                      activeDeck.pointLimit !== null &&
+                      activeDeck.pointTotal > activeDeck.pointLimit
+                        ? "ember"
+                        : "gold"
+                    }
+                  >
+                    Genesis {activeDeck.pointTotal}/{activeDeck.pointLimit ?? "?"} Punkte
+                  </StatusPill>
                 ) : null}
                 <StatusPill tone="slate">Main {activeDeck.mainCount}</StatusPill>
                 <StatusPill tone="slate">Extra {activeDeck.extraCount}</StatusPill>
@@ -1055,7 +1088,9 @@ export function DeckEditorConsole({
                 {filteredCollectionCards.reduce((sum, card) => sum + card.availableCopies, 0)} frei
               </StatusPill>
               <StatusPill tone="gold">
-                {filteredCollectionCards.filter((card) => card.legalLimit === 0).length} gesperrt
+                {usesGenesisRules
+                  ? `${filteredCollectionCards.filter((card) => card.pointValue > 0).length} mit Punkten`
+                  : `${filteredCollectionCards.filter((card) => card.legalLimit === 0).length} gesperrt`}
               </StatusPill>
             </div>
 
@@ -1066,6 +1101,7 @@ export function DeckEditorConsole({
                     key={card.cardId}
                     card={card}
                     disabled={isSubmitting || !activeDeck}
+                    usesPointLimit={usesGenesisRules}
                     selected={
                       resolvedPreview?.source === "collection" &&
                       resolvedPreview.card.cardId === card.cardId
@@ -1153,6 +1189,7 @@ export function DeckEditorConsole({
                 cards={mainCards}
                 selectedTarget={previewTarget}
                 isSubmitting={isSubmitting}
+                usesPointLimit={usesGenesisRules}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
                   void handleAddCardToSection(cardId, section);
@@ -1168,6 +1205,7 @@ export function DeckEditorConsole({
                 cards={extraCards}
                 selectedTarget={previewTarget}
                 isSubmitting={isSubmitting}
+                usesPointLimit={usesGenesisRules}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
                   void handleAddCardToSection(cardId, section);
@@ -1183,6 +1221,7 @@ export function DeckEditorConsole({
                 cards={sideCards}
                 selectedTarget={previewTarget}
                 isSubmitting={isSubmitting}
+                usesPointLimit={usesGenesisRules}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
                   void handleAddCardToSection(cardId, section);
@@ -1244,9 +1283,15 @@ export function DeckEditorConsole({
                     <StatusPill tone="slate">
                       {getKindLabel(resolvedPreview.card.kind)}
                     </StatusPill>
-                    <StatusPill tone={getLimitTone(resolvedPreview.card.legalLimit)}>
-                      {getLimitLabel(resolvedPreview.card.legalLimit)}
-                    </StatusPill>
+                    {usesGenesisRules ? (
+                      <StatusPill tone="gold">
+                        {formatPointValue(resolvedPreview.card.pointValue)}
+                      </StatusPill>
+                    ) : (
+                      <StatusPill tone={getLimitTone(resolvedPreview.card.legalLimit)}>
+                        {getLimitLabel(resolvedPreview.card.legalLimit)}
+                      </StatusPill>
+                    )}
                     <StatusPill tone="teal">
                       {resolvedPreview.card.availableCopies} frei
                     </StatusPill>
@@ -1270,8 +1315,12 @@ export function DeckEditorConsole({
                       value={String(resolvedPreview.card.availableCopies)}
                     />
                     <InfoRow
-                      label={usesGenesisRules ? "Genesis-Wert" : "Erlaubte Kopien"}
-                      value={String(resolvedPreview.card.legalLimit)}
+                      label={usesGenesisRules ? "Genesis-Punkte" : "Erlaubte Kopien"}
+                      value={
+                        usesGenesisRules
+                          ? formatPointValue(resolvedPreview.card.pointValue)
+                          : String(resolvedPreview.card.legalLimit)
+                      }
                     />
                     <InfoRow
                       label="Reserviert"
@@ -1346,9 +1395,15 @@ export function DeckEditorConsole({
                     <StatusPill tone={getSectionTone(resolvedPreview.card.section)}>
                       {getSectionLabel(resolvedPreview.card.section)}
                     </StatusPill>
-                    <StatusPill tone={getLimitTone(resolvedPreview.card.allowedCopies)}>
-                      {getLimitLabel(resolvedPreview.card.allowedCopies)}
-                    </StatusPill>
+                    {usesGenesisRules ? (
+                      <StatusPill tone="gold">
+                        {formatPointValue(resolvedPreview.card.pointValue)}
+                      </StatusPill>
+                    ) : (
+                      <StatusPill tone={getLimitTone(resolvedPreview.card.allowedCopies)}>
+                        {getLimitLabel(resolvedPreview.card.allowedCopies)}
+                      </StatusPill>
+                    )}
                     <StatusPill tone="gold">×{resolvedPreview.card.quantity}</StatusPill>
                   </div>
 
@@ -1363,8 +1418,12 @@ export function DeckEditorConsole({
 
                   <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-1">
                     <InfoRow
-                      label={usesGenesisRules ? "Genesis-Wert" : "Erlaubte Kopien"}
-                      value={String(resolvedPreview.card.allowedCopies)}
+                      label={usesGenesisRules ? "Genesis-Punkte" : "Erlaubte Kopien"}
+                      value={
+                        usesGenesisRules
+                          ? formatPointValue(resolvedPreview.card.pointValue)
+                          : String(resolvedPreview.card.allowedCopies)
+                      }
                     />
                     {resolvedPreview.card.monsterType ? (
                       <InfoRow
