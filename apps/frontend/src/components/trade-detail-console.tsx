@@ -130,6 +130,8 @@ export function TradeDetailConsole({
     trade.proposer.userId === viewerUserId
       ? trade.proposerConfirmedAt
       : trade.responderConfirmedAt;
+  const canSubmitCounter =
+    counterOfferedIds.length > 0 || counterRequestedIds.length > 0;
 
   function toggleCounterForm() {
     if (showCounterForm) {
@@ -174,6 +176,11 @@ export function TradeDetailConsole({
   }
 
   async function submitCounterOffer() {
+    if (!canSubmitCounter) {
+      setFeedback("Wähle mindestens eine Karte für das Gegenangebot aus.");
+      return;
+    }
+
     setPendingCounter(true);
     setFeedback(null);
 
@@ -248,6 +255,24 @@ export function TradeDetailConsole({
                     ? `Deine Bestätigung liegt seit ${new Date(viewerConfirmedAt).toLocaleString("de-DE")} vor.`
                     : "Deine Abschlussbestätigung fehlt noch."}
                 </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-3">
+                    <p className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a8cfd1]">
+                      {trade.proposer.displayName}
+                    </p>
+                    <p className="mt-2 font-semibold text-[#effcff]">
+                      {trade.proposerConfirmedAt ? "Bestätigt" : "Offen"}
+                    </p>
+                  </div>
+                  <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-3">
+                    <p className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a8cfd1]">
+                      {trade.responder.displayName}
+                    </p>
+                    <p className="mt-2 font-semibold text-[#effcff]">
+                      {trade.responderConfirmedAt ? "Bestätigt" : "Offen"}
+                    </p>
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -403,7 +428,7 @@ export function TradeDetailConsole({
                 <button
                   className="ui-button-primary"
                   type="button"
-                  disabled={pendingCounter}
+                  disabled={pendingCounter || !canSubmitCounter}
                   onClick={submitCounterOffer}
                 >
                   {pendingCounter ? "Speichert..." : "Version senden"}

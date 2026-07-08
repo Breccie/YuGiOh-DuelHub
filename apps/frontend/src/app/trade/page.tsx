@@ -59,6 +59,27 @@ function formatTradeState(value: string) {
   }
 }
 
+function toTradeEntry(trade: Awaited<ReturnType<typeof listTradesForViewer>>[number]) {
+  return {
+    id: trade.id,
+    partnerName: trade.partner.displayName,
+    partnerRank: "Tauschpartner",
+    partnerDuelistId: trade.partner.duelistId,
+    threadState: trade.threadState,
+    statusLabel: formatTradeState(trade.threadState),
+    summaryLabel: `${trade.givingCount} gibst · ${trade.receivingCount} erhältst`,
+    infoLabel: new Date(trade.updatedAt).toLocaleDateString("de-DE"),
+    offered: trade.givingPreview.map((name, index) => ({
+      id: `${trade.id}-give-${index}`,
+      name,
+    })),
+    wanted: trade.receivingPreview.map((name, index) => ({
+      id: `${trade.id}-receive-${index}`,
+      name,
+    })),
+  };
+}
+
 export default async function TradePage() {
   const prisma = getPrisma();
   const session = await getViewerSession(prisma);
@@ -137,16 +158,9 @@ export default async function TradePage() {
     .filter((trade) =>
       ["awaitingYourResponse", "waitingForYourConfirmation"].includes(trade.threadState),
     )
-    .slice(0, 3)
     .map((trade) => {
       return {
-        id: trade.id,
-        partnerName: trade.partner.displayName,
-        partnerRank: "Tauschpartner",
-        partnerDuelistId: trade.partner.duelistId,
-        statusLabel: formatTradeState(trade.threadState),
-        summaryLabel: `${trade.givingCount} gibst · ${trade.receivingCount} erhältst`,
-        infoLabel: new Date(trade.updatedAt).toLocaleDateString("de-DE"),
+        ...toTradeEntry(trade),
         offered: trade.receivingPreview.map((name, index) => ({
           id: `${trade.id}-receive-${index}`,
           name,
@@ -162,26 +176,8 @@ export default async function TradePage() {
     .filter((trade) =>
       ["waitingForTheirResponse", "waitingForTheirConfirmation"].includes(trade.threadState),
     )
-    .slice(0, 3)
-    .map((trade) => {
-      return {
-        id: trade.id,
-        partnerName: trade.partner.displayName,
-        partnerRank: "Tauschpartner",
-        partnerDuelistId: trade.partner.duelistId,
-        statusLabel: formatTradeState(trade.threadState),
-        summaryLabel: `${trade.givingCount} gibst · ${trade.receivingCount} erhältst`,
-        infoLabel: new Date(trade.updatedAt).toLocaleDateString("de-DE"),
-        offered: trade.givingPreview.map((name, index) => ({
-          id: `${trade.id}-give-${index}`,
-          name,
-        })),
-        wanted: trade.receivingPreview.map((name, index) => ({
-          id: `${trade.id}-receive-${index}`,
-          name,
-        })),
-      };
-    });
+    .map(toTradeEntry);
+  const historyTrades = trades.map(toTradeEntry);
 
   const partnerCards = friendships.slice(0, 5).map((friendship) => {
     const partner =
@@ -208,6 +204,7 @@ export default async function TradePage() {
       activeEra={getEraLabel(earliestSet?.releaseDate.toISOString() ?? new Date().toISOString())}
       incomingTrades={incomingTrades}
       outgoingTrades={outgoingTrades}
+      historyTrades={historyTrades}
       partnerCards={partnerCards}
     />
   );

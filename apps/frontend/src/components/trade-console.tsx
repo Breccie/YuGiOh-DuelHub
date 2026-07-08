@@ -16,6 +16,14 @@ type TradeEntry = {
   partnerName: string;
   partnerRank: string;
   partnerDuelistId: string;
+  threadState:
+    | "awaitingYourResponse"
+    | "waitingForTheirResponse"
+    | "waitingForYourConfirmation"
+    | "waitingForTheirConfirmation"
+    | "completed"
+    | "cancelled"
+    | "rejected";
   statusLabel: string;
   summaryLabel: string;
   infoLabel: string;
@@ -40,6 +48,7 @@ type TradeConsoleProps = {
   activeEra: string;
   incomingTrades: TradeEntry[];
   outgoingTrades: TradeEntry[];
+  historyTrades?: TradeEntry[];
   partnerCards: PartnerCard[];
 };
 
@@ -53,6 +62,25 @@ function TradeSummaryBadge({ value }: { value: string }) {
       {value}
     </div>
   );
+}
+
+function getThreadTone(threadState: TradeEntry["threadState"]) {
+  if (
+    threadState === "awaitingYourResponse" ||
+    threadState === "waitingForYourConfirmation"
+  ) {
+    return "ember" as const;
+  }
+
+  if (threadState === "completed") {
+    return "gold" as const;
+  }
+
+  if (threadState === "cancelled" || threadState === "rejected") {
+    return "slate" as const;
+  }
+
+  return "teal" as const;
 }
 
 function CardNameChip({ label }: { label: string }) {
@@ -96,7 +124,7 @@ function TradeEntryCard({
           <p className="mt-1 text-sm text-[#baa58a]">{trade.partnerRank}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone={direction === "incoming" ? "ember" : "slate"}>
+          <StatusPill tone={getThreadTone(trade.threadState)}>
             {trade.statusLabel}
           </StatusPill>
           <span className="text-[0.72rem] uppercase tracking-[0.18em] text-[#a9967f]">
@@ -211,7 +239,7 @@ function HistoryRow({
           <p className="mt-1 text-sm text-[#baa58a]">{item.partnerRank}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone={direction === "incoming" ? "ember" : "slate"}>
+          <StatusPill tone={getThreadTone(item.threadState)}>
             {item.statusLabel}
           </StatusPill>
           <TradeSummaryBadge value={item.summaryLabel} />
@@ -228,6 +256,7 @@ export function TradeConsole({
   activeEra,
   incomingTrades,
   outgoingTrades,
+  historyTrades,
   partnerCards,
 }: TradeConsoleProps) {
   const [activeTab, setActiveTab] = useState<"OVERVIEW" | "PARTNERS" | "HISTORY">(
@@ -236,10 +265,16 @@ export function TradeConsole({
 
   const historyItems = useMemo(
     () => [
-      ...incomingTrades.map((item) => ({ direction: "incoming" as const, item })),
-      ...outgoingTrades.map((item) => ({ direction: "outgoing" as const, item })),
+      ...(historyTrades ?? [...incomingTrades, ...outgoingTrades]).map((item) => ({
+        direction:
+          item.threadState === "awaitingYourResponse" ||
+          item.threadState === "waitingForYourConfirmation"
+            ? ("incoming" as const)
+            : ("outgoing" as const),
+        item,
+      })),
     ],
-    [incomingTrades, outgoingTrades],
+    [historyTrades, incomingTrades, outgoingTrades],
   );
 
   const overviewCount = incomingTrades.length + outgoingTrades.length;
@@ -263,8 +298,8 @@ export function TradeConsole({
             Tausch & Angebote
           </h1>
           <p className="mt-5 max-w-[44rem] text-[1.05rem] leading-8 text-[#dbc9b2]">
-            Verwalte offene Angebote, finde passende Partner und gleiche Karten direkt über den
-            internen Genesys-Wert ab.
+            Verwalte offene Angebote, finde passende Partner und tausche Karten direkt im
+            Bestand deiner aktiven Kampagne.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -419,7 +454,7 @@ export function TradeConsole({
             ) : (
               <EmptyPanelState
                 title="Noch kein Verlauf"
-                detail="Abgeschlossene oder laufende Tauschaktionen werden hier später chronologisch angezeigt."
+                detail="Abgeschlossene oder laufende Tauschaktionen werden hier chronologisch angezeigt."
               />
             )
           ) : null}

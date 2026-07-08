@@ -52,6 +52,9 @@ export function TradeCreateConsole({
     () => partners.find((partner) => partner.duelistId === partnerDuelistId) ?? null,
     [partnerDuelistId, partners],
   );
+  const canSubmit =
+    Boolean(partnerDuelistId) &&
+    (offeredEntryIds.length > 0 || requestedEntryIds.length > 0);
 
   function toggleSelection(values: string[], setValues: (next: string[]) => void, id: string) {
     if (values.includes(id)) {
@@ -63,6 +66,11 @@ export function TradeCreateConsole({
   }
 
   async function submitTrade() {
+    if (!canSubmit) {
+      setFeedback("Wähle zuerst einen Partner und mindestens eine Karte aus.");
+      return;
+    }
+
     setPending(true);
     setFeedback(null);
 
@@ -163,7 +171,12 @@ export function TradeCreateConsole({
               </div>
             </div>
 
-            <button className="ui-button-primary" type="button" disabled={pending} onClick={submitTrade}>
+            <button
+              className="ui-button-primary disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={pending || !canSubmit}
+              onClick={submitTrade}
+            >
               {pending ? "Speichert..." : "Trade erstellen"}
             </button>
           </div>
@@ -171,8 +184,9 @@ export function TradeCreateConsole({
 
         <div className="space-y-6">
           <Panel kicker="Deine Karten" title="Angebot">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {availableCards.map((card) => {
+            {availableCards.length > 0 ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {availableCards.map((card) => {
                 const active = offeredEntryIds.includes(card.id);
 
                 return (
@@ -195,14 +209,20 @@ export function TradeCreateConsole({
                     </p>
                   </button>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            ) : (
+              <div className="ui-empty rounded-[18px] px-4 py-5 text-sm">
+                Keine frei tauschbaren Karten in deiner aktiven Kampagne.
+              </div>
+            )}
           </Panel>
 
           <Panel kicker="Partner-Karten" title={selectedPartner?.displayName ?? "Kein Partner ausgewählt"}>
             {selectedPartner ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {selectedPartner.availableCards.map((card) => {
+              selectedPartner.availableCards.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {selectedPartner.availableCards.map((card) => {
                   const active = requestedEntryIds.includes(card.id);
 
                   return (
@@ -225,8 +245,13 @@ export function TradeCreateConsole({
                       </p>
                     </button>
                   );
-                })}
-              </div>
+                  })}
+                </div>
+              ) : (
+                <div className="ui-empty rounded-[18px] px-4 py-5 text-sm">
+                  Dieser Partner hat in der aktiven Kampagne gerade keine frei tauschbaren Karten.
+                </div>
+              )
             ) : (
               <div className="ui-empty rounded-[18px] px-4 py-5 text-sm">
                 Wähle zuerst einen Tauschpartner aus.
