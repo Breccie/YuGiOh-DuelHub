@@ -4,6 +4,7 @@ import type {
   TradeDecisionRequest,
 } from "@ygo/contracts";
 import { apiPostJson } from "@/lib/api-client";
+import { refreshLocalSyncCacheSoon } from "@/lib/sync-cache-refresh";
 
 type TradeMutationResponse = {
   trade: {
@@ -12,21 +13,30 @@ type TradeMutationResponse = {
 };
 
 export const tradeClient = {
-  create(input: CreateTradeRequest) {
-    return apiPostJson<TradeMutationResponse, CreateTradeRequest>("/api/trades", input);
+  async create(input: CreateTradeRequest) {
+    const response = await apiPostJson<TradeMutationResponse, CreateTradeRequest>(
+      "/api/trades",
+      input,
+    );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  decide(tradeId: string, input: TradeDecisionRequest) {
-    return apiPostJson<TradeMutationResponse, TradeDecisionRequest>(
+  async decide(tradeId: string, input: TradeDecisionRequest) {
+    const response = await apiPostJson<TradeMutationResponse, TradeDecisionRequest>(
       `/api/trades/${tradeId}/decision`,
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  createVersion(tradeId: string, input: CreateTradeVersionRequest) {
-    return apiPostJson<TradeMutationResponse, CreateTradeVersionRequest>(
+  async createVersion(tradeId: string, input: CreateTradeVersionRequest) {
+    const response = await apiPostJson<TradeMutationResponse, CreateTradeVersionRequest>(
       `/api/trades/${tradeId}/versions`,
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 };

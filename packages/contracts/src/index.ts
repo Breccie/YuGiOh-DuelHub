@@ -246,6 +246,7 @@ export type RecordTournamentMatchResultRequest = z.infer<
 
 export const openPackRequestSchema = z.object({
   setId: z.string().trim().min(1).optional(),
+  idempotencyKey: z.string().trim().min(1).max(120).nullable().optional(),
 });
 export type OpenPackRequest = z.infer<typeof openPackRequestSchema>;
 
@@ -659,6 +660,9 @@ export const homeDashboardResponseSchema = z.object({
   ),
 });
 export type HomeDashboardResponse = z.infer<typeof homeDashboardResponseSchema>;
+
+export const dashboardSummaryResponseSchema = homeDashboardResponseSchema;
+export type DashboardSummaryResponse = z.infer<typeof dashboardSummaryResponseSchema>;
 
 export const packOpeningSummarySchema = z.object({
   id: z.string(),
@@ -1178,3 +1182,69 @@ export const claimPromoResponseSchema = z.object({
   source: promoSourceSchema,
 });
 export type ClaimPromoResponse = z.infer<typeof claimPromoResponseSchema>;
+
+export const syncBootstrapResponseSchema = z.object({
+  serverTime: z.string(),
+  cursor: z.string(),
+  viewer: z.object({
+    userId: z.string(),
+    duelistId: z.string(),
+    displayName: z.string(),
+  }),
+  activeRunId: z.string().nullable(),
+  catalog: z.object({
+    cards: z.number().int(),
+    sets: z.number().int(),
+    openableSets: z.number().int(),
+    banlists: z.number().int(),
+    packSets: z.array(
+      z.object({
+        id: z.string(),
+        code: z.string(),
+        name: z.string(),
+        releaseDate: z.string(),
+        productType: z.string(),
+        packSize: z.number().int(),
+        imageUrl: z.string().nullable(),
+        cardPoolSize: z.number().int(),
+      }),
+    ),
+    runSetUnlocks: z.array(
+      z.object({
+        id: z.string(),
+        setId: z.string(),
+        unlockedAt: z.string(),
+        rewardOnly: z.boolean(),
+        packPrice: z.number().int().nullable(),
+        displaySize: z.number().int().nullable(),
+      }),
+    ),
+  }),
+  run: z.unknown().nullable(),
+  wallet: z.unknown().nullable(),
+  counts: z.object({
+    collectionEntries: z.number().int(),
+    decks: z.number().int(),
+    binders: z.number().int(),
+    trades: z.number().int(),
+    tournaments: z.number().int(),
+    pendingRewards: z.number().int(),
+  }),
+});
+export type SyncBootstrapResponse = z.infer<typeof syncBootstrapResponseSchema>;
+
+export const syncChangesResponseSchema = z.object({
+  serverTime: z.string(),
+  cursor: z.string(),
+  hasMore: z.boolean(),
+  changes: z.object({
+    collectionEntries: z.array(z.unknown()),
+    decks: z.array(z.unknown()),
+    binders: z.array(z.unknown()),
+    trades: z.array(z.unknown()),
+    tournaments: z.array(z.unknown()),
+    packOpenings: z.array(z.unknown()),
+    rewards: z.array(z.unknown()),
+  }),
+});
+export type SyncChangesResponse = z.infer<typeof syncChangesResponseSchema>;

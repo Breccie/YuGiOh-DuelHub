@@ -42,9 +42,17 @@ Nach Deploy pruefen:
 
 ```bash
 curl https://<render-api>.onrender.com/health
+curl https://<render-api>.onrender.com/ready
 ```
 
-Erwartet: `{ "ok": true, "service": "ygo-api" }`.
+`/health` prueft, ob der API-Prozess laeuft. Erwartet:
+`{ "ok": true, "service": "ygo-api" }`.
+
+`/ready` prueft zusaetzlich die Postgres-Verbindung. Erwartet:
+`{ "ok": true, "service": "ygo-api", "database": "reachable" }`.
+Wenn `/health` funktioniert, aber `/ready` `503` liefert, sind meist
+`API_DATABASE_URL`, Supabase Pooler/IPv6/IPv4 oder Migration/Seed der naechste
+Pruefpunkt.
 
 ## 3. Vercel Frontend deployen
 
@@ -72,9 +80,7 @@ Lokal gegen Postgres:
 
 ```bash
 npm run online:infra
-npm run db:generate
-npm run db:migrate
-npm run db:seed:base
+npm run online:prepare
 npm run test:e2e:online
 ```
 

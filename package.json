@@ -27,6 +27,7 @@
     "db:seed:demo": "cross-env DATABASE_URL=file:./demo.db prisma db push --schema prisma/schema.prisma --skip-generate --accept-data-loss && cross-env DATABASE_URL=file:./demo.db tsx prisma/demo-seed.ts",
     "db:studio": "prisma studio --schema apps/api/prisma/schema.prisma",
     "online:infra": "docker compose up -d postgres",
+    "online:prepare": "npm run db:generate && npm run db:migrate && npm run db:seed:base",
     "online:dev": "npm run online:infra && npm run db:generate && npm run db:migrate && npm run db:seed:base && concurrently -k \"npm:api:dev\" \"npm:frontend:online:dev\"",
     "assets:audit:packs": "tsx scripts/audit-pack-assets.ts",
     "data:audit:promos": "tsx scripts/audit-promo-pack-data.ts",

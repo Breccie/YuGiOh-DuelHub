@@ -1,6 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createServer } from "./server";
 import { getPrisma } from "./lib/prisma";
+
+vi.mock("./lib/prisma", () => ({
+  getPrisma: vi.fn(() => ({
+    $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
+  })),
+}));
 
 const runApiIntegrationTests = process.env.API_INTEGRATION_TESTS === "1";
 
@@ -43,6 +49,44 @@ describe("api server", () => {
     expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
   });
 
+  it("exposes a database readiness endpoint", async () => {
+    vi.mocked(getPrisma).mockReturnValueOnce({
+      $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
+    } as unknown as ReturnType<typeof getPrisma>);
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/ready",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      ok: true,
+      service: "ygo-api",
+      database: "reachable",
+    });
+  });
+
+  it("reports readiness failure when the database is unreachable", async () => {
+    vi.mocked(getPrisma).mockReturnValueOnce({
+      $queryRaw: vi.fn(async () => {
+        throw new Error("database offline");
+      }),
+    } as unknown as ReturnType<typeof getPrisma>);
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/ready",
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({
+      ok: false,
+      service: "ygo-api",
+      database: "unreachable",
+    });
+  });
+
   it("exposes rules through api v1", async () => {
     const response = await server.inject({
       method: "GET",
@@ -63,13 +107,21 @@ describe("api server", () => {
   });
 
   it("protects the dashboard endpoint", async () => {
-    const response = await server.inject({
-      method: "GET",
-      url: "/api/v1/dashboard",
-    });
+    const [response, summaryResponse] = await Promise.all([
+      server.inject({
+        method: "GET",
+        url: "/api/v1/dashboard",
+      }),
+      server.inject({
+        method: "GET",
+        url: "/api/v1/dashboard/summary",
+      }),
+    ]);
 
     expect(response.statusCode).toBe(401);
     expect(response.json().errorDetail.code).toBe("unauthorized");
+    expect(summaryResponse.statusCode).toBe(401);
+    expect(summaryResponse.json().errorDetail.code).toBe("unauthorized");
   });
 
   it("protects pack endpoints", async () => {
@@ -87,6 +139,24 @@ describe("api server", () => {
 
     expect(packsResponse.statusCode).toBe(401);
     expect(openingsResponse.statusCode).toBe(401);
+  });
+
+  it("protects sync endpoints", async () => {
+    const [bootstrapResponse, changesResponse] = await Promise.all([
+      server.inject({
+        method: "GET",
+        url: "/api/v1/sync/bootstrap",
+      }),
+      server.inject({
+        method: "GET",
+        url: "/api/v1/sync/changes",
+      }),
+    ]);
+
+    expect(bootstrapResponse.statusCode).toBe(401);
+    expect(bootstrapResponse.json().errorDetail.code).toBe("unauthorized");
+    expect(changesResponse.statusCode).toBe(401);
+    expect(changesResponse.json().errorDetail.code).toBe("unauthorized");
   });
 
   it("protects friends and profile mutation endpoints", async () => {

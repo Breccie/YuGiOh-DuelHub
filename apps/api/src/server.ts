@@ -1,6 +1,7 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
+import { getPrisma } from "./lib/prisma";
 import { getAllowedCorsOrigins, getCookieSecret } from "./lib/runtime-config";
 import authRoutes from "./routes/auth";
 import collectionRoutes from "./routes/collection";
@@ -12,6 +13,7 @@ import packsRoutes from "./routes/packs";
 import profileRoutes from "./routes/profiles";
 import rulesRoutes from "./routes/rules";
 import runsRoutes from "./routes/runs";
+import syncRoutes from "./routes/sync";
 import tournamentRoutes from "./routes/tournaments";
 import tradeRoutes from "./routes/trades";
 
@@ -49,6 +51,26 @@ export function createServer() {
     };
   });
 
+  app.get("/ready", async (request, reply) => {
+    try {
+      await getPrisma().$queryRaw`SELECT 1`;
+
+      return {
+        ok: true,
+        service: "ygo-api",
+        database: "reachable",
+      };
+    } catch (error) {
+      request.log.warn({ error }, "API readiness check failed.");
+
+      return reply.status(503).send({
+        ok: false,
+        service: "ygo-api",
+        database: "unreachable",
+      });
+    }
+  });
+
   app.register(authRoutes, { prefix: "/api/v1/auth" });
   app.register(collectionRoutes, { prefix: "/api/v1/collection" });
   app.register(dashboardRoutes, { prefix: "/api/v1/dashboard" });
@@ -59,6 +81,7 @@ export function createServer() {
   app.register(profileRoutes, { prefix: "/api/v1/profiles" });
   app.register(rulesRoutes, { prefix: "/api/v1/rules" });
   app.register(runsRoutes, { prefix: "/api/v1/runs" });
+  app.register(syncRoutes, { prefix: "/api/v1/sync" });
   app.register(tournamentRoutes, { prefix: "/api/v1/tournaments" });
   app.register(tradeRoutes, { prefix: "/api/v1/trades" });
 

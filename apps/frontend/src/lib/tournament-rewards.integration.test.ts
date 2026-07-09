@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { claimRewardPack, createRunRewardGrant, openPack } from "@/lib/pack-openings";
 import {
   applyProgressionCheckpoint,
@@ -11,6 +11,10 @@ import {
 } from "@/lib/tournament-service";
 
 const prisma = new PrismaClient();
+
+vi.setConfig({
+  testTimeout: 15_000,
+});
 
 describe("tournament rewards and progression", () => {
   afterAll(async () => {

@@ -68,6 +68,7 @@ const packsRoutes: FastifyPluginAsync = async (app) => {
         viewerId: session.userId,
         runId: activeRun.id,
         setId: body.setId,
+        idempotencyKey: body.idempotencyKey,
       });
 
       return reply.status(201).send(openPackResponseSchema.parse({ opening }));

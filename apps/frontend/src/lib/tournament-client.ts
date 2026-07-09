@@ -4,6 +4,7 @@ import type {
   RecordTournamentMatchResultRequest,
 } from "@ygo/contracts";
 import { apiPatchJson, apiPost, apiPostJson } from "@/lib/api-client";
+import { refreshLocalSyncCacheSoon } from "@/lib/sync-cache-refresh";
 import type { TournamentDetail } from "@/lib/tournament-service";
 
 type TournamentMutationResponse = {
@@ -11,42 +12,55 @@ type TournamentMutationResponse = {
 };
 
 export const tournamentClient = {
-  create(input: CreateTournamentRequest) {
-    return apiPostJson<TournamentMutationResponse, CreateTournamentRequest>(
+  async create(input: CreateTournamentRequest) {
+    const response = await apiPostJson<
+      TournamentMutationResponse,
+      CreateTournamentRequest
+    >(
       "/api/tournaments",
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  inviteParticipant(
+  async inviteParticipant(
     tournamentId: string,
     input: InviteTournamentParticipantRequest,
   ) {
-    return apiPostJson<
+    const response = await apiPostJson<
       TournamentMutationResponse,
       InviteTournamentParticipantRequest
     >(`/api/tournaments/${tournamentId}/participants`, input);
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  createRound(tournamentId: string) {
-    return apiPost<TournamentMutationResponse>(
+  async createRound(tournamentId: string) {
+    const response = await apiPost<TournamentMutationResponse>(
       `/api/tournaments/${tournamentId}/rounds`,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  recordMatchResult(
+  async recordMatchResult(
     matchId: string,
     input: RecordTournamentMatchResultRequest,
   ) {
-    return apiPatchJson<
+    const response = await apiPatchJson<
       TournamentMutationResponse,
       RecordTournamentMatchResultRequest
     >(`/api/tournaments/matches/${matchId}`, input);
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  complete(tournamentId: string) {
-    return apiPost<TournamentMutationResponse>(
+  async complete(tournamentId: string) {
+    const response = await apiPost<TournamentMutationResponse>(
       `/api/tournaments/${tournamentId}/complete`,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 };

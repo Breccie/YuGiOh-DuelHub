@@ -460,6 +460,7 @@ export function PackOpeningStation({
 
       const payload = await packOpeningClient.open({
         setId: activeSet.id,
+        idempotencyKey: crypto.randomUUID(),
       });
 
       setCurrentOpening(payload.opening);

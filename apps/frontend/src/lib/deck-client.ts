@@ -11,6 +11,7 @@ import {
   apiPatchJson,
   apiPostJson,
 } from "@/lib/api-client";
+import { refreshLocalSyncCacheSoon } from "@/lib/sync-cache-refresh";
 
 type DeckMutationResponse = {
   deck: {
@@ -34,33 +35,46 @@ type DeckExportResponse = {
 };
 
 export const deckClient = {
-  create(input: CreateDeckRequest) {
-    return apiPostJson<DeckMutationResponse, CreateDeckRequest>("/api/decks", input);
+  async create(input: CreateDeckRequest) {
+    const response = await apiPostJson<DeckMutationResponse, CreateDeckRequest>(
+      "/api/decks",
+      input,
+    );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  update(deckId: string, input: UpdateDeckRequest) {
-    return apiPatchJson<DeckMutationResponse, UpdateDeckRequest>(
+  async update(deckId: string, input: UpdateDeckRequest) {
+    const response = await apiPatchJson<DeckMutationResponse, UpdateDeckRequest>(
       `/api/decks/${deckId}`,
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  remove(deckId: string) {
-    return apiDeleteJson<DeckDeleteResponse>(`/api/decks/${deckId}`);
+  async remove(deckId: string) {
+    const response = await apiDeleteJson<DeckDeleteResponse>(`/api/decks/${deckId}`);
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  upsertCard(deckId: string, input: UpsertDeckCardRequest) {
-    return apiPostJson<DeckCardMutationResponse, UpsertDeckCardRequest>(
+  async upsertCard(deckId: string, input: UpsertDeckCardRequest) {
+    const response = await apiPostJson<DeckCardMutationResponse, UpsertDeckCardRequest>(
       `/api/decks/${deckId}/cards`,
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
-  removeCard(deckId: string, input: RemoveDeckCardRequest) {
-    return apiDeleteJson<DeckDeleteResponse, RemoveDeckCardRequest>(
+  async removeCard(deckId: string, input: RemoveDeckCardRequest) {
+    const response = await apiDeleteJson<DeckDeleteResponse, RemoveDeckCardRequest>(
       `/api/decks/${deckId}/cards`,
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
   },
 
   exportDeck(deckId: string, input: DeckExportRequest) {

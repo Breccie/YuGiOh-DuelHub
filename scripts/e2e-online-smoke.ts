@@ -185,6 +185,23 @@ async function withApiPrisma<T>(
   }
 }
 
+async function assertApiDatabaseReachable() {
+  try {
+    await withApiPrisma(async (prisma) => {
+      await prisma.$queryRaw`SELECT 1`;
+    });
+  } catch (error) {
+    throw new Error(
+      [
+        `Online smoke cannot reach API_DATABASE_URL: ${apiDatabaseUrl}`,
+        "Start the local online database first with: npm run online:infra",
+        "Then prepare it with: npm run online:prepare",
+        `Original error: ${error instanceof Error ? error.message : String(error)}`,
+      ].join("\n"),
+    );
+  }
+}
+
 async function mirrorCatalogToApiWhenEmpty() {
   const frontendPrisma = new FrontendPrismaClient({
     datasources: {
@@ -899,15 +916,23 @@ async function smokeTournament(primary: SmokeActor, secondary: SmokeActor) {
 }
 
 async function cleanupApiSmokeUsers(duelistIds: string[]) {
-  await withApiPrisma(async (prisma) => {
-    await prisma.user.deleteMany({
-      where: {
-        duelistId: {
-          in: duelistIds,
+  try {
+    await withApiPrisma(async (prisma) => {
+      await prisma.user.deleteMany({
+        where: {
+          duelistId: {
+            in: duelistIds,
+          },
         },
-      },
+      });
     });
-  });
+  } catch (error) {
+    console.warn(
+      `[e2e-online] Cleanup skipped because the API database was not reachable: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
 
 async function runOnlineBrowserSmoke(primary: SmokeUser, secondary: SmokeUser) {
@@ -975,6 +1000,7 @@ async function runOnlineBrowserSmoke(primary: SmokeUser, secondary: SmokeUser) {
 async function main() {
   let apiServer: ChildProcessWithoutNullStreams | null = null;
   let frontendServer: ChildProcessWithoutNullStreams | null = null;
+  let apiDatabaseWasReachable = false;
   const suffix = Date.now();
   const primary: SmokeUser = {
     duelistId: `ONLINE-A-${suffix}`,
@@ -988,13 +1014,16 @@ async function main() {
   };
 
   try {
+    await assertApiDatabaseReachable();
+    apiDatabaseWasReachable = true;
+
     console.log("[e2e-online] Preparing frontend mirror database");
     await resetFrontendSmokeDatabase();
     await mirrorCatalogToApiWhenEmpty();
 
     console.log(`[e2e-online] Starting API service at ${apiBaseUrl}`);
     apiServer = startApiServer();
-    await waitForHttp(`${apiBaseUrl}/health`, "API service");
+    await waitForHttp(`${apiBaseUrl}/ready`, "API service readiness");
 
     console.log(`[e2e-online] Starting Next online frontend at ${baseUrl}`);
     frontendServer = startFrontendServer();
@@ -1014,7 +1043,9 @@ async function main() {
 
     throw error;
   } finally {
-    await cleanupApiSmokeUsers([primary.duelistId, secondary.duelistId]);
+    if (apiDatabaseWasReachable) {
+      await cleanupApiSmokeUsers([primary.duelistId, secondary.duelistId]);
+    }
     await stopProcess(frontendServer);
     await stopProcess(apiServer);
   }

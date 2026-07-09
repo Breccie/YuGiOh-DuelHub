@@ -1,29 +1,17 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import type { PackSelectionResponse } from "@ygo/contracts";
 import { PackSelectionConsole } from "@/components/pack-selection-console";
-import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
+import { PackSelectionLoader } from "@/components/pack-selection-loader";
+import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { buildPackSelectionPayload } from "@/lib/packs-data";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 import Loading from "../loading";
 
-async function getOnlinePackSelectionPayload() {
-  try {
-    return await fetchApiServiceJson<PackSelectionResponse>("/api/v1/packs");
-  } catch (error) {
-    if ((error as Error & { status?: number }).status === 401) {
-      redirect("/login");
-    }
-
-    throw error;
-  }
-}
-
 async function PacksPageContent() {
   if (shouldProxyToApiService()) {
-    return <PackSelectionConsole {...(await getOnlinePackSelectionPayload())} />;
+    return <PackSelectionLoader />;
   }
 
   const prisma = getPrisma();

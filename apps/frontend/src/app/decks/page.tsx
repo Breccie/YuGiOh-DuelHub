@@ -1,42 +1,22 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import { DeckOverviewLoader } from "@/components/deck-overview-loader";
 import { DeckOverviewConsole } from "@/components/deck-overview-console";
 import { getCardAssetUrl } from "@/lib/asset-urls";
-import {
-  fetchApiServiceJson,
-  shouldProxyToApiService,
-} from "@/lib/api-service-proxy";
+import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 import Loading from "../loading";
 
-type RemoteDeckOverviewPayload = Parameters<typeof DeckOverviewConsole>[0];
-
-function readSearchParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 function formatNumber(value: number) {
   return new Intl.NumberFormat("de-DE").format(value);
 }
 
-async function DecksPageContent({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = (await searchParams) ?? {};
-  const deckId = readSearchParam(params.deck);
-
+async function DecksPageContent() {
   if (shouldProxyToApiService()) {
-    const query = deckId ? `?deckId=${encodeURIComponent(deckId)}` : "";
-    const pageData = await fetchApiServiceJson<RemoteDeckOverviewPayload>(
-      `/api/v1/decks/overview${query}`,
-    );
-
-    return <DeckOverviewConsole {...pageData} />;
+    return <DeckOverviewLoader />;
   }
 
   const prisma = getPrisma();
@@ -48,7 +28,6 @@ async function DecksPageContent({
 
   const snapshot = await getDeckLegalitySnapshot({
     viewerId: session.userId,
-    deckId,
   });
 
   const viewerId = snapshot.viewer.id;
@@ -167,14 +146,10 @@ async function DecksPageContent({
   );
 }
 
-export default function DecksPage({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default function DecksPage() {
   return (
     <Suspense fallback={<Loading />}>
-      <DecksPageContent searchParams={searchParams} />
+      <DecksPageContent />
     </Suspense>
   );
 }

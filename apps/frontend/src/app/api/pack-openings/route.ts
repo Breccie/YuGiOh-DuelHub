@@ -59,6 +59,7 @@ export async function POST(request: Request) {
       viewerId: session.userId,
       runId: activeRun.id,
       setId: body.setId,
+      idempotencyKey: body.idempotencyKey,
     });
 
     return NextResponse.json({ opening }, { status: 201 });

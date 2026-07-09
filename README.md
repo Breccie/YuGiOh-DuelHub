@@ -49,6 +49,18 @@ npm run online:dev
 
 `online:dev` startet PostgreSQL über Docker Compose, führt Prisma Generate/Migration/Base-Seed aus und startet danach API plus Frontend parallel. Dafür muss in `.env` mindestens `APP_MODE=online-dev`, `API_BASE_URL`, `API_DATABASE_URL`, `COOKIE_SECRET` und `CORS_ORIGIN` gesetzt sein. `npm run db:migrate` ist bewusst nicht-interaktiv und nutzt `prisma migrate deploy`; neue lokale Migrationen werden mit `npm run db:migrate:dev` erzeugt.
 
+Für den lokalen Online-Smoke ohne den kombinierten Dev-Start:
+
+```bash
+npm run online:infra
+npm run online:prepare
+npm run test:e2e:online
+```
+
+`test:e2e:online` startet API und Frontend selbst auf Testports. Wenn Docker/Postgres nicht läuft, bricht der Smoke früh mit einer Preflight-Meldung ab, statt später im Cleanup einen Prisma-Fehler zu werfen.
+
+Nach einem Render-Deploy prueft `/health` nur den API-Prozess; `/ready` prueft zusaetzlich die Postgres-Verbindung.
+
 Der Ziel-Stack für den ersten Freundeskreis-Release ist Supabase Free Postgres, Render Free API und Vercel Frontend. Die passenden Vorlagen liegen in `.env.online-api.example` und `.env.online-frontend.example`; für Prisma/Supabase wird die Supavisor Session-pooler-URL auf Port `5432` genutzt. Details stehen in [docs/online-release.md](/C:/Users/Emil/Documents/Yu-Gi-Oh/docs/online-release.md).
 
 Der neue API-Standard liegt unter `/api/v1/*` im Service und wird schrittweise über die bestehenden Next-Kompatibilitätsrouten gespiegelt. Aktuell sind unter anderem `auth`, `dashboard`, `collection`, `decks`, `duels`, `friends`, `packs`, `profiles`, `rules`, `tournaments` und `trades` im Service verdrahtet. `duels` ist dabei kein In-App-Spielclient, sondern hoechstens Koordination/Ergebnis- oder EDOPro-Kontext. Wenn die API im Online-Modus nicht erreichbar ist, antworten die Proxies mit `service_unavailable` statt auf lokale Datenbanklogik zurückzufallen.
