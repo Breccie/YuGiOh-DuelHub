@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import type { HomeDashboardResponse } from "@ygo/contracts";
 import { HomeConsole } from "@/components/home-console";
 import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { buildHomeDashboardPayload } from "@/lib/home-dashboard-data";
 import { getPrisma } from "@/lib/prisma";
+import Loading from "./loading";
 
 async function getOnlineDashboardPayload() {
   try {
@@ -18,7 +20,7 @@ async function getOnlineDashboardPayload() {
   }
 }
 
-export default async function Home() {
+async function HomeContent() {
   if (shouldProxyToApiService()) {
     return <HomeConsole {...(await getOnlineDashboardPayload())} />;
   }
@@ -31,4 +33,12 @@ export default async function Home() {
   }
 
   return <HomeConsole {...(await buildHomeDashboardPayload(prisma, session.userId))} />;
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <HomeContent />
+    </Suspense>
+  );
 }

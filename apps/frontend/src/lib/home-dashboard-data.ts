@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { HomeDashboardResponse } from "@ygo/contracts";
 import { listDuelRequests } from "@/lib/duel-service";
-import { getPackDashboardSnapshot } from "@/lib/pack-openings";
 import { getActiveRun, getOrCreateWallet } from "@/lib/run-service";
 
 function getEraLabel(value: string) {
@@ -34,13 +33,73 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("de-DE").format(value);
 }
 
+async function loadUnlockedPackActions(
+  prisma: PrismaClient,
+  viewerId: string,
+  run: Awaited<ReturnType<typeof getActiveRun>>,
+) {
+  const [unlocks, openingStats] = await Promise.all([
+    prisma.runSetUnlock.findMany({
+      where: {
+        runId: run.id,
+        rewardOnly: false,
+      },
+      orderBy: {
+        set: {
+          releaseDate: "asc",
+        },
+      },
+      include: {
+        set: {
+          select: {
+            id: true,
+            name: true,
+            releaseDate: true,
+            productType: true,
+            _count: {
+              select: {
+                setCards: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+    prisma.packOpening.groupBy({
+      by: ["setId"],
+      where: {
+        userId: viewerId,
+        runId: run.id,
+      },
+      _count: {
+        _all: true,
+      },
+    }),
+  ]);
+
+  const openedBySetId = new Map(
+    openingStats.map((entry) => [entry.setId, entry._count._all]),
+  );
+
+  return unlocks.map((unlock) => ({
+    id: unlock.set.id,
+    name: unlock.set.name,
+    releaseDate: unlock.set.releaseDate.toISOString(),
+    productType: unlock.set.productType,
+    cardPoolSize: unlock.set._count.setCards,
+    totalOpened: openedBySetId.get(unlock.set.id) ?? 0,
+    packPrice: unlock.packPrice ?? run.defaultPackPrice,
+  }));
+}
+
 export async function buildHomeDashboardPayload(
   prisma: PrismaClient,
   viewerId: string,
 ): Promise<HomeDashboardResponse> {
   const activeRun = await getActiveRun(prisma, viewerId);
   const [
-    dashboard,
+    viewer,
+    unlockedPackActions,
     duelRequests,
     uniqueOwnedCards,
     deckCount,
@@ -56,7 +115,15 @@ export async function buildHomeDashboardPayload(
     matchesToConfirm,
     matchesToReport,
   ] = await Promise.all([
-    getPackDashboardSnapshot(prisma, viewerId, activeRun.id),
+    prisma.user.findUnique({
+      where: {
+        id: viewerId,
+      },
+      select: {
+        displayName: true,
+      },
+    }),
+    loadUnlockedPackActions(prisma, viewerId, activeRun),
     listDuelRequests(prisma, viewerId),
     prisma.collectionEntry.groupBy({
       by: ["cardId"],
@@ -234,10 +301,16 @@ export async function buildHomeDashboardPayload(
     }),
   ]);
 
-  const coreTimeline = dashboard.sets.filter((set) => set.productType === "CORE_BOOSTER");
-  const eraSource = (coreTimeline[0] ?? dashboard.sets[0])?.releaseDate ?? new Date().toISOString();
-  const newlyAvailablePacks = dashboard.sets
-    .filter((set) => set.canBuy && set.totalOpened === 0)
+  if (!viewer) {
+    throw new Error("Spielerprofil wurde nicht gefunden.");
+  }
+
+  const coreTimeline = unlockedPackActions.filter((set) => set.productType === "CORE_BOOSTER");
+  const eraSource =
+    (coreTimeline.at(-1) ?? unlockedPackActions.at(-1))?.releaseDate ??
+    new Date().toISOString();
+  const newlyAvailablePacks = unlockedPackActions
+    .filter((set) => set.totalOpened === 0)
     .slice(0, 3);
   const pendingPromoSources = unlockedPromoSources.filter(
     (source) => source.claims.length === 0,
@@ -306,7 +379,7 @@ export async function buildHomeDashboardPayload(
 
   return {
     viewer: {
-      displayName: dashboard.viewer.displayName,
+      displayName: viewer.displayName,
     },
     collectionValue: `${formatNumber(uniqueOwnedCards.length)} Karten`,
     activeRunName: activeRun.name,

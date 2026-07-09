@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel } from "@/components/panel";
@@ -174,6 +175,7 @@ export function HomeConsole({
   tradeRequests,
   progressCards,
 }: HomeConsoleProps) {
+  const router = useRouter();
   const statIcons = [
     <AssetIcon key="credits" name="cart" className="h-6 w-6 text-current" />,
     <AssetIcon key="packs" name="nav-packs" className="h-6 w-6 text-current" />,
@@ -196,6 +198,12 @@ export function HomeConsole({
       href: "/duels",
     })),
   ];
+
+  useEffect(() => {
+    for (const path of ["/packs", "/collection", "/decks", "/trade", "/tournaments"]) {
+      router.prefetch(path);
+    }
+  }, [router]);
 
   return (
     <DuelConsoleScaffold
