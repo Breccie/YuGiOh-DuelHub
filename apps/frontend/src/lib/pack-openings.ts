@@ -560,6 +560,15 @@ export async function getPackDashboardSnapshot(
           isOpenable: set.effectiveConfiguration.isOpenable,
         }),
     );
+  const latestUnlockedSetIndex = runId
+    ? hydratedSets.reduce((latestIndex, set, index) => {
+        return unlockBySetId.has(set.id) ? Math.max(latestIndex, index) : latestIndex;
+      }, -1)
+    : hydratedSets.length - 1;
+  const visibleSetLimit = Math.max(latestUnlockedSetIndex + 25, 32);
+  const displaySets = runId
+    ? hydratedSets.filter((set, index) => unlockBySetId.has(set.id) || index < visibleSetLimit)
+    : hydratedSets.slice(0, 64);
 
   return {
     viewer: {
@@ -572,7 +581,7 @@ export async function getPackDashboardSnapshot(
         }
       : null,
     selectedSetId:
-      hydratedSets.find((set) => {
+      displaySets.find((set) => {
         const unlock = unlockBySetId.get(set.id);
 
         return (
@@ -581,14 +590,14 @@ export async function getPackDashboardSnapshot(
         );
       })
         ?.id ??
-      hydratedSets.find((set) => {
+      displaySets.find((set) => {
         const unlock = unlockBySetId.get(set.id);
 
         return !runId || (unlock && !unlock.rewardOnly);
       })?.id ??
-      hydratedSets[0]?.id ??
+      displaySets[0]?.id ??
       null,
-    sets: hydratedSets.map((set) => {
+    sets: displaySets.map((set) => {
       const unlock = unlockBySetId.get(set.id) ?? null;
       const economy =
         run && unlock
