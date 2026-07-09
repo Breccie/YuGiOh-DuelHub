@@ -42,6 +42,7 @@ type PartnerCard = {
 type TradeConsoleProps = {
   viewer: {
     displayName: string;
+    duelistId?: string | null;
   };
   collectionValue: string;
   latestBanlistName: string;
@@ -284,6 +285,7 @@ export function TradeConsole({
       activePath="/trade"
       viewer={{
         displayName: viewer.displayName,
+        duelistId: viewer.duelistId,
       }}
       metrics={[
         { icon: "book", label: "Sammlung", value: collectionValue },

@@ -31,15 +31,21 @@ function createFallbackPackSelection(): PackSelectionResponse {
 
 export function PackSelectionLoader() {
   const router = useRouter();
-  const [payload, setPayload] = useState<PackSelectionResponse>(() => {
-    return (
-      buildCachedPackSelectionPayload(readLocalSyncCache()) ??
-      createFallbackPackSelection()
-    );
-  });
+  const [payload, setPayload] = useState<PackSelectionResponse>(
+    createFallbackPackSelection,
+  );
 
   useEffect(() => {
     let isMounted = true;
+    const cachedPayload = buildCachedPackSelectionPayload(readLocalSyncCache());
+
+    if (cachedPayload) {
+      queueMicrotask(() => {
+        if (isMounted) {
+          setPayload(cachedPayload);
+        }
+      });
+    }
 
     async function refresh() {
       await refreshLocalSyncCache({

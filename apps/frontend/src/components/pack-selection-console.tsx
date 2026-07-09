@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { MouseEvent, PointerEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -442,6 +443,7 @@ export function PackSelectionConsole({
   recentCollectionCards,
   activeDeck,
 }: PackSelectionConsoleProps) {
+  const router = useRouter();
   const timelineSets = useMemo(() => {
     const orderedSets = [...sets].sort(
       (left, right) =>
@@ -457,6 +459,7 @@ export function PackSelectionConsole({
     selectedSetId ?? timelineSets[0]?.id ?? sets[0]?.id ?? "",
   );
   const [isTimelineDragging, setIsTimelineDragging] = useState(false);
+  const [navigatingSetId, setNavigatingSetId] = useState<string | null>(null);
   const timelineRowRef = useRef<HTMLDivElement | null>(null);
   const timelineDragRef = useRef<TimelineDragState>(emptyTimelineDragState);
   const timelineMomentumFrameRef = useRef<number | null>(null);
@@ -490,6 +493,15 @@ export function PackSelectionConsole({
     selectedSet.displayCost !== null
       ? `${formatNumber(selectedSet.displayCost)} Credits`
       : "nach Run-Regel";
+
+  function openPackSet(setId: string) {
+    if (navigatingSetId) {
+      return;
+    }
+
+    setNavigatingSetId(setId);
+    router.push(`/packs/${setId}`);
+  }
 
   function scrollTimeline(direction: "left" | "right") {
     stopTimelineMomentum();
@@ -716,6 +728,8 @@ export function PackSelectionConsole({
                     imageSrc={heroPackImage}
                     label={selectedSet.name}
                     code={selectedSet.code}
+                    onActivate={selectedSet.canBuy ? () => openPackSet(selectedSet.id) : undefined}
+                    pending={navigatingSetId === selectedSet.id}
                   />
                 </div>
 
@@ -745,7 +759,7 @@ export function PackSelectionConsole({
                       <AssetIcon name="cart" className="h-4 w-4 text-[#c7ae8d]" />
                       <span>
                         {selectedSet.canBuy
-                          ? `${selectedPackPrice} pro Pack`
+                          ? `Öffnen für ${selectedPackPrice}`
                           : selectedSet.rewardOnly
                             ? "Nur als Reward"
                             : "Noch gesperrt"}
@@ -771,14 +785,20 @@ export function PackSelectionConsole({
                       <>
                         <Link
                           href={`/packs/${selectedSet.id}`}
+                          onClick={() => setNavigatingSetId(selectedSet.id)}
                           className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
                         >
-                          <span>Booster öffnen ({selectedPackPrice})</span>
+                          <span>
+                            {navigatingSetId === selectedSet.id
+                              ? "Pack wird geöffnet..."
+                              : `Pack öffnen (${selectedPackPrice})`}
+                          </span>
                           <AssetIcon name="package" className="h-5 w-5 text-current" />
                         </Link>
 
                         <Link
                           href={`/packs/${selectedSet.id}`}
+                          onClick={() => setNavigatingSetId(selectedSet.id)}
                           className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb]"
                         >
                           <span>Display öffnen ({selectedDisplayPrice})</span>
@@ -862,7 +882,20 @@ export function PackSelectionConsole({
                       <button
                         key={set.id}
                         type="button"
-                        onClick={() => setCurrentSetId(set.id)}
+                        onClick={() => {
+                          if (selected && set.canBuy) {
+                            openPackSet(set.id);
+                            return;
+                          }
+
+                          setCurrentSetId(set.id);
+                        }}
+                        aria-label={
+                          selected && set.canBuy
+                            ? `${set.name} öffnen`
+                            : `${set.name} auswählen`
+                        }
+                        aria-busy={navigatingSetId === set.id}
                         className={classes(
                           "group relative shrink-0 rounded-[16px] border p-2 transition",
                           selected
@@ -895,9 +928,16 @@ export function PackSelectionConsole({
                         ) : null}
 
                         {selected ? (
-                          <div className="absolute inset-x-0 -bottom-2 flex justify-center">
-                            <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#cf5b42]" />
-                          </div>
+                          <>
+                            <div className="absolute inset-x-0 -bottom-2 flex justify-center">
+                              <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#cf5b42]" />
+                            </div>
+                            {set.canBuy ? (
+                              <span className="absolute inset-x-2 bottom-3 rounded-[4px] bg-[rgba(75,13,9,0.9)] px-1 py-1.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#fff0e1]">
+                                {navigatingSetId === set.id ? "Lädt..." : "Öffnen"}
+                              </span>
+                            ) : null}
+                          </>
                         ) : null}
                       </button>
                     );

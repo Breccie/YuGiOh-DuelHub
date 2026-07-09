@@ -8,6 +8,8 @@ type InteractiveBoosterPackProps = {
   imageSrc: string | null;
   label: string;
   code: string;
+  onActivate?: () => void;
+  pending?: boolean;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -18,8 +20,12 @@ export function InteractiveBoosterPack({
   imageSrc,
   label,
   code,
+  onActivate,
+  pending = false,
 }: InteractiveBoosterPackProps) {
   const frameRef = useRef<HTMLButtonElement | null>(null);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerMovedRef = useRef(false);
   const [dragging, setDragging] = useState(false);
   const [inspected, setInspected] = useState(false);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
@@ -122,14 +128,38 @@ export function InteractiveBoosterPack({
       <button
         ref={frameRef}
         type="button"
-        aria-label={`${label} ansehen`}
-        onClick={toggleInspect}
+        aria-label={onActivate ? `${label} öffnen` : `${label} ansehen`}
+        aria-busy={pending}
+        onClick={() => {
+          if (pointerMovedRef.current || pending) {
+            pointerMovedRef.current = false;
+            return;
+          }
+
+          if (onActivate) {
+            onActivate();
+            return;
+          }
+
+          toggleInspect();
+        }}
         onPointerDown={(event) => {
           setDragging(true);
+          pointerStartRef.current = { x: event.clientX, y: event.clientY };
+          pointerMovedRef.current = false;
           frameRef.current?.setPointerCapture(event.pointerId);
           updateFromPointer(event.clientX, event.clientY);
         }}
         onPointerMove={(event) => {
+          const pointerStart = pointerStartRef.current;
+
+          if (
+            pointerStart &&
+            Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 8
+          ) {
+            pointerMovedRef.current = true;
+          }
+
           if (!dragging && !inspected) {
             return;
           }
@@ -142,9 +172,11 @@ export function InteractiveBoosterPack({
         }}
         onPointerUp={() => {
           setDragging(false);
+          pointerStartRef.current = null;
           resetPose();
         }}
-        className="group relative block h-[456px] w-full rounded-[30px] [perspective:1400px]"
+        disabled={pending}
+        className="group relative block h-[456px] w-full rounded-[30px] [perspective:1400px] disabled:cursor-wait"
       >
         <div
           className="relative flex h-full w-full items-end justify-center pb-8 transition-transform duration-200 ease-out [transform-style:preserve-3d]"
@@ -193,6 +225,11 @@ export function InteractiveBoosterPack({
             </div>
           </div>
         </div>
+        {pending ? (
+          <span className="pointer-events-none absolute inset-x-8 bottom-3 z-20 rounded-full border border-[rgba(207,91,66,0.42)] bg-[rgba(69,12,9,0.9)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#fff0e1]">
+            Pack wird geöffnet...
+          </span>
+        ) : null}
       </button>
     </div>
   );

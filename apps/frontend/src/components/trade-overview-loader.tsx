@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TradeConsole } from "@/components/trade-console";
 import { ApiClientError, apiGetJson, isActiveRunRequiredError } from "@/lib/api-client";
+import { authClient } from "@/lib/auth-client";
+import { readLocalSyncCache } from "@/lib/sync-cache";
 
 type TradeOverviewPayload = Parameters<typeof TradeConsole>[0];
 
 function createFallbackTradeOverview(): TradeOverviewPayload {
   return {
     viewer: {
-      displayName: "Duelist",
+      displayName: "Wird geladen",
+      duelistId: null,
     },
     collectionValue: "0 Karten",
     latestBanlistName: "Wird geladen",
@@ -30,6 +33,36 @@ export function TradeOverviewLoader() {
 
   useEffect(() => {
     let isMounted = true;
+    const cachedViewer = readLocalSyncCache().bootstrap?.viewer;
+
+    if (cachedViewer) {
+      queueMicrotask(() => {
+        if (isMounted) {
+          setPayload((current) => ({
+            ...current,
+            viewer: {
+              displayName: cachedViewer.displayName,
+              duelistId: cachedViewer.duelistId,
+            },
+          }));
+        }
+      });
+    }
+
+    void authClient
+      .getSession()
+      .then(({ session }) => {
+        if (isMounted && session) {
+          setPayload((current) => ({
+            ...current,
+            viewer: {
+              displayName: session.displayName,
+              duelistId: session.duelistId,
+            },
+          }));
+        }
+      })
+      .catch(() => null);
 
     async function refresh() {
       const freshPayload = await apiGetJson<TradeOverviewPayload>(
@@ -40,7 +73,13 @@ export function TradeOverviewLoader() {
       );
 
       if (isMounted) {
-        setPayload(freshPayload);
+        setPayload((current) => ({
+          ...freshPayload,
+          viewer: {
+            ...freshPayload.viewer,
+            duelistId: freshPayload.viewer.duelistId ?? current.viewer.duelistId,
+          },
+        }));
       }
     }
 

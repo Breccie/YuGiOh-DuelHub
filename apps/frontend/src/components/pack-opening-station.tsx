@@ -69,6 +69,10 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("de-DE").format(value);
+}
+
 function formatDateTime(value: string | null) {
   if (!value) {
     return "Noch nicht geöffnet";
@@ -636,11 +640,13 @@ export function PackOpeningStation({
     );
   }
   const packPriceLabel =
-    activeSet.packPrice !== null ? `${activeSet.packPrice} Credits` : "frei";
+    activeSet.packPrice !== null ? `${formatNumber(activeSet.packPrice)} Credits` : "frei";
   const displayCostLabel =
-    activeSet.displayCost !== null ? `${activeSet.displayCost} Credits` : "nach Run-Regel";
+    activeSet.displayCost !== null
+      ? `${formatNumber(activeSet.displayCost)} Credits`
+      : "nach Run-Regel";
   const walletBalanceLabel =
-    snapshot.wallet ? `${snapshot.wallet.balance} Credits` : "kein Wallet";
+    snapshot.wallet ? `${formatNumber(snapshot.wallet.balance)} Credits` : "kein Wallet";
 
   const packRenderAssets = getPackRenderAssets(
     activeSet.code,
@@ -752,7 +758,7 @@ export function PackOpeningStation({
                 : `${activeSet.packSize} Karten pro Pack`}
             </StatusPill>
             {activeSet.canBuy ? (
-              <StatusPill tone="slate">Display {displayCostLabel}</StatusPill>
+              <StatusPill tone="slate">Display öffnen ({displayCostLabel})</StatusPill>
             ) : null}
             <StatusPill tone="slate">
               {currentOpening
@@ -845,7 +851,7 @@ export function PackOpeningStation({
       {!activeSet.canBuy ? (
         <div className="paper-card-strong mt-4 rounded-[22px] border border-[rgba(204,97,78,0.28)] p-4 text-sm leading-7 text-[#f2c1b7]">
           {activeSet.rewardOnly
-            ? "Dieses Pack ist ein Reward-Pack und kann nicht im Shop gekauft werden."
+            ? "Dieses Pack ist ein Reward-Pack und kann nur als Belohnung geöffnet werden."
             : "Dieses Pack ist in der Kampagne noch nicht freigeschaltet. Schließe ein Turnier ab und wende den nächsten Progression-Checkpoint an."}
         </div>
       ) : null}

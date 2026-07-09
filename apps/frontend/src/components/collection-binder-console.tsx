@@ -224,12 +224,12 @@ function BinderShelfCard({
       <button type="button" onClick={() => onSelect(binder.id)} className="block w-full text-left">
         <div className="relative mx-auto w-full max-w-[160px] [perspective:1400px]">
           <div className="pointer-events-none absolute inset-x-[12%] bottom-1 h-8 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.18),transparent_72%)] opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
-          <div className="relative aspect-[62/100] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] shadow-[0_22px_34px_rgba(0,0,0,0.28)] transition duration-500 ease-out [transform-style:preserve-3d] group-hover:[transform:rotateX(4deg)_rotateY(-7deg)_translateY(-4px)]">
+          <div className="relative aspect-[62/100] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] shadow-[0_22px_34px_rgba(0,0,0,0.28)]">
             <BinderCoverArtwork
               src={binder.coverImageUrl}
               alt={binder.name}
               eager={binder.isActive}
-              className="pointer-events-none select-none object-cover object-center drop-shadow-[0_18px_30px_rgba(0,0,0,0.34)] transition duration-500 group-hover:scale-[1.03] [-webkit-user-drag:none]"
+              className="pointer-events-none select-none object-cover object-center drop-shadow-[0_18px_30px_rgba(0,0,0,0.34)] [-webkit-user-drag:none]"
             />
             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.26),transparent_34%)]" />
@@ -275,8 +275,8 @@ function AddBinderTile({ onClick }: { onClick: () => void }) {
       className="group rounded-[20px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(7,10,15,0.52)] p-3 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
     >
       <div className="relative mx-auto flex w-full max-w-[160px] items-center justify-center [perspective:1400px]">
-        <div className="relative flex aspect-[62/100] w-full items-center justify-center rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))] shadow-[0_22px_34px_rgba(0,0,0,0.28)] transition duration-500 ease-out group-hover:[transform:rotateX(4deg)_rotateY(-7deg)_translateY(-4px)]">
-          <span className="grid h-14 w-14 place-items-center rounded-full border border-[rgba(208,170,110,0.28)] bg-[rgba(208,170,110,0.08)] transition group-hover:scale-105 group-hover:border-[rgba(207,91,66,0.44)]">
+        <div className="relative flex aspect-[62/100] w-full items-center justify-center rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))] shadow-[0_22px_34px_rgba(0,0,0,0.28)]">
+          <span className="grid h-14 w-14 place-items-center rounded-full border border-[rgba(208,170,110,0.28)] bg-[rgba(208,170,110,0.08)] transition group-hover:border-[rgba(207,91,66,0.44)]">
             <AssetIcon name="plus" className="h-7 w-7 text-current" />
           </span>
         </div>
@@ -578,10 +578,10 @@ export function CollectionBinderConsole({
       <div className="app-background" />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[272px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
+        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
           <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-0 lg:py-0">
-            <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-8 lg:pb-8 lg:pt-7">
-              <ConsoleBrand size="lg" />
+            <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-6 lg:pb-8 lg:pt-6">
+              <ConsoleBrand size="sm" />
             </div>
 
             <nav className="hidden lg:block lg:pt-2">
@@ -612,8 +612,8 @@ export function CollectionBinderConsole({
           </div>
         </aside>
 
-        <main className="min-w-0 lg:ml-[272px]">
-          <div className="mx-auto w-full max-w-[1620px] px-5 pb-10 pt-4 sm:px-7 lg:px-8 xl:px-10">
+        <main className="min-w-0 lg:ml-[196px]">
+          <div className="app-workspace mx-auto w-full max-w-[1480px] px-3 pb-4 pt-3 sm:px-4 lg:px-5">
             <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
               <ConsoleGlobalStatusBar
                 viewer={{ displayName: viewer.displayName }}
@@ -703,11 +703,11 @@ export function CollectionBinderConsole({
                       >
                         <div className="relative mx-auto w-full max-w-[100px] [perspective:1200px]">
                           <div className="pointer-events-none absolute inset-x-[16%] bottom-1 h-6 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.16),transparent_74%)] opacity-0 blur-xl transition duration-500 group-hover:opacity-100" />
-                          <div className="relative aspect-[62/100] overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] transition duration-500 ease-out group-hover:[transform:rotateX(3deg)_rotateY(-6deg)_translateY(-2px)]">
+                          <div className="relative aspect-[62/100] overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))]">
                             <BinderCoverArtwork
                               src={cover.imageUrl}
                               alt={cover.name}
-                              className="pointer-events-none select-none object-cover object-center drop-shadow-[0_16px_26px_rgba(0,0,0,0.28)] transition duration-500 group-hover:scale-[1.03] [-webkit-user-drag:none]"
+                              className="pointer-events-none select-none object-cover object-center drop-shadow-[0_16px_26px_rgba(0,0,0,0.28)] [-webkit-user-drag:none]"
                             />
                             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
                               <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.24),transparent_34%)]" />

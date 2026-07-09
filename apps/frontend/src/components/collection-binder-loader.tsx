@@ -39,17 +39,23 @@ function createFallbackCollection(): CachedCollectionPagePayload {
 export function CollectionBinderLoader() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [payload, setPayload] = useState<CachedCollectionPagePayload>(() => {
-    return (
-      buildCachedCollectionPagePayload(readLocalSyncCache()) ??
-      createFallbackCollection()
-    );
-  });
+  const [payload, setPayload] = useState<CachedCollectionPagePayload>(
+    createFallbackCollection,
+  );
   const [editorSnapshot, setEditorSnapshot] =
     useState<CollectionBinderEditorSnapshot | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    const cachedPayload = buildCachedCollectionPagePayload(readLocalSyncCache());
+
+    if (cachedPayload) {
+      queueMicrotask(() => {
+        if (isMounted) {
+          setPayload(cachedPayload);
+        }
+      });
+    }
 
     async function refresh() {
       await refreshLocalSyncCache({

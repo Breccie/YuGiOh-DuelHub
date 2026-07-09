@@ -6,6 +6,8 @@ import type { CreditLedgerEntryDto } from "@ygo/contracts";
 import { TournamentsConsole } from "@/components/tournaments-console";
 import { ApiClientError, apiGetJson, isActiveRunRequiredError } from "@/lib/api-client";
 import type { TournamentOverviewDto, ViewerSession } from "@/lib/app-dtos";
+import { authClient } from "@/lib/auth-client";
+import { readLocalSyncCache } from "@/lib/sync-cache";
 
 type TournamentsOverviewPayload = {
   session: ViewerSession;
@@ -24,7 +26,7 @@ function createFallbackTournamentsOverview(): TournamentsOverviewPayload {
       sessionId: "cached-session",
       userId: "cached-viewer",
       duelistId: "",
-      displayName: "Duelist",
+      displayName: "Wird geladen",
       avatarKey: "default",
       favoriteEra: null,
       isPublic: false,
@@ -51,6 +53,32 @@ export function TournamentsLoader() {
 
   useEffect(() => {
     let isMounted = true;
+    const cachedViewer = readLocalSyncCache().bootstrap?.viewer;
+
+    if (cachedViewer) {
+      queueMicrotask(() => {
+        if (isMounted) {
+          setPayload((current) => ({
+            ...current,
+            session: {
+              ...current.session,
+              userId: cachedViewer.userId,
+              duelistId: cachedViewer.duelistId,
+              displayName: cachedViewer.displayName,
+            },
+          }));
+        }
+      });
+    }
+
+    void authClient
+      .getSession()
+      .then(({ session }) => {
+        if (isMounted && session) {
+          setPayload((current) => ({ ...current, session }));
+        }
+      })
+      .catch(() => null);
 
     async function refresh() {
       const freshPayload = await apiGetJson<TournamentsOverviewPayload>(

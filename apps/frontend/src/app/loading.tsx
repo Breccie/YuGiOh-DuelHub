@@ -59,7 +59,7 @@ export default function Loading() {
               <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5">
                 <LoadingMetric iconName="shield" label="Kampagne" />
                 <LoadingMetric iconName="book" label="Sammlung" />
-                <LoadingMetric iconName="users" label="Freunde online" />
+                <LoadingMetric iconName="users" label="Freunde" />
                 <LoadingMetric iconName="sword" label="Duellanfragen" />
                 <div className="flex min-h-[58px] min-w-[154px] items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
                   <AssetIcon name="profile-signet" className="h-8 w-8 text-[#d0b38c]" />

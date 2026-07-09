@@ -30,6 +30,13 @@ type ConsoleTopbarState = {
   duelRequestCount: number;
 };
 
+const initialTopbarState: ConsoleTopbarState = {
+  activeRunName: "Keine Kampagne",
+  collectionValue: "Sammlung",
+  friendOnlineCount: 0,
+  duelRequestCount: 0,
+};
+
 function getDesktopShell() {
   if (typeof window === "undefined") {
     return null;
@@ -189,7 +196,7 @@ export function ConsoleGlobalStatusBar({
   viewer: DesktopViewer;
   fallback?: ConsoleTopbarFallback;
 }) {
-  const [remoteStatus, setRemoteStatus] = useState(resolveTopbarState);
+  const [remoteStatus, setRemoteStatus] = useState(initialTopbarState);
   const status = {
     activeRunName: fallback?.activeRunName ?? remoteStatus.activeRunName,
     collectionValue: fallback?.collectionValue ?? remoteStatus.collectionValue,
@@ -200,6 +207,12 @@ export function ConsoleGlobalStatusBar({
 
   useEffect(() => {
     let mounted = true;
+
+    queueMicrotask(() => {
+      if (mounted) {
+        setRemoteStatus(resolveTopbarState());
+      }
+    });
 
     async function refresh() {
       const payload = await syncClient.getDashboardSummary();
@@ -242,7 +255,7 @@ export function ConsoleGlobalStatusBar({
       <TopbarStatusChip
         href="/friends"
         iconName="users"
-        label="Freunde online"
+        label="Freunde"
         value={`${status.friendOnlineCount} online`}
       />
       <TopbarStatusChip
@@ -331,7 +344,7 @@ export function ConsoleProfileMenuChip({
         <div className="hidden text-left sm:block">
           <p className="text-sm font-semibold text-[#f0dfcc]">{viewer.displayName}</p>
           <p className="text-[0.7rem] uppercase tracking-[0.16em] text-[#9f8c77]">
-            {viewer.duelistId ?? "Duelist"}
+            {viewer.duelistId ?? viewer.displayName}
           </p>
         </div>
         <AssetIcon name="chevron-down" className="h-4 w-4 text-[#c3ae92]" />
@@ -342,7 +355,7 @@ export function ConsoleProfileMenuChip({
           <div className="rounded-[16px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.025)] px-4 py-3">
             <p className="text-sm font-semibold text-[#f0dfcc]">{viewer.displayName}</p>
             <p className="mt-1 text-[0.72rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-              {viewer.duelistId ?? "Duelist"}
+              {viewer.duelistId ?? viewer.displayName}
             </p>
           </div>
           <div className="mt-2 grid gap-1">
