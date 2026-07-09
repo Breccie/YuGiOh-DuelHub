@@ -1,0 +1,17 @@
+node_modules
+.next
+apps/frontend/.next
+dist-desktop
+output
+coverage
+playwright-report
+test-results
+screenshots
+tmp
+*.db
+*.sqlite
+*.sqlite3
+*.tsbuildinfo
+.env*
+.vercel
+.git
