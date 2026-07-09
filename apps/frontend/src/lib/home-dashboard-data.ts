@@ -33,6 +33,53 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("de-DE").format(value);
 }
 
+async function getTopbarSocialSummary(prisma: PrismaClient, viewerId: string) {
+  const friendships = await prisma.friendship.findMany({
+    where: {
+      status: "ACCEPTED",
+      OR: [{ requesterId: viewerId }, { addresseeId: viewerId }],
+    },
+    select: {
+      requesterId: true,
+      addresseeId: true,
+    },
+  });
+  const friendIds = friendships.map((friendship) =>
+    friendship.requesterId === viewerId
+      ? friendship.addresseeId
+      : friendship.requesterId,
+  );
+
+  if (friendIds.length === 0) {
+    return {
+      friendCount: 0,
+      friendOnlineCount: 0,
+    };
+  }
+
+  const now = new Date();
+  const onlineSince = new Date(now.getTime() - 1000 * 60 * 5);
+  const onlineSessions = await prisma.session.groupBy({
+    by: ["userId"],
+    where: {
+      userId: {
+        in: friendIds,
+      },
+      lastSeenAt: {
+        gte: onlineSince,
+      },
+      expiresAt: {
+        gt: now,
+      },
+    },
+  });
+
+  return {
+    friendCount: friendIds.length,
+    friendOnlineCount: onlineSessions.length,
+  };
+}
+
 async function loadUnlockedPackActions(
   prisma: PrismaClient,
   viewerId: string,
@@ -114,6 +161,7 @@ export async function buildHomeDashboardPayload(
     readyCheckpoints,
     matchesToConfirm,
     matchesToReport,
+    topbarSocial,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: {
@@ -124,7 +172,7 @@ export async function buildHomeDashboardPayload(
       },
     }),
     loadUnlockedPackActions(prisma, viewerId, activeRun),
-    listDuelRequests(prisma, viewerId),
+    listDuelRequests(prisma, viewerId, activeRun.id),
     prisma.collectionEntry.groupBy({
       by: ["cardId"],
       where: {
@@ -299,6 +347,7 @@ export async function buildHomeDashboardPayload(
         OR: [{ playerOneId: viewerId }, { playerTwoId: viewerId }],
       },
     }),
+    getTopbarSocialSummary(prisma, viewerId),
   ]);
 
   if (!viewer) {
@@ -385,6 +434,10 @@ export async function buildHomeDashboardPayload(
     activeRunName: activeRun.name,
     latestBanlistName: latestBanlist?.name ?? "Keine Bannliste",
     activeEra: getEraLabel(eraSource),
+    topbar: {
+      ...topbarSocial,
+      duelRequestCount: duelRequests.length,
+    },
     heroStats: [
       {
         label: "Credits",
@@ -489,6 +542,8 @@ export async function buildDashboardSummaryPayload(
     readyCheckpointCount,
     matchesToConfirm,
     matchesToReport,
+    duelRequestCount,
+    topbarSocial,
     unlockedSets,
     openingStats,
   ] = await Promise.all([
@@ -630,6 +685,13 @@ export async function buildDashboardSummaryPayload(
         OR: [{ playerOneId: viewerId }, { playerTwoId: viewerId }],
       },
     }),
+    prisma.duelRequest.count({
+      where: {
+        runId: activeRun.id,
+        OR: [{ requesterId: viewerId }, { opponentId: viewerId }],
+      },
+    }),
+    getTopbarSocialSummary(prisma, viewerId),
     prisma.runSetUnlock.findMany({
       where: {
         runId: activeRun.id,
@@ -726,6 +788,10 @@ export async function buildDashboardSummaryPayload(
     activeRunName: activeRun.name,
     latestBanlistName: latestBanlist?.name ?? "Keine Bannliste",
     activeEra,
+    topbar: {
+      ...topbarSocial,
+      duelRequestCount,
+    },
     heroStats: [
       {
         label: "Credits",

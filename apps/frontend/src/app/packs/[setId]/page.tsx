@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import type { PackDetailResponse } from "@ygo/contracts";
-import { AssetIcon } from "@/components/asset-icon";
-import { ConsoleProfileMenuChip } from "@/components/console-shell-primitives";
+import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { PackOpeningStation } from "@/components/pack-opening-station";
 import { SiteFrame } from "@/components/site-frame";
 import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
@@ -11,28 +10,6 @@ import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
-
-function TopbarMetric({
-  iconName,
-  label,
-  value,
-}: {
-  iconName: "book" | "scale" | "hourglass";
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex min-h-[68px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-      <AssetIcon name={iconName} className="h-6 w-6 text-[#d0b38c]" />
-      <div>
-        <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-          {label}
-        </p>
-        <p className="mt-1 text-sm font-semibold text-[#efdfcb]">{value}</p>
-      </div>
-    </div>
-  );
-}
 
 type PackDetailPageProps = {
   params: Promise<{
@@ -70,29 +47,15 @@ export default async function PackDetailPage({ params }: PackDetailPageProps) {
     <SiteFrame
       headerVariant="none"
       topbarContent={
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
-          <TopbarMetric
-            iconName="book"
-            label="Sammlung"
-            value={payload.metrics.collection}
-          />
-          <TopbarMetric
-            iconName="scale"
-            label="Banlist"
-            value={payload.metrics.latestBanlistName}
-          />
-          <TopbarMetric
-            iconName="hourglass"
-            label="Aktive Ära"
-            value={payload.metrics.activeEra}
-          />
-          <ConsoleProfileMenuChip
-            viewer={{
-              displayName: payload.viewer.displayName,
-              duelistId: payload.viewer.duelistId,
-            }}
-          />
-        </div>
+        <ConsoleGlobalStatusBar
+          viewer={{
+            displayName: payload.viewer.displayName,
+            duelistId: payload.viewer.duelistId,
+          }}
+          fallback={{
+            collectionValue: payload.metrics.collection,
+          }}
+        />
       }
     >
       <PackOpeningStation initialSnapshot={payload.snapshot} setId={payload.setId} />

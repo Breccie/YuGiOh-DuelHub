@@ -1,10 +1,6 @@
 import { AssetIcon } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
-import {
-  ConsoleProfileMenuChip,
-  ConsoleSidebarUtilityActions,
-  ConsoleWindowChromeButton,
-} from "@/components/console-shell-primitives";
+import { ConsoleSidebarUtilityActions } from "@/components/console-shell-primitives";
 import { SiteNav } from "@/components/site-nav";
 
 function SkeletonBar({
@@ -23,14 +19,14 @@ function LoadingMetric({
   iconName,
   label,
 }: {
-  iconName: "book" | "scale" | "cart" | "hourglass";
+  iconName: "book" | "shield" | "sword" | "users";
   label: string;
 }) {
   return (
-    <div className="flex min-h-[68px] min-w-[154px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-      <AssetIcon name={iconName} className="h-6 w-6 text-[#d0b38c]" />
+    <div className="flex min-h-[58px] min-w-[132px] items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
+      <AssetIcon name={iconName} className="h-5 w-5 text-[#d0b38c]" />
       <div className="min-w-0 flex-1">
-        <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#9f8c77]">
+        <p className="text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">
           {label}
         </p>
         <SkeletonBar className="mt-2 h-3 w-20" />
@@ -59,18 +55,22 @@ export default function Loading() {
 
         <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <div className="hidden justify-end gap-3 xl:flex">
-              <ConsoleWindowChromeButton name="window-min" label="Minimieren" />
-              <ConsoleWindowChromeButton name="window-max" label="Fenster" />
-              <ConsoleWindowChromeButton name="window-close" label="Schließen" />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-end gap-3 xl:mt-2">
-              <LoadingMetric iconName="book" label="Sammlung" />
-              <LoadingMetric iconName="scale" label="Status" />
-              <LoadingMetric iconName="cart" label="Credits" />
-              <LoadingMetric iconName="hourglass" label="Kampagne" />
-              <ConsoleProfileMenuChip viewer={{ displayName: "Lädt..." }} />
+            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5">
+                <LoadingMetric iconName="shield" label="Kampagne" />
+                <LoadingMetric iconName="book" label="Sammlung" />
+                <LoadingMetric iconName="users" label="Freunde online" />
+                <LoadingMetric iconName="sword" label="Duellanfragen" />
+                <div className="flex min-h-[58px] min-w-[154px] items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
+                  <AssetIcon name="profile-signet" className="h-8 w-8 text-[#d0b38c]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">
+                      Benutzer
+                    </p>
+                    <SkeletonBar className="mt-2 h-3 w-20" />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <section className="mt-5 grid flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_392px]">

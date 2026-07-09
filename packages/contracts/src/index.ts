@@ -618,6 +618,13 @@ export const homeDashboardResponseSchema = z.object({
   activeRunName: z.string(),
   latestBanlistName: z.string(),
   activeEra: z.string(),
+  topbar: z
+    .object({
+      friendOnlineCount: z.number().int().nonnegative(),
+      friendCount: z.number().int().nonnegative(),
+      duelRequestCount: z.number().int().nonnegative(),
+    })
+    .optional(),
   heroStats: z.array(
     z.object({
       label: z.string(),

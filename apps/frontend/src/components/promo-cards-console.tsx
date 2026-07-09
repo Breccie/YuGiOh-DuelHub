@@ -14,9 +14,8 @@ import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
 import { consoleNavItems } from "@/components/console-nav-items";
 import {
-  ConsoleProfileMenuChip,
+  ConsoleGlobalStatusBar,
   ConsoleSidebarUtilityActions,
-  ConsoleWindowChromeButton as WindowChromeButton,
 } from "@/components/console-shell-primitives";
 import { apiPostJson, getApiErrorMessage } from "@/lib/api-client";
 
@@ -234,36 +233,8 @@ export function PromoCardsConsole({
 
         <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col gap-6 px-3 pb-8 pt-3 sm:px-4 lg:px-5">
-            <div className="hidden justify-end gap-3 xl:flex">
-              <WindowChromeButton name="window-min" label="Minimieren" />
-              <WindowChromeButton name="window-max" label="Fenster" />
-              <WindowChromeButton name="window-close" label="Schließen" />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-end gap-3 xl:mt-2">
-              <div className="flex min-h-[68px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-                <AssetIcon name="package" className="h-6 w-6 text-[#d0b38c]" />
-                <div>
-                  <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-                    Bereich
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#efdfcb]">
-                    Promo-Karten
-                  </p>
-                </div>
-              </div>
-              <div className="flex min-h-[68px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-                <AssetIcon name="hourglass" className="h-6 w-6 text-[#d0b38c]" />
-                <div>
-                  <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-                    History
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#efdfcb]">
-                    {formatDate(progressionState.run.historyCursor)}
-                  </p>
-                </div>
-              </div>
-              <ConsoleProfileMenuChip viewer={{ displayName: viewer.displayName }} />
+            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+              <ConsoleGlobalStatusBar viewer={{ displayName: viewer.displayName }} />
             </div>
             <header className="grid gap-8 rounded-[28px] border border-[rgba(255,255,255,0.10)] bg-[rgba(8,11,16,0.78)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl xl:grid-cols-[360px_520px_minmax(0,1fr)] xl:items-end">
               <div className="hidden min-h-[300px] items-center justify-center xl:flex">

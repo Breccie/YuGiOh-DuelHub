@@ -20,6 +20,11 @@ function createFallbackDashboard(): HomeDashboardResponse {
     activeRunName: "Kampagne",
     latestBanlistName: "Wird geladen",
     activeEra: "Sync",
+    topbar: {
+      friendCount: 0,
+      friendOnlineCount: 0,
+      duelRequestCount: 0,
+    },
     heroStats: [
       {
         label: "Credits",

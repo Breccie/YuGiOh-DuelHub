@@ -15,6 +15,11 @@ type HomeConsoleProps = {
   activeRunName: string;
   latestBanlistName: string;
   activeEra: string;
+  topbar?: {
+    friendOnlineCount: number;
+    friendCount: number;
+    duelRequestCount: number;
+  };
   heroStats: Array<{
     label: string;
     value: string;
@@ -167,8 +172,7 @@ export function HomeConsole({
   viewer,
   collectionValue,
   activeRunName,
-  latestBanlistName,
-  activeEra,
+  topbar,
   heroStats,
   newsItems,
   duelRequests,
@@ -214,9 +218,13 @@ export function HomeConsole({
       metrics={[
         { icon: "shield", label: "Kampagne", value: activeRunName },
         { icon: "book", label: "Sammlung", value: collectionValue },
-        { icon: "scale", label: "Banlist", value: latestBanlistName },
-        { icon: "hourglass", label: "Ära", value: activeEra },
       ]}
+      topbar={{
+        activeRunName,
+        collectionValue,
+        friendOnlineCount: topbar?.friendOnlineCount ?? null,
+        duelRequestCount: topbar?.duelRequestCount ?? duelRequests.length,
+      }}
     >
       <section className="grid gap-6 pt-4 xl:grid-cols-[1.08fr_0.92fr]">
         <div>

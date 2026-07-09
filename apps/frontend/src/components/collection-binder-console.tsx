@@ -10,8 +10,8 @@ import { BinderOpenSpread } from "@/components/binder-open-spread";
 import { ConsoleBrand } from "@/components/console-brand";
 import { consoleNavItems } from "@/components/console-nav-items";
 import {
+  ConsoleGlobalStatusBar,
   ConsoleSidebarUtilityActions,
-  ConsoleWindowChromeButton as WindowChromeButton,
 } from "@/components/console-shell-primitives";
 import { StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -444,6 +444,7 @@ function ActiveBinderShowcase({
 }
 
 export function CollectionBinderConsole({
+  viewer,
   binders,
   collectionProgress,
   initialEditorSnapshot = null,
@@ -615,10 +616,13 @@ export function CollectionBinderConsole({
 
         <main className="min-w-0 lg:ml-[272px]">
           <div className="mx-auto w-full max-w-[1620px] px-5 pb-10 pt-4 sm:px-7 lg:px-8 xl:px-10">
-            <div className="flex justify-end gap-3">
-              <WindowChromeButton label="Minimieren" name="window-min" />
-              <WindowChromeButton label="Fenster" name="window-max" />
-              <WindowChromeButton label="Schließen" name="window-close" />
+            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+              <ConsoleGlobalStatusBar
+                viewer={{ displayName: viewer.displayName }}
+                fallback={{
+                  collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
+                }}
+              />
             </div>
 
             <header className="mt-8 grid gap-5 xl:grid-cols-[minmax(320px,0.72fr)_minmax(0,1fr)] xl:items-end">

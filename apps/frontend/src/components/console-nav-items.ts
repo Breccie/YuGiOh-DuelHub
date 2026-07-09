@@ -2,12 +2,9 @@ import type { AssetIconName } from "@/components/asset-icon";
 
 export const consoleNavItems = [
   { href: "/", label: "Start", iconName: "nav-start" },
-  { href: "/campaigns", label: "Kampagnen", iconName: "shield" },
-  { href: "/friends", label: "Freunde", iconName: "users" },
   { href: "/packs", label: "Packs", iconName: "nav-packs" },
   { href: "/collection", label: "Sammlung", iconName: "nav-collection" },
   { href: "/decks", label: "Decks", iconName: "nav-decks" },
-  { href: "/duels", label: "Duelle", iconName: "sword" },
   { href: "/tournaments", label: "Turniere", iconName: "shield" },
   { href: "/trade", label: "Tausch", iconName: "nav-trade" },
 ] as const satisfies ReadonlyArray<{

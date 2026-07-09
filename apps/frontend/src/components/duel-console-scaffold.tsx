@@ -2,12 +2,10 @@
 
 import type { ReactNode } from "react";
 import type { AssetIconName } from "@/components/asset-icon";
-import { AssetIcon } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
 import {
-  ConsoleProfileMenuChip,
+  ConsoleGlobalStatusBar,
   ConsoleSidebarUtilityActions,
-  ConsoleWindowChromeButton,
 } from "@/components/console-shell-primitives";
 import { SiteNav } from "@/components/site-nav";
 
@@ -17,31 +15,29 @@ type MetricItem = {
   value: string;
 };
 
-function MetricChip({ icon, label, value }: MetricItem) {
-  const resolvedIcon =
-    typeof icon === "string" ? (
-      <AssetIcon name={icon as AssetIconName} className="h-6 w-6 text-current" />
-    ) : (
-      icon
-    );
+function findMetricValue(metrics: MetricItem[], labels: string[]) {
+  const normalizedLabels = labels.map((label) => label.toLocaleLowerCase("de"));
 
-  return (
-    <div className="flex min-h-[68px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-      <div className="text-[#d0b38c]">{resolvedIcon}</div>
-      <div>
-        <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-          {label}
-        </p>
-        <p className="mt-1 text-sm font-semibold text-[#efdfcb]">{value}</p>
-      </div>
-    </div>
-  );
+  return metrics.find((metric) =>
+    normalizedLabels.includes(metric.label.toLocaleLowerCase("de")),
+  )?.value;
+}
+
+function parseMetricCount(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const numericValue = Number.parseInt(value.replace(/\D/g, ""), 10);
+
+  return Number.isFinite(numericValue) ? numericValue : undefined;
 }
 
 export function DuelConsoleScaffold({
   activePath: _activePath,
   viewer,
   metrics,
+  topbar,
   children,
 }: {
   activePath: string;
@@ -50,9 +46,20 @@ export function DuelConsoleScaffold({
     duelistId?: string | null;
   };
   metrics: MetricItem[];
+  topbar?: {
+    activeRunName?: string | null;
+    collectionValue?: string | null;
+    friendOnlineCount?: number | null;
+    duelRequestCount?: number | null;
+  };
   children: ReactNode;
 }) {
   void _activePath;
+  const campaignValue = topbar?.activeRunName ?? findMetricValue(metrics, ["Kampagne"]);
+  const collectionValue = topbar?.collectionValue ?? findMetricValue(metrics, ["Sammlung"]);
+  const duelRequestCount =
+    topbar?.duelRequestCount ??
+    parseMetricCount(findMetricValue(metrics, ["Duellanfragen", "Anfragen"]));
 
   return (
     <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
@@ -74,23 +81,16 @@ export function DuelConsoleScaffold({
 
         <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <div className="hidden justify-end gap-3 xl:flex">
-              <ConsoleWindowChromeButton name="window-min" label="Minimieren" />
-              <ConsoleWindowChromeButton name="window-max" label="Fenster" />
-              <ConsoleWindowChromeButton name="window-close" label="Schließen" />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-end gap-3 xl:mt-2">
-              {metrics.map((metric) => (
-                <MetricChip
-                  key={`${metric.label}-${metric.value}`}
-                  icon={metric.icon}
-                  label={metric.label}
-                  value={metric.value}
-                />
-              ))}
-
-              <ConsoleProfileMenuChip viewer={viewer} />
+            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+              <ConsoleGlobalStatusBar
+                viewer={viewer}
+                fallback={{
+                  activeRunName: campaignValue,
+                  collectionValue,
+                  friendOnlineCount: topbar?.friendOnlineCount,
+                  duelRequestCount,
+                }}
+              />
             </div>
 
             <div className="mt-4 flex-1">{children}</div>

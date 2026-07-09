@@ -14,9 +14,8 @@ import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
 import { consoleNavItems } from "@/components/console-nav-items";
 import {
-  ConsoleProfileMenuChip,
+  ConsoleGlobalStatusBar,
   ConsoleSidebarUtilityActions,
-  ConsoleWindowChromeButton as WindowChromeButton,
 } from "@/components/console-shell-primitives";
 import { InteractiveBoosterPack } from "@/components/interactive-booster-pack";
 import { apiGetJson, apiPostJson, getApiErrorMessage } from "@/lib/api-client";
@@ -121,32 +120,6 @@ function formatReleaseDate(value: string) {
   }).format(new Date(value));
 }
 
-function getEraLabel(value: string) {
-  const year = new Date(value).getUTCFullYear();
-
-  if (year <= 2003) {
-    return "DM Ära";
-  }
-
-  if (year <= 2007) {
-    return "GX Ära";
-  }
-
-  if (year <= 2011) {
-    return "5D's Ära";
-  }
-
-  if (year <= 2014) {
-    return "ZEXAL Ära";
-  }
-
-  if (year <= 2017) {
-    return "ARC-V Ära";
-  }
-
-  return "Moderne Ära";
-}
-
 function SidebarNavItem({
   href,
   label,
@@ -193,28 +166,6 @@ function Panel({
     >
       {children}
     </section>
-  );
-}
-
-function MetricChip({
-  iconName,
-  label,
-  value,
-}: {
-  iconName: AssetIconName;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex min-h-[68px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-4 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
-      <AssetIcon name={iconName} className="h-6 w-6 text-[#d0b38c]" />
-      <div>
-        <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-          {label}
-        </p>
-        <p className="mt-1 text-sm font-semibold text-[#efdfcb]">{value}</p>
-      </div>
-    </div>
   );
 }
 
@@ -484,10 +435,8 @@ function DeckCount({
 
 export function PackSelectionConsole({
   viewer,
-  wallet,
   activeRunId,
   collectionProgress,
-  latestBanlistName,
   selectedSetId,
   sets,
   recentCollectionCards,
@@ -533,7 +482,6 @@ export function PackSelectionConsole({
     selectedSet.imageUrl,
   );
   const compactHeroTitle = selectedSet.name.length > 24;
-  const heroEra = getEraLabel(selectedSet.releaseDate);
   const visibleRecentCards = recentCollectionCards.slice(0, 8);
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
   const selectedPackPrice =
@@ -748,33 +696,13 @@ export function PackSelectionConsole({
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
             <section className="relative xl:min-h-[520px]">
               <div className="relative">
-                <div className="hidden justify-end gap-3 xl:flex">
-                  <WindowChromeButton name="window-min" label="Minimieren" />
-                  <WindowChromeButton name="window-max" label="Fenster" />
-                  <WindowChromeButton name="window-close" label="Schließen" />
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-center justify-end gap-3 xl:mt-2">
-                  <MetricChip
-                    iconName="book"
-                    label="Sammlung"
-                    value={`${formatNumber(collectionProgress.owned)} / ${formatNumber(collectionProgress.total)}`}
+                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+                  <ConsoleGlobalStatusBar
+                    viewer={{ displayName: viewer.displayName }}
+                    fallback={{
+                      collectionValue: `${formatNumber(collectionProgress.owned)} / ${formatNumber(collectionProgress.total)}`,
+                    }}
                   />
-                  <MetricChip
-                    iconName="scale"
-                    label="Banlist"
-                    value={latestBanlistName}
-                  />
-                  <MetricChip
-                    iconName="cart"
-                    label="Credits"
-                    value={
-                      wallet ? formatNumber(wallet.balance) : "Kein Run-Wallet"
-                    }
-                  />
-                  <MetricChip iconName="hourglass" label="Aktive Ära" value={heroEra} />
-
-                  <ConsoleProfileMenuChip viewer={{ displayName: viewer.displayName }} />
                 </div>
               </div>
 
