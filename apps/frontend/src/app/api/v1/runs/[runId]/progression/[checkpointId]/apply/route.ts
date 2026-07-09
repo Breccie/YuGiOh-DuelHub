@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ApplyRunProgressionResponse } from "@ygo/contracts";
+import { applyRunProgressionRequestSchema } from "@ygo/contracts";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireSameOriginMutation } from "@/lib/api-route-security";
@@ -30,11 +31,17 @@ export async function POST(
 
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
+    const body = applyRunProgressionRequestSchema.parse(
+      await request.json().catch(() => ({})),
+    );
     const payload: ApplyRunProgressionResponse = await applyProgressionCheckpoint(
       prisma,
       session.userId,
       runId,
       checkpointId,
+      {
+        force: body.force,
+      },
     );
 
     return NextResponse.json(payload);

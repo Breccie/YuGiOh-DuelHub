@@ -1112,6 +1112,13 @@ export type ApplyRunProgressionResponse = z.infer<
   typeof applyRunProgressionResponseSchema
 >;
 
+export const applyRunProgressionRequestSchema = z.object({
+  force: z.boolean().optional(),
+});
+export type ApplyRunProgressionRequest = z.infer<
+  typeof applyRunProgressionRequestSchema
+>;
+
 export const generateRunProgressionRequestSchema = z.object({
   count: z.number().int().min(1).max(50).optional(),
   fromDate: z.string().trim().min(1).nullable().optional(),

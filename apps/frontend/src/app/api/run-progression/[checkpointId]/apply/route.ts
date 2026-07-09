@@ -3,6 +3,7 @@ import type {
   ActiveRunResponse,
   ApplyRunProgressionResponse,
 } from "@ygo/contracts";
+import { applyRunProgressionRequestSchema } from "@ygo/contracts";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import {
   fetchApiService,
@@ -57,11 +58,17 @@ export async function POST(
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const activeRun = await getActiveRun(prisma, session.userId);
+    const body = applyRunProgressionRequestSchema.parse(
+      await request.json().catch(() => ({})),
+    );
     const payload: ApplyRunProgressionResponse = await applyProgressionCheckpoint(
       prisma,
       session.userId,
       activeRun.id,
       checkpointId,
+      {
+        force: body.force,
+      },
     );
 
     return NextResponse.json(payload);

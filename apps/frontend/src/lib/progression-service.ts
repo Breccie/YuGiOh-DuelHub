@@ -569,6 +569,9 @@ export async function applyProgressionCheckpoint(
   viewerId: string,
   runId: string,
   checkpointId: string,
+  options: {
+    force?: boolean;
+  } = {},
 ) {
   await requireRunMembership(prisma, {
     runId,
@@ -603,7 +606,9 @@ export async function applyProgressionCheckpoint(
     });
   }
 
-  const applyState = assertCheckpointCanApply(checkpoint.status);
+  const applyState = options.force && checkpoint.status === "LOCKED"
+    ? "can_apply"
+    : assertCheckpointCanApply(checkpoint.status);
 
   const appliedCheckpoint =
     applyState === "already_applied"

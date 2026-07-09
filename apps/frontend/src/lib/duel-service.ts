@@ -83,11 +83,15 @@ async function loadDuelRequest(prisma: PrismaClient, duelRequestId: string) {
   });
 }
 
-export async function listDuelRequests(prisma: PrismaClient, viewerId: string) {
-  const activeRun = await getActiveRun(prisma, viewerId);
+export async function listDuelRequests(
+  prisma: PrismaClient,
+  viewerId: string,
+  activeRunId?: string,
+) {
+  const runId = activeRunId ?? (await getActiveRun(prisma, viewerId)).id;
   const duelRequests = await prisma.duelRequest.findMany({
     where: {
-      runId: activeRun.id,
+      runId,
       OR: [{ requesterId: viewerId }, { opponentId: viewerId }],
     },
     orderBy: {

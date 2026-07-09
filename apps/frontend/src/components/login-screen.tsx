@@ -39,7 +39,7 @@ export function LoginScreen({
               duelistId,
               password,
               rememberDevice,
-              deviceLabel: "Desktop App",
+              deviceLabel: "Web App",
             }
           : {
               duelistId,
@@ -80,13 +80,13 @@ export function LoginScreen({
       <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1320px] items-center px-4 py-8 lg:px-8">
         <div className="grid w-full gap-6 lg:grid-cols-[1.04fr_0.96fr]">
           <section className="hero-surface rounded-[32px] px-6 py-8 sm:px-8 lg:px-10 lg:py-12">
-            <p className="ui-kicker">Desktop Duel Hub</p>
+            <p className="ui-kicker">Duel Hub</p>
             <h1 className="font-display inscription-text mt-5 text-[3.3rem] leading-[0.92] sm:text-[4.7rem]">
               Profile, Trades, Duelle und Turniere in einer App.
             </h1>
             <p className="ui-copy-strong mt-6 max-w-[40rem] text-[1rem]">
-              Melde dich mit deiner Duelist-ID an, öffne fremde Showcase-Binder, plane EDOPro-
-              Matches und exportiere Decks direkt aus der Desktop-App.
+              Melde dich mit deiner Duelist-ID an, öffne Showcase-Binder, plane EDOPro-
+              Matches und exportiere Decks direkt aus deiner Kampagne.
             </p>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -231,7 +231,7 @@ export function LoginScreen({
                 {pending
                   ? "Wird verarbeitet..."
                   : mode === "LOGIN"
-                    ? "In Desktop-App starten"
+                    ? "Anmelden"
                     : "Account anlegen"}
               </button>
             </form>

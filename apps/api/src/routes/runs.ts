@@ -2,6 +2,7 @@ import type { PrismaClient as FrontendPrismaClient } from "@prisma/client";
 import {
   activeRunResponseSchema,
   addRunMemberRequestSchema,
+  applyRunProgressionRequestSchema,
   applyRunProgressionResponseSchema,
   claimRewardResponseSchema,
   claimPromoRequestSchema,
@@ -447,11 +448,15 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
       const { runId, checkpointId } = checkpointParamsSchema.parse(request.params);
+      const body = applyRunProgressionRequestSchema.parse(request.body ?? {});
       const payload = await applyProgressionCheckpoint(
         getSharedPrisma(),
         session.userId,
         runId,
         checkpointId,
+        {
+          force: body.force,
+        },
       );
 
       return reply.send(applyRunProgressionResponseSchema.parse(payload));

@@ -8,6 +8,7 @@ import {
   listDuelRequests,
 } from "@/lib/duel-service";
 import { getPrisma } from "@/lib/prisma";
+import { getActiveRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,27 @@ export async function GET(request: Request) {
   try {
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
-    const duels = await listDuelRequests(prisma, session.userId);
+    const activeRun = await getActiveRun(prisma, session.userId);
+    const [duels, decks] = await Promise.all([
+      listDuelRequests(prisma, session.userId, activeRun.id),
+      prisma.deck.findMany({
+        where: {
+          userId: session.userId,
+          runId: activeRun.id,
+        },
+        orderBy: {
+          updatedAt: "desc",
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       duels,
+      decks,
     });
   } catch (error) {
     const status =

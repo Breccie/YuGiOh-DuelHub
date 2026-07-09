@@ -10,6 +10,7 @@ import {
   respondToDuelRequest,
   scheduleDuelRequest,
 } from "@/lib/duel-service";
+import { getActiveRun } from "@/lib/run-service";
 import { requireViewerSession } from "../lib/auth";
 import { sendApiError } from "../lib/errors";
 import { getPrisma } from "../lib/prisma";
@@ -23,11 +24,13 @@ const duelRoutes: FastifyPluginAsync = async (app) => {
     try {
       const prisma = getPrisma();
       const session = await requireViewerSession(request, prisma);
+      const activeRun = await getActiveRun(getSharedPrisma(), session.userId);
       const [duels, decks] = await Promise.all([
-        listDuelRequests(getSharedPrisma(), session.userId),
+        listDuelRequests(getSharedPrisma(), session.userId, activeRun.id),
         prisma.deck.findMany({
           where: {
             userId: session.userId,
+            runId: activeRun.id,
           },
           orderBy: {
             updatedAt: "desc",
