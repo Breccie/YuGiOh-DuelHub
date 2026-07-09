@@ -115,10 +115,26 @@ async function loadCollectionEntries(prisma: PrismaClient, viewerId: string, run
       acquiredAt: "desc",
     },
     include: {
-      card: true,
+      card: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          externalCardId: true,
+          kind: true,
+        },
+      },
       setCard: {
-        include: {
-          set: true,
+        select: {
+          id: true,
+          setCode: true,
+          rarity: true,
+          set: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
         },
       },
     },
@@ -143,7 +159,7 @@ function groupCollectionEntries(entries: RawCollectionEntry[]) {
         slug: entry.card.slug,
         imageUrl: getCardAssetUrl(entry.card.externalCardId),
         kind: entry.card.kind,
-        currentOracleText: entry.card.currentOracleText,
+        currentOracleText: null,
         totalCopies: 0,
         availableCopies: 0,
         reservedCopies: 0,
@@ -234,7 +250,6 @@ function matchesQuery(entry: RawCollectionEntry, normalizedQuery: string) {
   const haystacks = [
     entry.card.name,
     entry.card.slug,
-    entry.card.currentOracleText ?? "",
     entry.setCard?.setCode ?? "",
     entry.setCard?.set?.name ?? "",
     entry.setCard?.set?.code ?? "",

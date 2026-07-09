@@ -430,8 +430,13 @@ export async function getPackDashboardSnapshot(
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
-  const [sets, openingStats, recentOpenings, run, wallet, setUnlocks] = await Promise.all([
+  const [sets, setCardCounts, openingStats, recentOpenings, run, wallet, setUnlocks] =
+    await Promise.all([
     prisma.cardSet.findMany({
+      where: {
+        isOpenable: true,
+        productType: "CORE_BOOSTER",
+      },
       orderBy: {
         releaseDate: "asc",
       },
@@ -442,14 +447,14 @@ export async function getPackDashboardSnapshot(
         releaseDate: true,
         productType: true,
         packSize: true,
+        isOpenable: true,
         imageUrl: true,
-        setCards: {
-          select: {
-            cardId: true,
-            rarity: true,
-            setCode: true,
-          },
-        },
+      },
+    }),
+    prisma.setCard.groupBy({
+      by: ["setId"],
+      _count: {
+        _all: true,
       },
     }),
     prisma.packOpening.groupBy({
@@ -529,15 +534,19 @@ export async function getPackDashboardSnapshot(
     ]),
   );
   const unlockBySetId = new Map(setUnlocks.map((unlock) => [unlock.setId, unlock]));
+  const cardPoolSizeBySetId = new Map(
+    setCardCounts.map((entry) => [entry.setId, entry._count._all]),
+  );
 
   const hydratedSets = sets
     .map((set) => {
-      const canonicalSetCards = getCanonicalSetCards(set.setCards);
-
       return {
         ...set,
-        setCards: canonicalSetCards,
-        effectiveConfiguration: getEffectiveSetConfiguration(set, canonicalSetCards),
+        effectiveConfiguration: {
+          productType: set.productType,
+          packSize: set.packSize,
+          isOpenable: set.isOpenable,
+        },
       };
     })
     .filter(
@@ -598,7 +607,7 @@ export async function getPackDashboardSnapshot(
         releaseDate: set.releaseDate.toISOString(),
         productType: set.effectiveConfiguration.productType,
         packSize: set.effectiveConfiguration.packSize,
-        cardPoolSize: set.setCards.length,
+        cardPoolSize: cardPoolSizeBySetId.get(set.id) ?? 0,
         imageUrl: resolveAppImageUrl(set.imageUrl),
         totalOpened: openingStatsBySetId.get(set.id)?.totalOpened ?? 0,
         lastOpenedAt: openingStatsBySetId.get(set.id)?.lastOpenedAt ?? null,
