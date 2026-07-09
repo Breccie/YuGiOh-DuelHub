@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { CollectionBinderConsole } from "@/components/collection-binder-console";
 import {
   fetchApiServiceJson,
@@ -17,6 +18,7 @@ import {
   type CollectionPresetDto,
 } from "@/lib/collection-showcase";
 import { getPrisma } from "@/lib/prisma";
+import Loading from "../loading";
 
 type RemoteCollectionPagePayload = {
   viewer: CollectionSnapshot["viewer"];
@@ -36,7 +38,7 @@ function getSingleQueryValue(value: string | string[] | undefined) {
   return value ?? null;
 }
 
-export default async function CollectionPage({
+async function CollectionPageContent({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -113,5 +115,17 @@ export default async function CollectionPage({
       recentEntries={collectionSnapshot.recentEntries}
       initialEditorSnapshot={initialEditorSnapshot}
     />
+  );
+}
+
+export default function CollectionPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={<Loading />}>
+      <CollectionPageContent searchParams={searchParams} />
+    </Suspense>
   );
 }

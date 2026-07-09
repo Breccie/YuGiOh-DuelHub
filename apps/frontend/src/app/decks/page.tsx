@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { DeckOverviewConsole } from "@/components/deck-overview-console";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import {
@@ -9,6 +10,7 @@ import { getViewerSession } from "@/lib/auth";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
+import Loading from "../loading";
 
 type RemoteDeckOverviewPayload = Parameters<typeof DeckOverviewConsole>[0];
 
@@ -20,7 +22,7 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat("de-DE").format(value);
 }
 
-export default async function DecksPage({
+async function DecksPageContent({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -162,5 +164,17 @@ export default async function DecksPage({
       availableBanlists={snapshot.editor.availableBanlists}
       collectionCards={snapshot.editor.collectionCards}
     />
+  );
+}
+
+export default function DecksPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <Suspense fallback={<Loading />}>
+      <DecksPageContent searchParams={searchParams} />
+    </Suspense>
   );
 }

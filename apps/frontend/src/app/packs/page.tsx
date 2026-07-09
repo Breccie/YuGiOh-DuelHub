@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import type { PackSelectionResponse } from "@ygo/contracts";
 import { PackSelectionConsole } from "@/components/pack-selection-console";
 import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
@@ -6,6 +7,7 @@ import { getViewerSession } from "@/lib/auth";
 import { buildPackSelectionPayload } from "@/lib/packs-data";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
+import Loading from "../loading";
 
 async function getOnlinePackSelectionPayload() {
   try {
@@ -19,7 +21,7 @@ async function getOnlinePackSelectionPayload() {
   }
 }
 
-export default async function PacksPage() {
+async function PacksPageContent() {
   if (shouldProxyToApiService()) {
     return <PackSelectionConsole {...(await getOnlinePackSelectionPayload())} />;
   }
@@ -37,5 +39,13 @@ export default async function PacksPage() {
     <PackSelectionConsole
       {...(await buildPackSelectionPayload(prisma, session.userId, activeRun.id))}
     />
+  );
+}
+
+export default function PacksPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <PacksPageContent />
+    </Suspense>
   );
 }
