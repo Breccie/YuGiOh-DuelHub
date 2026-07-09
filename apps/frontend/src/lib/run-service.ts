@@ -299,7 +299,6 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
           _count: {
             select: {
               memberships: true,
-              setUnlocks: true,
             },
           },
         },
@@ -317,10 +316,6 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
         activeRunId: existingMembership.runId,
       },
     });
-
-    if (existingMembership.run._count.setUnlocks === 0) {
-      await ensureInitialSetUnlocks(prisma, existingMembership.runId);
-    }
 
     return existingMembership.run;
   }
@@ -406,7 +401,6 @@ export async function listRuns(prisma: PrismaClient, userId: string) {
             _count: {
               select: {
                 memberships: true,
-                setUnlocks: true,
               },
             },
           },
@@ -457,9 +451,6 @@ export async function getActiveRun(prisma: PrismaClient, userId: string) {
     });
 
     if (membership) {
-      if (membership.run._count.setUnlocks === 0) {
-        await ensureInitialSetUnlocks(prisma, membership.runId);
-      }
       return membership.run;
     }
   }

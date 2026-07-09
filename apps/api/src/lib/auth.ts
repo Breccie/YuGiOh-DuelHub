@@ -59,14 +59,19 @@ export async function getViewerSession(
     return null;
   }
 
-  await prisma.session.update({
-    where: {
-      id: session.id,
-    },
-    data: {
-      lastSeenAt: new Date(),
-    },
-  });
+  const now = Date.now();
+  const lastSeenAt = session.lastSeenAt?.getTime() ?? 0;
+
+  if (now - lastSeenAt > 1000 * 60 * 5) {
+    await prisma.session.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        lastSeenAt: new Date(now),
+      },
+    });
+  }
 
   return toViewerSession(session);
 }
