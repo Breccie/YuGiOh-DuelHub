@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TradeConsole } from "@/components/trade-console";
-import { ApiClientError, apiGetJson } from "@/lib/api-client";
+import { ApiClientError, apiGetJson, isActiveRunRequiredError } from "@/lib/api-client";
 
 type TradeOverviewPayload = Parameters<typeof TradeConsole>[0];
 
@@ -47,6 +47,11 @@ export function TradeOverviewLoader() {
     void refresh().catch((error) => {
       if (error instanceof ApiClientError && error.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (isActiveRunRequiredError(error)) {
+        router.replace("/campaigns");
       }
     });
 

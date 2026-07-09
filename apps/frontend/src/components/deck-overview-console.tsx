@@ -343,6 +343,11 @@ export function DeckOverviewConsole({
   const [showEditor, setShowEditor] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [draftDeckName, setDraftDeckName] = useState("");
+  const [draftBanlistId, setDraftBanlistId] = useState(availableBanlists[0]?.id ?? "");
+  const [isCreatingDeck, setIsCreatingDeck] = useState(false);
+  const [creatorFeedback, setCreatorFeedback] = useState<string | null>(null);
   const selectedDeck =
     decks.find((deck) => deck.id === selectedDeckId) ??
     decks[0] ??
@@ -361,6 +366,7 @@ export function DeckOverviewConsole({
         : null;
   const heroEra = getEraLabel(activeDeck?.snapshotDate ?? new Date().toISOString());
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
+  const resolvedDraftBanlistId = draftBanlistId || availableBanlists[0]?.id || "";
 
   function scrollLibrary(direction: "left" | "right") {
     libraryRowRef.current?.scrollBy({
@@ -405,6 +411,38 @@ export function DeckOverviewConsole({
       setExportFeedback(getApiErrorMessage(error, "Deck konnte nicht exportiert werden."));
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function handleCreateDeck() {
+    const trimmedName = draftDeckName.trim();
+
+    if (!trimmedName) {
+      setCreatorFeedback("Gib deinem Deck zuerst einen Namen.");
+      return;
+    }
+
+    setIsCreatingDeck(true);
+    setCreatorFeedback(null);
+
+    try {
+      const payload = await deckClient.create({
+        name: trimmedName,
+        banlistId: resolvedDraftBanlistId || null,
+      });
+
+      if (!payload.deck?.id) {
+        throw new Error("Deck wurde erstellt, aber die Deck-ID fehlt.");
+      }
+
+      setDraftDeckName("");
+      setCreatorOpen(false);
+      router.push(`/decks?deck=${payload.deck.id}`);
+      router.refresh();
+    } catch (error) {
+      setCreatorFeedback(getApiErrorMessage(error, "Deck konnte nicht erstellt werden."));
+    } finally {
+      setIsCreatingDeck(false);
     }
   }
 
@@ -637,7 +675,79 @@ export function DeckOverviewConsole({
                       </button>
                     );
                   })}
+                  <button
+                    type="button"
+                    onClick={() => setCreatorOpen(true)}
+                    className="group relative flex shrink-0 flex-col items-center justify-center rounded-[16px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(255,255,255,0.025)] p-2 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
+                    aria-label="Neues Deck erstellen"
+                  >
+                    <div className="flex h-[150px] w-[98px] items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))]">
+                      <span className="grid h-12 w-12 place-items-center rounded-full border border-[rgba(208,170,110,0.28)] bg-[rgba(208,170,110,0.08)] transition group-hover:scale-105 group-hover:border-[rgba(207,91,66,0.44)]">
+                        <AssetIcon name="plus" className="h-6 w-6 text-current" />
+                      </span>
+                    </div>
+                    <span className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em]">
+                      Neues Deck
+                    </span>
+                  </button>
                 </div>
+
+                {creatorOpen ? (
+                  <div className="mt-3 rounded-[18px] border border-[rgba(208,170,110,0.14)] bg-[rgba(255,255,255,0.025)] p-4">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,0.9fr)_auto_auto] lg:items-end">
+                      <label className="block">
+                        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9f8c77]">
+                          Deckname
+                        </span>
+                        <input
+                          value={draftDeckName}
+                          onChange={(event) => setDraftDeckName(event.target.value)}
+                          className="ui-input mt-2"
+                          placeholder="z.B. Chaos Control"
+                          disabled={isCreatingDeck}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9f8c77]">
+                          Bannliste
+                        </span>
+                        <select
+                          value={resolvedDraftBanlistId}
+                          onChange={(event) => setDraftBanlistId(event.target.value)}
+                          className="ui-input mt-2"
+                          disabled={isCreatingDeck || availableBanlists.length === 0}
+                        >
+                          {availableBanlists.map((banlist) => (
+                            <option key={banlist.id} value={banlist.id}>
+                              {banlist.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => void handleCreateDeck()}
+                        disabled={isCreatingDeck || !draftDeckName.trim()}
+                        className="ui-button-primary min-h-[46px] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isCreatingDeck ? "Erstelle..." : "Erstellen"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCreatorOpen(false)}
+                        className="ui-button-neutral min-h-[46px]"
+                        disabled={isCreatingDeck}
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                    {creatorFeedback ? (
+                      <div className="mt-3 rounded-[14px] border border-[rgba(207,91,66,0.22)] bg-[rgba(126,23,15,0.14)] px-4 py-3 text-sm text-[#ffd7c9]">
+                        {creatorFeedback}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </Panel>
 
               <Panel className="p-4 sm:p-5 xl:row-span-2">

@@ -3,6 +3,7 @@ import type { AssetIconName } from "@/components/asset-icon";
 export const consoleNavItems = [
   { href: "/", label: "Start", iconName: "nav-start" },
   { href: "/campaigns", label: "Kampagnen", iconName: "shield" },
+  { href: "/friends", label: "Freunde", iconName: "users" },
   { href: "/packs", label: "Packs", iconName: "nav-packs" },
   { href: "/collection", label: "Sammlung", iconName: "nav-collection" },
   { href: "/decks", label: "Decks", iconName: "nav-decks" },

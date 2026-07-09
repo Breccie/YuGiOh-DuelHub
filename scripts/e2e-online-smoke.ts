@@ -405,6 +405,31 @@ async function registerActor(actor: SmokeActor) {
   }
 }
 
+async function createPrimaryRun(actor: SmokeActor) {
+  console.log(`[e2e-online] Creating explicit online campaign for ${actor.duelistId}`);
+  const payload = await apiJson<{ run: { id: string; name: string } }>(
+    actor.page,
+    "/api/v1/runs",
+    "POST",
+    {
+      name: `Online Smoke ${Date.now()}`,
+      startingCredits: 2400,
+      defaultPackPrice: 100,
+      defaultDisplaySize: 24,
+      freePacksPerSetUnlock: 24,
+      tournamentWinnerCredits: 300,
+      tournamentRunnerUpCredits: 150,
+      tournamentParticipationCredits: 50,
+    },
+  );
+
+  if (!payload.run?.id) {
+    throw new Error("Online smoke campaign creation did not return a run id.");
+  }
+
+  return payload.run.id;
+}
+
 async function joinSecondaryActorToPrimaryRun(primary: SmokeActor, secondary: SmokeActor) {
   await withApiPrisma(async (prisma) => {
     const [owner, member] = await Promise.all([
@@ -968,6 +993,7 @@ async function runOnlineBrowserSmoke(primary: SmokeUser, secondary: SmokeUser) {
   try {
     await registerActor(primaryActor);
     await registerActor(secondaryActor);
+    await createPrimaryRun(primaryActor);
 
     console.log("[e2e-online] Verifying server-rendered packs page");
     await primaryActor.page.goto(`${baseUrl}/packs`);

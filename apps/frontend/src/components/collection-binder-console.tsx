@@ -161,6 +161,46 @@ function Panel({
   );
 }
 
+function BinderCoverArtwork({
+  src,
+  alt,
+  sizes,
+  eager,
+  className,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+  eager?: boolean;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-4 text-center text-[#d9c4aa]">
+        <AssetIcon name="book" className="h-9 w-9 text-current" />
+        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em]">
+          {alt}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes={sizes}
+      loading={eager ? "eager" : undefined}
+      draggable={false}
+      onError={() => setFailed(true)}
+      className={className}
+    />
+  );
+}
+
 function BinderShelfCard({
   binder,
   onSelect,
@@ -185,13 +225,11 @@ function BinderShelfCard({
         <div className="relative mx-auto w-full max-w-[160px] [perspective:1400px]">
           <div className="pointer-events-none absolute inset-x-[12%] bottom-1 h-8 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.18),transparent_72%)] opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
           <div className="relative aspect-[62/100] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] shadow-[0_22px_34px_rgba(0,0,0,0.28)] transition duration-500 ease-out [transform-style:preserve-3d] group-hover:[transform:rotateX(4deg)_rotateY(-7deg)_translateY(-4px)]">
-            <Image
+            <BinderCoverArtwork
               src={binder.coverImageUrl}
               alt={binder.name}
-              fill
               sizes="240px"
-              loading={binder.isActive ? "eager" : undefined}
-              draggable={false}
+              eager={binder.isActive}
               className="pointer-events-none select-none object-cover object-center drop-shadow-[0_18px_30px_rgba(0,0,0,0.34)] transition duration-500 group-hover:scale-[1.03] [-webkit-user-drag:none]"
             />
             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
@@ -227,6 +265,27 @@ function BinderShelfCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function AddBinderTile({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group rounded-[20px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(7,10,15,0.52)] p-3 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
+    >
+      <div className="relative mx-auto flex w-full max-w-[160px] items-center justify-center [perspective:1400px]">
+        <div className="relative flex aspect-[62/100] w-full items-center justify-center rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))] shadow-[0_22px_34px_rgba(0,0,0,0.28)] transition duration-500 ease-out group-hover:[transform:rotateX(4deg)_rotateY(-7deg)_translateY(-4px)]">
+          <span className="grid h-14 w-14 place-items-center rounded-full border border-[rgba(208,170,110,0.28)] bg-[rgba(208,170,110,0.08)] transition group-hover:scale-105 group-hover:border-[rgba(207,91,66,0.44)]">
+            <AssetIcon name="plus" className="h-7 w-7 text-current" />
+          </span>
+        </div>
+      </div>
+      <p className="mt-3 text-center text-sm font-semibold uppercase tracking-[0.16em]">
+        Neuer Binder
+      </p>
+    </button>
   );
 }
 
@@ -266,12 +325,10 @@ function BinderDetailPanel({
       <div className="relative mx-auto mt-5 w-full max-w-[230px] [perspective:1400px]">
         <div className="pointer-events-none absolute inset-x-[16%] bottom-1 h-10 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.18),transparent_72%)] blur-2xl" />
         <div className="relative aspect-[62/100] overflow-hidden rounded-[18px] border border-[rgba(255,255,255,0.1)] bg-[#05070a] shadow-[0_28px_48px_rgba(0,0,0,0.42)]">
-          <Image
+          <BinderCoverArtwork
             src={binder.coverImageUrl}
             alt={binder.name}
-            fill
             sizes="260px"
-            draggable={false}
             className="pointer-events-none select-none object-cover object-center [-webkit-user-drag:none]"
           />
           <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,transparent_18%,rgba(255,255,255,0.05)_38%,rgba(255,255,255,0.16)_48%,rgba(255,255,255,0.04)_58%,transparent_74%)]" />
@@ -412,7 +469,10 @@ export function CollectionBinderConsole({
   const editorInitialSlotIndex = Number.isFinite(parsedEditorSlotIndex)
     ? Math.max(0, Math.min(binderSlotCount - 1, parsedEditorSlotIndex))
     : null;
-  const activeBinder = binderOptions.find((binder) => binder.isActive) ?? binderOptions[0] ?? null;
+  const visibleBinders = binderOptions.filter((binder) => getBinderFilledSlots(binder) > 0);
+  const hiddenEmptyBinderCount = binderOptions.length - visibleBinders.length;
+  const activeBinder =
+    visibleBinders.find((binder) => binder.isActive) ?? visibleBinders[0] ?? null;
 
   function updateEditorRoute(
     nextBinderId: string | null,
@@ -501,8 +561,12 @@ export function CollectionBinderConsole({
         ]);
         setDraftBinderName("");
         setCreatorOpen(false);
+        updateEditorRoute(payload.binder.id, {
+          pageIndex: 0,
+          slotIndex: null,
+        });
       });
-      setFeedbackMessage(`Binder "${payload.binder.name}" wurde erstellt.`);
+      setFeedbackMessage(`Binder "${payload.binder.name}" wurde erstellt und geöffnet.`);
     } catch (error) {
       setFeedbackMessage(getApiErrorMessage(error, "Binder konnte nicht erstellt werden."));
     } finally {
@@ -583,15 +647,7 @@ export function CollectionBinderConsole({
                     {collectionProgress.owned}
                   </p>
                 </div>
-                <StatusPill tone="slate">{binderOptions.length} Binder</StatusPill>
-                <button
-                  type="button"
-                  onClick={() => setCreatorOpen(true)}
-                  className="flex min-h-[42px] items-center gap-2 rounded-[4px] border border-[rgba(255,255,255,0.12)] bg-[rgba(10,13,18,0.66)] px-4 text-sm font-semibold uppercase tracking-[0.14em] text-[#ead9c3] transition hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(18,22,28,0.82)]"
-                >
-                  <AssetIcon name="plus" className="h-4 w-4 text-current" />
-                  Neuer Binder
-                </button>
+                <StatusPill tone="slate">{visibleBinders.length} befüllt</StatusPill>
               </div>
             </header>
 
@@ -646,12 +702,10 @@ export function CollectionBinderConsole({
                         <div className="relative mx-auto w-full max-w-[100px] [perspective:1200px]">
                           <div className="pointer-events-none absolute inset-x-[16%] bottom-1 h-6 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.16),transparent_74%)] opacity-0 blur-xl transition duration-500 group-hover:opacity-100" />
                           <div className="relative aspect-[62/100] overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] transition duration-500 ease-out group-hover:[transform:rotateX(3deg)_rotateY(-6deg)_translateY(-2px)]">
-                            <Image
+                            <BinderCoverArtwork
                               src={cover.imageUrl}
                               alt={cover.name}
-                              fill
                               sizes="120px"
-                              draggable={false}
                               className="pointer-events-none select-none object-cover object-center drop-shadow-[0_16px_26px_rgba(0,0,0,0.28)] transition duration-500 group-hover:scale-[1.03] [-webkit-user-drag:none]"
                             />
                             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
@@ -685,11 +739,16 @@ export function CollectionBinderConsole({
                 <section>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[#d9c7b1]">
-                      {binderOptions.length} Binder
+                      {visibleBinders.length} gefüllte Binder
                     </p>
+                    {hiddenEmptyBinderCount > 0 ? (
+                      <span className="text-xs uppercase tracking-[0.14em] text-[#9f8c77]">
+                        {hiddenEmptyBinderCount} leer ausgeblendet
+                      </span>
+                    ) : null}
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {binderOptions.map((binder) => (
+                    {visibleBinders.map((binder) => (
                       <BinderShelfCard
                         key={binder.id}
                         binder={binder}
@@ -702,7 +761,14 @@ export function CollectionBinderConsole({
                         }
                       />
                     ))}
+                    <AddBinderTile onClick={() => setCreatorOpen(true)} />
                   </div>
+                  {visibleBinders.length === 0 ? (
+                    <div className="mt-4 rounded-[18px] border border-dashed border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.02)] px-4 py-5 text-sm text-[#b9aa96]">
+                      Noch kein gefüllter Binder. Erstelle einen Binder über die Plus-Kachel und
+                      fülle ihn im Editor mit Karten aus deiner Sammlung.
+                    </div>
+                  ) : null}
                 </section>
 
                 {activeBinder ? (

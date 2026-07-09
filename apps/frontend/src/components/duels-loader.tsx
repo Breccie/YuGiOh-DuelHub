@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DuelsConsole } from "@/components/duels-console";
-import { ApiClientError, apiGetJson } from "@/lib/api-client";
+import { ApiClientError, apiGetJson, isActiveRunRequiredError } from "@/lib/api-client";
 import type { DuelRequestDto, ViewerSession } from "@/lib/app-dtos";
 
 type DuelsPayload = {
@@ -70,6 +70,11 @@ export function DuelsLoader() {
     void refresh().catch((error) => {
       if (error instanceof ApiClientError && error.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (isActiveRunRequiredError(error)) {
+        router.replace("/campaigns");
       }
     });
 

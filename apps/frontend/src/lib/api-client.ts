@@ -139,3 +139,11 @@ export function getApiErrorMessage(error: unknown, fallbackMessage: string) {
 
   return fallbackMessage;
 }
+
+export function isActiveRunRequiredError(error: unknown) {
+  return (
+    error instanceof ApiClientError &&
+    (error.code === "active_run_required" ||
+      (error.status === 409 && /kampagne|runde/i.test(error.message)))
+  );
+}

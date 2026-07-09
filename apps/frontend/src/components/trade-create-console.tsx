@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel, StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -41,7 +41,17 @@ export function TradeCreateConsole({
   partners: TradePartnerOption[];
 }) {
   const router = useRouter();
-  const [partnerDuelistId, setPartnerDuelistId] = useState(partners[0]?.duelistId ?? "");
+  const searchParams = useSearchParams();
+  const requestedPartnerDuelistId =
+    searchParams.get("duelistId")?.trim().toUpperCase() ?? "";
+  const queryPartnerDuelistId = partners.some(
+    (partner) => partner.duelistId === requestedPartnerDuelistId,
+  )
+    ? requestedPartnerDuelistId
+    : "";
+  const [selectedPartnerOverride, setSelectedPartnerOverride] = useState("");
+  const partnerDuelistId =
+    selectedPartnerOverride || queryPartnerDuelistId || partners[0]?.duelistId || "";
   const [offeredEntryIds, setOfferedEntryIds] = useState<string[]>([]);
   const [requestedEntryIds, setRequestedEntryIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
@@ -115,7 +125,7 @@ export function TradeCreateConsole({
                 className="ui-input mt-2"
                 value={partnerDuelistId}
                 onChange={(event) => {
-                  setPartnerDuelistId(event.target.value);
+                  setSelectedPartnerOverride(event.target.value);
                   setRequestedEntryIds([]);
                 }}
               >

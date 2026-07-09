@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TradeCreateConsole } from "@/components/trade-create-console";
-import { ApiClientError, apiGetJson } from "@/lib/api-client";
+import { ApiClientError, apiGetJson, isActiveRunRequiredError } from "@/lib/api-client";
 
 type TradeCreatePayload = Parameters<typeof TradeCreateConsole>[0];
 
@@ -46,6 +46,11 @@ export function TradeCreateLoader() {
     void refresh().catch((error) => {
       if (error instanceof ApiClientError && error.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (isActiveRunRequiredError(error)) {
+        router.replace("/campaigns");
       }
     });
 

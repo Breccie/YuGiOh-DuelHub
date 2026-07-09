@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { HomeDashboardResponse } from "@ygo/contracts";
 import { HomeConsole } from "@/components/home-console";
-import { ApiClientError } from "@/lib/api-client";
+import { ApiClientError, isActiveRunRequiredError } from "@/lib/api-client";
 import {
   readCachedDashboardSummary,
   writeCachedDashboardSummary,
@@ -114,6 +114,11 @@ export function HomeConsoleLoader() {
     void refresh().catch((error) => {
       if (error instanceof ApiClientError && error.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (isActiveRunRequiredError(error)) {
+        router.replace("/campaigns");
         return;
       }
 

@@ -376,8 +376,6 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
 }
 
 export async function listRuns(prisma: PrismaClient, userId: string) {
-  await ensureDefaultRun(prisma, userId);
-
   const [user, memberships] = await Promise.all([
     prisma.user.findUnique({
       where: {
@@ -408,9 +406,14 @@ export async function listRuns(prisma: PrismaClient, userId: string) {
       },
     }),
   ]);
+  const membershipRunIds = new Set(memberships.map((membership) => membership.runId));
+  const activeRunId =
+    user?.activeRunId && membershipRunIds.has(user.activeRunId)
+      ? user.activeRunId
+      : null;
 
   return {
-    activeRunId: user?.activeRunId ?? null,
+    activeRunId,
     runs: memberships.map((membership) =>
       serializeRun(membership.run, userId),
     ),
@@ -455,7 +458,49 @@ export async function getActiveRun(prisma: PrismaClient, userId: string) {
     }
   }
 
-  return ensureDefaultRun(prisma, userId);
+  const fallbackMembership = await prisma.runMembership.findFirst({
+    where: {
+      userId,
+      run: {
+        status: "ACTIVE",
+      },
+    },
+    orderBy: {
+      joinedAt: "asc",
+    },
+    include: {
+      run: {
+        include: {
+          memberships: true,
+          _count: {
+            select: {
+              memberships: true,
+              setUnlocks: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (fallbackMembership) {
+    await prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        activeRunId: fallbackMembership.runId,
+      },
+    });
+
+    return fallbackMembership.run;
+  }
+
+  throw new DomainError({
+    code: "active_run_required",
+    message: "Bitte erstelle zuerst eine Kampagne oder lass dich einladen.",
+    status: 409,
+  });
 }
 
 export async function requireRunMembership(

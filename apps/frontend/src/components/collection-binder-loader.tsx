@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CollectionBinderConsole } from "@/components/collection-binder-console";
-import { ApiClientError } from "@/lib/api-client";
+import { ApiClientError, isActiveRunRequiredError } from "@/lib/api-client";
 import { collectionClient } from "@/lib/collection-client";
 import type { CollectionBinderEditorSnapshot } from "@/lib/collection-showcase";
 import { readLocalSyncCache } from "@/lib/sync-cache";
@@ -90,6 +90,11 @@ export function CollectionBinderLoader() {
     void refresh().catch((error) => {
       if (error instanceof ApiClientError && error.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (isActiveRunRequiredError(error)) {
+        router.replace("/campaigns");
       }
     });
 

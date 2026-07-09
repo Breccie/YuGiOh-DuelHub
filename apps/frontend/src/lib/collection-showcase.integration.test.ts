@@ -27,6 +27,7 @@ describe("collection binder saving", () => {
       userId?: string;
       cardId?: string;
       setId?: string;
+      runId?: string;
     } = {};
 
     try {
@@ -39,6 +40,29 @@ describe("collection binder saving", () => {
         },
       });
       createdIds.userId = user.id;
+
+      const run = await prisma.playGroupRun.create({
+        data: {
+          ownerId: user.id,
+          name: `${tag} Campaign`,
+          memberships: {
+            create: {
+              userId: user.id,
+              role: "OWNER",
+            },
+          },
+        },
+      });
+      createdIds.runId = run.id;
+
+      await prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          activeRunId: run.id,
+        },
+      });
 
       const card = await prisma.card.create({
         data: {
@@ -77,6 +101,7 @@ describe("collection binder saving", () => {
           userId: user.id,
           cardId: card.id,
           setCardId: setCard.id,
+          runId: run.id,
           source: "MANUAL_GRANT",
           lockState: EntryLockState.RESERVED,
         },
@@ -123,6 +148,9 @@ describe("collection binder saving", () => {
     } finally {
       if (createdIds.userId) {
         await prisma.user.deleteMany({ where: { id: createdIds.userId } });
+      }
+      if (createdIds.runId) {
+        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
       }
       if (createdIds.setId) {
         await prisma.cardSet.deleteMany({ where: { id: createdIds.setId } });

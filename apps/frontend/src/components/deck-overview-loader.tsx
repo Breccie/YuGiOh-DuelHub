@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DeckOverviewConsole } from "@/components/deck-overview-console";
-import { ApiClientError } from "@/lib/api-client";
+import { ApiClientError, isActiveRunRequiredError } from "@/lib/api-client";
 import { readLocalSyncCache } from "@/lib/sync-cache";
 import { refreshLocalSyncCache } from "@/lib/sync-cache-refresh";
 import {
@@ -74,6 +74,11 @@ export function DeckOverviewLoader() {
     void refresh().catch((error) => {
       if (error instanceof ApiClientError && error.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (isActiveRunRequiredError(error)) {
+        router.replace("/campaigns");
       }
     });
 
