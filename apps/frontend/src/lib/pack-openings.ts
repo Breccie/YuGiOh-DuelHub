@@ -92,10 +92,107 @@ type RewardGrantWithPackSet = Prisma.RewardGrantGetPayload<{
   };
 }>;
 
+type CachedPackCatalogSet = {
+  id: string;
+  code: string;
+  name: string;
+  releaseDate: Date;
+  productType: string;
+  packSize: number;
+  imageUrl: string | null;
+  cardPoolSize: number;
+};
+
 const INTERNAL_SAMPLE_SET_CODES = new Set(["SMP-START"]);
+const PACK_CATALOG_CACHE_TTL_MS = 1000 * 60 * 15;
+
+let packCatalogCache:
+  | {
+      expiresAt: number;
+      sets: CachedPackCatalogSet[];
+    }
+  | null = null;
+let pendingPackCatalogLoad: Promise<CachedPackCatalogSet[]> | null = null;
 
 function isInternalSampleSet(set: { code: string }) {
   return INTERNAL_SAMPLE_SET_CODES.has(set.code.toUpperCase());
+}
+
+async function loadStandardPackCatalog(
+  prisma: PrismaClient,
+): Promise<CachedPackCatalogSet[]> {
+  const now = Date.now();
+
+  if (packCatalogCache && packCatalogCache.expiresAt > now) {
+    return packCatalogCache.sets;
+  }
+
+  if (pendingPackCatalogLoad) {
+    return pendingPackCatalogLoad;
+  }
+
+  pendingPackCatalogLoad = prisma.cardSet
+    .findMany({
+      where: {
+        isOpenable: true,
+        productType: "CORE_BOOSTER",
+      },
+      orderBy: {
+        releaseDate: "asc",
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        releaseDate: true,
+        productType: true,
+        packSize: true,
+        isOpenable: true,
+        imageUrl: true,
+        _count: {
+          select: {
+            setCards: true,
+          },
+        },
+      },
+    })
+    .then((sets) =>
+      sets
+        .filter(
+          (set) =>
+            set.isOpenable &&
+            !isInternalSampleSet(set) &&
+            isStandardProgressionPack({
+              code: set.code,
+              name: set.name,
+              productType: set.productType,
+              isOpenable: set.isOpenable,
+            }),
+        )
+        .map((set) => ({
+          id: set.id,
+          code: set.code,
+          name: set.name,
+          releaseDate: set.releaseDate,
+          productType: set.productType,
+          packSize: set.packSize,
+          imageUrl: set.imageUrl,
+          cardPoolSize: set._count.setCards,
+        })),
+    )
+    .then((sets) => {
+      packCatalogCache = {
+        expiresAt: Date.now() + PACK_CATALOG_CACHE_TTL_MS,
+        sets,
+      };
+
+      return sets;
+    })
+    .finally(() => {
+      pendingPackCatalogLoad = null;
+    });
+
+  return pendingPackCatalogLoad;
 }
 
 type PackOpeningPrisma = PrismaClient | Prisma.TransactionClient;
@@ -430,32 +527,9 @@ export async function getPackDashboardSnapshot(
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
-  const [sets, openingStats, recentOpenings, run, wallet, setUnlocks] =
+  const [catalogSets, openingStats, recentOpenings, run, wallet, setUnlocks] =
     await Promise.all([
-    prisma.cardSet.findMany({
-      where: {
-        isOpenable: true,
-        productType: "CORE_BOOSTER",
-      },
-      orderBy: {
-        releaseDate: "asc",
-      },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        releaseDate: true,
-        productType: true,
-        packSize: true,
-        isOpenable: true,
-        imageUrl: true,
-        _count: {
-          select: {
-            setCards: true,
-          },
-        },
-      },
-    }),
+    loadStandardPackCatalog(prisma),
     prisma.packOpening.groupBy({
       by: ["setId"],
       where: {
@@ -534,28 +608,7 @@ export async function getPackDashboardSnapshot(
   );
   const unlockBySetId = new Map(setUnlocks.map((unlock) => [unlock.setId, unlock]));
 
-  const hydratedSets = sets
-    .map((set) => {
-      return {
-        ...set,
-        effectiveConfiguration: {
-          productType: set.productType,
-          packSize: set.packSize,
-          isOpenable: set.isOpenable,
-        },
-      };
-    })
-    .filter(
-      (set) =>
-        set.effectiveConfiguration.isOpenable &&
-        !isInternalSampleSet(set) &&
-        isStandardProgressionPack({
-          code: set.code,
-          name: set.name,
-          productType: set.effectiveConfiguration.productType,
-          isOpenable: set.effectiveConfiguration.isOpenable,
-        }),
-    );
+  const hydratedSets = catalogSets;
   const latestUnlockedSetIndex = runId
     ? hydratedSets.reduce((latestIndex, set, index) => {
         return unlockBySetId.has(set.id) ? Math.max(latestIndex, index) : latestIndex;
@@ -581,7 +634,7 @@ export async function getPackDashboardSnapshot(
         const unlock = unlockBySetId.get(set.id);
 
         return (
-          set.effectiveConfiguration.productType === "CORE_BOOSTER" &&
+          set.productType === "CORE_BOOSTER" &&
           (!runId || (unlock && !unlock.rewardOnly))
         );
       })
@@ -610,9 +663,9 @@ export async function getPackDashboardSnapshot(
         code: set.code,
         name: set.name,
         releaseDate: set.releaseDate.toISOString(),
-        productType: set.effectiveConfiguration.productType,
-        packSize: set.effectiveConfiguration.packSize,
-        cardPoolSize: set._count.setCards,
+        productType: set.productType,
+        packSize: set.packSize,
+        cardPoolSize: set.cardPoolSize,
         imageUrl: resolveAppImageUrl(set.imageUrl),
         totalOpened: openingStatsBySetId.get(set.id)?.totalOpened ?? 0,
         lastOpenedAt: openingStatsBySetId.get(set.id)?.lastOpenedAt ?? null,
