@@ -447,7 +447,7 @@ export function DeckOverviewConsole({
 
         <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <section className="relative xl:min-h-[520px]">
+            <section className="relative xl:min-h-[420px]">
               <div className="relative">
                 <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
                   <ConsoleGlobalStatusBar
@@ -459,7 +459,7 @@ export function DeckOverviewConsole({
                 </div>
               </div>
 
-              <div className="relative mt-5 grid gap-8 xl:grid-cols-[360px_520px_minmax(0,1fr)] xl:items-end">
+              <div className="relative mt-5 grid gap-8 xl:grid-cols-[300px_520px_minmax(0,1fr)] xl:items-end">
                 <div className="xl:self-end">
                   {heroCard ? (
                     <FeaturedDeckCard
@@ -499,7 +499,7 @@ export function DeckOverviewConsole({
                       onClick={() => setShowEditor(true)}
                       className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
                     >
-                      <span>Deck öffnen</span>
+                      <span>Deck bearbeiten</span>
                       <AssetIcon name="nav-packs" className="h-5 w-5 text-current" />
                     </button>
 
@@ -564,11 +564,11 @@ export function DeckOverviewConsole({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowEditor(true)}
+                      onClick={() => setCreatorOpen(true)}
                       className="ml-2 inline-flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-[#b19b84] transition hover:text-[#f0ddc8]"
                     >
-                      <span>Alle anzeigen</span>
-                      <AssetIcon name="chevron-right" className="h-4 w-4 text-current" />
+                      <span>Neues Deck</span>
+                      <AssetIcon name="plus" className="h-4 w-4 text-current" />
                     </button>
                   </div>
                 </div>
@@ -587,13 +587,13 @@ export function DeckOverviewConsole({
                         type="button"
                         onClick={() => router.push(`/decks?deck=${deck.id}`)}
                         className={classes(
-                          "group relative shrink-0 rounded-[16px] border p-2 transition",
+                          "group relative flex w-[122px] shrink-0 flex-col rounded-[16px] border p-2 text-left transition",
                           selected
                             ? "border-[rgba(207,91,66,0.48)] bg-[rgba(207,91,66,0.08)] shadow-[0_0_0_1px_rgba(207,91,66,0.16)]"
                             : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.16)]",
                         )}
                       >
-                        <div className="relative flex h-[150px] w-[98px] items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2">
+                        <div className="relative flex h-[150px] w-full items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2">
                           <CardArtwork
                             src={deck.previewImageUrl}
                             alt={deck.name}
@@ -602,6 +602,22 @@ export function DeckOverviewConsole({
                             objectFit="contain"
                           />
                         </div>
+                        <span className="mt-2 truncate text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[#f1dec9]">
+                          {deck.name}
+                        </span>
+                        <span className="mt-1 text-[0.64rem] uppercase tracking-[0.12em] text-[#9f8c77]">
+                          {deck.mainCount}/{deck.extraCount}/{deck.sideCount}
+                        </span>
+                        <span
+                          className={classes(
+                            "mt-2 inline-flex w-fit rounded-full border px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.14em]",
+                            deck.isLegal
+                              ? "border-[rgba(88,163,169,0.22)] bg-[rgba(58,118,124,0.12)] text-[#b8e3e4]"
+                              : "border-[rgba(207,91,66,0.28)] bg-[rgba(126,23,15,0.18)] text-[#ffd7c9]",
+                          )}
+                        >
+                          {deck.isLegal ? "Legal" : `${deck.issueCount} Fehler`}
+                        </span>
 
                         {selected ? (
                           <div className="absolute inset-x-0 -bottom-2 flex justify-center">
@@ -614,10 +630,10 @@ export function DeckOverviewConsole({
                   <button
                     type="button"
                     onClick={() => setCreatorOpen(true)}
-                    className="group relative flex shrink-0 flex-col items-center justify-center rounded-[16px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(255,255,255,0.025)] p-2 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
+                    className="group relative flex w-[122px] shrink-0 flex-col items-center justify-center rounded-[16px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(255,255,255,0.025)] p-2 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
                     aria-label="Neues Deck erstellen"
                   >
-                    <div className="flex h-[150px] w-[98px] items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))]">
+                    <div className="flex h-[150px] w-full items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))]">
                       <span className="grid h-12 w-12 place-items-center rounded-full border border-[rgba(208,170,110,0.28)] bg-[rgba(208,170,110,0.08)] transition group-hover:scale-105 group-hover:border-[rgba(207,91,66,0.44)]">
                         <AssetIcon name="plus" className="h-6 w-6 text-current" />
                       </span>

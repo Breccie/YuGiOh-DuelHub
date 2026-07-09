@@ -1,7 +1,10 @@
 import type { PrismaClient } from "@prisma/client";
 import type { PackDetailResponse, PackSelectionResponse } from "@ygo/contracts";
 import { getCardAssetUrl } from "@/lib/asset-urls";
-import { getPackDashboardSnapshot } from "@/lib/pack-openings";
+import {
+  getFocusedPackDashboardSnapshot,
+  getPackDashboardSnapshot,
+} from "@/lib/pack-openings";
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("de-DE").format(value);
@@ -117,12 +120,18 @@ export async function buildPackDetailPayload(
   setId: string,
   runId?: string | null,
 ): Promise<PackDetailResponse | null> {
-  const snapshot = await getPackDashboardSnapshot(prisma, viewerId, runId);
-  const activeSet = snapshot.sets.find((set) => set.id === setId);
+  const snapshot = await getFocusedPackDashboardSnapshot(
+    prisma,
+    viewerId,
+    setId,
+    runId,
+  );
 
-  if (!activeSet) {
+  if (!snapshot) {
     return null;
   }
+
+  const activeSet = snapshot.sets[0];
 
   const [ownedUniqueCards, totalCards, latestBanlist, viewer] =
     await Promise.all([

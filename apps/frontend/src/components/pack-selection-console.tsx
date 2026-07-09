@@ -486,6 +486,10 @@ export function PackSelectionConsole({
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
   const selectedPackPrice =
     selectedSet.packPrice !== null ? `${formatNumber(selectedSet.packPrice)} Credits` : "frei";
+  const selectedDisplayPrice =
+    selectedSet.displayCost !== null
+      ? `${formatNumber(selectedSet.displayCost)} Credits`
+      : "nach Run-Regel";
 
   function scrollTimeline(direction: "left" | "right") {
     stopTimelineMomentum();
@@ -756,6 +760,7 @@ export function PackSelectionConsole({
                       </span>
                       <Link
                         href="/packs/promos"
+                        prefetch
                         className="flex-1 rounded-full px-3 py-2 text-center text-[#bfa88e] transition hover:text-[#fff0df]"
                       >
                         Promo-Karten
@@ -768,7 +773,7 @@ export function PackSelectionConsole({
                           href={`/packs/${selectedSet.id}`}
                           className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
                         >
-                          <span>Booster kaufen</span>
+                          <span>Booster öffnen ({selectedPackPrice})</span>
                           <AssetIcon name="package" className="h-5 w-5 text-current" />
                         </Link>
 
@@ -776,11 +781,7 @@ export function PackSelectionConsole({
                           href={`/packs/${selectedSet.id}`}
                           className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb]"
                         >
-                          <span>
-                            Display {selectedSet.displayCost !== null
-                              ? `${formatNumber(selectedSet.displayCost)} Credits`
-                              : "kaufen"}
-                          </span>
+                          <span>Display öffnen ({selectedDisplayPrice})</span>
                           <AssetIcon name="cart" className="h-4 w-4 text-current" />
                         </Link>
                       </>

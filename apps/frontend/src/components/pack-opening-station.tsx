@@ -437,11 +437,39 @@ export function PackOpeningStation({
     setCurrentOpening(opening);
   }
 
-  async function refreshSnapshot() {
-    const payload = await packOpeningClient.getDashboard();
+  function applyLocalOpeningResult(
+    openings: Array<OpeningSummary | DisplayOpeningSummary>,
+    totalCost: number,
+    walletBalance?: number,
+  ) {
+    if (!activeSet || openings.length === 0) {
+      return;
+    }
+
+    const latestOpenedAt = openings[0]?.openedAt ?? new Date().toISOString();
 
     startTransition(() => {
-      setSnapshot(payload);
+      setSnapshot((current) => ({
+        ...current,
+        wallet: current.wallet
+          ? {
+              balance:
+                typeof walletBalance === "number"
+                  ? walletBalance
+                  : Math.max(0, current.wallet.balance - totalCost),
+            }
+          : current.wallet,
+        sets: current.sets.map((set) =>
+          set.id === activeSet.id
+            ? {
+                ...set,
+                totalOpened: set.totalOpened + openings.length,
+                lastOpenedAt: latestOpenedAt,
+              }
+            : set,
+        ),
+        recentOpenings: [...openings, ...current.recentOpenings].slice(0, 6),
+      }));
     });
   }
 
@@ -464,7 +492,7 @@ export function PackOpeningStation({
       });
 
       setCurrentOpening(payload.opening);
-      await refreshSnapshot();
+      applyLocalOpeningResult([payload.opening], activeSet.packPrice ?? 0);
     } catch (caughtError) {
       setPackPhase("idle");
       setError(getApiErrorMessage(caughtError, "Pack konnte nicht geöffnet werden."));
@@ -499,7 +527,11 @@ export function PackOpeningStation({
         `Display geöffnet: ${payload.batch.quantity} Packs, ${payload.batch.totalCost} Credits. Schneide die Packs jetzt der Reihe nach auf.`,
       );
       setDisplayOpenings(payload.openings);
-      await refreshSnapshot();
+      applyLocalOpeningResult(
+        payload.openings,
+        payload.batch.totalCost,
+        payload.wallet.balance,
+      );
     } catch (caughtError) {
       setPackPhase("idle");
       setError(getApiErrorMessage(caughtError, "Display konnte nicht geöffnet werden."));
@@ -748,7 +780,9 @@ export function PackOpeningStation({
               }
               className="ui-button-primary min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting || isPending ? "Pack wird geöffnet..." : "Pack kaufen"}
+              {isSubmitting || isPending
+                ? "Pack wird geöffnet..."
+                : `Pack öffnen (${packPriceLabel})`}
             </button>
 
             <button
@@ -764,7 +798,7 @@ export function PackOpeningStation({
               }
               className="ui-button-neutral min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Display öffnen
+              Display öffnen ({displayCostLabel})
             </button>
 
             {isDisplaySequenceActive ? (

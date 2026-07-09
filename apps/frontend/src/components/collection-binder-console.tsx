@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -164,17 +163,16 @@ function Panel({
 function BinderCoverArtwork({
   src,
   alt,
-  sizes,
   eager,
   className,
 }: {
   src: string;
   alt: string;
-  sizes: string;
   eager?: boolean;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = failedSrc === src;
 
   if (failed) {
     return (
@@ -188,15 +186,17 @@ function BinderCoverArtwork({
   }
 
   return (
-    <Image
+    // Binder covers are already local static assets; a plain img avoids slow
+    // optimizer hops in hosted/browser mode and keeps the shelf stable.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={src}
       alt={alt}
-      fill
-      sizes={sizes}
       loading={eager ? "eager" : undefined}
+      decoding="async"
       draggable={false}
-      onError={() => setFailed(true)}
-      className={className}
+      onError={() => setFailedSrc(src)}
+      className={classes("absolute inset-0 h-full w-full", className)}
     />
   );
 }
@@ -228,7 +228,6 @@ function BinderShelfCard({
             <BinderCoverArtwork
               src={binder.coverImageUrl}
               alt={binder.name}
-              sizes="240px"
               eager={binder.isActive}
               className="pointer-events-none select-none object-cover object-center drop-shadow-[0_18px_30px_rgba(0,0,0,0.34)] transition duration-500 group-hover:scale-[1.03] [-webkit-user-drag:none]"
             />
@@ -328,7 +327,6 @@ function BinderDetailPanel({
           <BinderCoverArtwork
             src={binder.coverImageUrl}
             alt={binder.name}
-            sizes="260px"
             className="pointer-events-none select-none object-cover object-center [-webkit-user-drag:none]"
           />
           <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,transparent_18%,rgba(255,255,255,0.05)_38%,rgba(255,255,255,0.16)_48%,rgba(255,255,255,0.04)_58%,transparent_74%)]" />
@@ -435,7 +433,7 @@ function ActiveBinderShowcase({
                 {activePage.filledSlots}/18
               </span>
             </div>
-            <BinderOpenSpread compact className="mx-auto max-w-[980px]" slots={activePage.slots} />
+            <BinderOpenSpread compact className="mx-auto max-w-[860px]" slots={activePage.slots} />
           </div>
         ) : null}
       </div>
@@ -709,7 +707,6 @@ export function CollectionBinderConsole({
                             <BinderCoverArtwork
                               src={cover.imageUrl}
                               alt={cover.name}
-                              sizes="120px"
                               className="pointer-events-none select-none object-cover object-center drop-shadow-[0_16px_26px_rgba(0,0,0,0.28)] transition duration-500 group-hover:scale-[1.03] [-webkit-user-drag:none]"
                             />
                             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">

@@ -681,6 +681,146 @@ export async function getPackDashboardSnapshot(
   };
 }
 
+export async function getFocusedPackDashboardSnapshot(
+  prisma: PrismaClient,
+  viewerId: string,
+  setId: string,
+  runId?: string | null,
+): Promise<PackDashboardSnapshot | null> {
+  const [viewer, set, openingStats, run, wallet, unlock] = await Promise.all([
+    prisma.user.findUnique({
+      where: {
+        id: viewerId,
+      },
+      select: {
+        id: true,
+        displayName: true,
+      },
+    }),
+    prisma.cardSet.findUnique({
+      where: {
+        id: setId,
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        releaseDate: true,
+        productType: true,
+        packSize: true,
+        isOpenable: true,
+        imageUrl: true,
+        _count: {
+          select: {
+            setCards: true,
+          },
+        },
+      },
+    }),
+    prisma.packOpening.aggregate({
+      where: {
+        userId: viewerId,
+        runId: runId ?? undefined,
+        setId,
+      },
+      _count: {
+        _all: true,
+      },
+      _max: {
+        openedAt: true,
+      },
+    }),
+    runId
+      ? prisma.playGroupRun.findUnique({
+          where: {
+            id: runId,
+          },
+          select: {
+            defaultPackPrice: true,
+            defaultDisplaySize: true,
+          },
+        })
+      : Promise.resolve(null),
+    runId
+      ? getOrCreateWallet(prisma, {
+          runId,
+          userId: viewerId,
+        })
+      : Promise.resolve(null),
+    runId
+      ? prisma.runSetUnlock.findUnique({
+          where: {
+            runId_setId: {
+              runId,
+              setId,
+            },
+          },
+          select: {
+            packPrice: true,
+            displaySize: true,
+            rewardOnly: true,
+          },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (
+    !viewer ||
+    !set ||
+    !set.isOpenable ||
+    isInternalSampleSet(set) ||
+    !isStandardProgressionPack({
+      code: set.code,
+      name: set.name,
+      productType: set.productType,
+      isOpenable: set.isOpenable,
+    })
+  ) {
+    return null;
+  }
+
+  const economy =
+    run && unlock
+      ? normalizePackEconomy({
+          packPrice: unlock.packPrice,
+          displaySize: unlock.displaySize,
+          defaultPackPrice: run.defaultPackPrice,
+          defaultDisplaySize: run.defaultDisplaySize,
+        })
+      : null;
+
+  return {
+    viewer,
+    wallet: wallet
+      ? {
+          balance: wallet.balance,
+        }
+      : null,
+    selectedSetId: set.id,
+    sets: [
+      {
+        id: set.id,
+        code: set.code,
+        name: set.name,
+        releaseDate: set.releaseDate.toISOString(),
+        productType: set.productType,
+        packSize: set.packSize,
+        cardPoolSize: set._count.setCards,
+        imageUrl: resolveAppImageUrl(set.imageUrl),
+        totalOpened: openingStats._count._all,
+        lastOpenedAt: openingStats._max.openedAt?.toISOString() ?? null,
+        isUnlocked: runId ? Boolean(unlock) : true,
+        rewardOnly: unlock?.rewardOnly ?? false,
+        packPrice: economy?.packPrice ?? null,
+        displaySize: economy?.displaySize ?? null,
+        displayCost: economy?.displayCost ?? null,
+        canBuy: runId ? Boolean(unlock && !unlock.rewardOnly) : true,
+      },
+    ],
+    recentOpenings: [],
+  };
+}
+
 export async function listRunRewardGrants(
   prisma: PrismaClient,
   viewerId: string,
