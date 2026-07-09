@@ -5,7 +5,7 @@ import {
   FormatType,
   PrismaClient,
   Region,
-} from "@prisma/client";
+} from "../apps/api/generated/prisma";
 
 const prisma = new PrismaClient();
 

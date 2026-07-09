@@ -182,22 +182,17 @@ async function ensureInitialSetUnlocks(prisma: PrismaLike, runId: string) {
     .filter(isStandardProgressionPack)
     .slice(0, INITIAL_UNLOCK_COUNT);
 
-  for (const set of initialSets) {
-    await prisma.runSetUnlock.upsert({
-      where: {
-        runId_setId: {
-          runId,
-          setId: set.id,
-        },
-      },
-      create: {
+  if (initialSets.length === 0) {
+    return;
+  }
+
+  await prisma.runSetUnlock.createMany({
+    data: initialSets.map((set) => ({
         runId,
         setId: set.id,
         note: "Initialer Kampagnen-Shop-Unlock.",
-      },
-      update: {},
-    });
-  }
+    })),
+  });
 }
 
 async function createStartingWallet(
@@ -327,8 +322,9 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
     return existingMembership.run;
   }
 
-  return prisma.$transaction(async (tx) => {
-    const run = await tx.playGroupRun.create({
+  return prisma.$transaction(
+    async (tx) => {
+      const run = await tx.playGroupRun.create({
       data: {
         ownerId: userId,
         name: DEFAULT_RUN_NAME,
@@ -373,8 +369,12 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
       },
     });
 
-    return run;
-  });
+      return run;
+    },
+    {
+      timeout: 20_000,
+    },
+  );
 }
 
 export async function listRuns(prisma: PrismaClient, userId: string) {
@@ -452,6 +452,7 @@ export async function getActiveRun(prisma: PrismaClient, userId: string) {
     });
 
     if (membership) {
+      await ensureInitialSetUnlocks(prisma, membership.runId);
       return membership.run;
     }
   }
@@ -514,8 +515,9 @@ export async function createRun(
     tournamentParticipationCredits?: number;
   },
 ) {
-  return prisma.$transaction(async (tx) => {
-    const run = await tx.playGroupRun.create({
+  return prisma.$transaction(
+    async (tx) => {
+      const run = await tx.playGroupRun.create({
       data: {
         ownerId: userId,
         name: input.name.trim(),
@@ -559,8 +561,12 @@ export async function createRun(
       },
     });
 
-    return run;
-  });
+      return run;
+    },
+    {
+      timeout: 20_000,
+    },
+  );
 }
 
 export async function updateRunSettings(

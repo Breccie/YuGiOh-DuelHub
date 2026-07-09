@@ -7,7 +7,7 @@ import {
   PrismaClient,
   Region,
   SetProductType,
-} from "@prisma/client";
+} from "../apps/api/generated/prisma";
 import {
   compareSetCodePreference,
   inferOpenableStatus,
