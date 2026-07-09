@@ -111,6 +111,9 @@ export function CollectionBinderLoader() {
 
   return (
     <CollectionBinderConsole
+      key={payload.binders
+        .map((binder) => `${binder.id}:${binder.updatedAt}`)
+        .join("|")}
       viewer={{
         displayName: payload.viewer.displayName,
       }}

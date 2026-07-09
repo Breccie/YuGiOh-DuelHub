@@ -304,6 +304,10 @@ function assertSetIsPurchasableInRun(options: {
 function buildPackPulls(
   set: Awaited<ReturnType<typeof loadSetOrThrow>>,
 ) {
+  const cardMetadataBySetCardId = new Map(
+    set.setCards.map((setCard) => [setCard.id, setCard.card] as const),
+  );
+
   return generatePackCards(set, set.setCards).map((selectedSetCard, index) => {
     if (!selectedSetCard.id) {
       throw new Error(
@@ -311,11 +315,20 @@ function buildPackPulls(
       );
     }
 
+    const card = cardMetadataBySetCardId.get(selectedSetCard.id);
+    if (!card) {
+      throw new Error(`Card data for SetCard ${selectedSetCard.id} was not found.`);
+    }
+
     return {
+      id: randomUUID(),
       slotIndex: index + 1,
       cardId: selectedSetCard.cardId,
       setCardId: selectedSetCard.id,
       rarity: selectedSetCard.rarity,
+      cardName: card.name,
+      cardExternalId: card.externalCardId,
+      setCode: selectedSetCard.setCode,
     };
   });
 }
@@ -1132,18 +1145,22 @@ export async function openPack(
     chargeCredits?: boolean;
   },
 ) {
-  const viewer = await prisma.user.findUnique({
-    where: {
-      id: options.viewerId,
-    },
-  });
+  const [viewer, set] = await Promise.all([
+    prisma.user.findUnique({
+      where: {
+        id: options.viewerId,
+      },
+    }),
+    loadSetOrThrow(prisma, options.setId),
+  ]);
 
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
-  const set = await loadSetOrThrow(prisma, options.setId);
   const randomSeed = randomUUID();
+  const openingId = randomUUID();
+  const openedAt = new Date();
   const auditHash = createHash("sha1")
     .update(`${viewer.id}:${set.id}:${randomSeed}:${Date.now()}`)
     .digest("hex");
@@ -1267,10 +1284,12 @@ export async function openPack(
 
     const opening = await tx.packOpening.create({
       data: {
+        id: openingId,
         userId: viewer.id,
         setId: set.id,
         runId: options.runId ?? null,
         batchId,
+        openedAt,
         randomSeed,
         auditHash,
       },
@@ -1278,6 +1297,7 @@ export async function openPack(
 
     await tx.packPull.createMany({
       data: pulls.map((pull) => ({
+        id: pull.id,
         openingId: opening.id,
         cardId: pull.cardId,
         setCardId: pull.setCardId,
@@ -1300,7 +1320,29 @@ export async function openPack(
     return opening.id;
   });
 
-  return serializeOpening(await fetchOpeningSummary(prisma, createdOpeningId));
+  if (createdOpeningId !== openingId) {
+    return serializeOpening(await fetchOpeningSummary(prisma, createdOpeningId));
+  }
+
+  return {
+    id: openingId,
+    openedAt: openedAt.toISOString(),
+    addedToCollection: pulls.length,
+    set: {
+      id: set.id,
+      code: set.code,
+      name: set.name,
+      packSize: pulls.length,
+    },
+    pulls: pulls.map((pull) => ({
+      id: pull.id,
+      slotIndex: pull.slotIndex,
+      cardName: pull.cardName,
+      cardImageUrl: getCardAssetUrl(pull.cardExternalId),
+      rarity: pull.rarity,
+      setCode: pull.setCode,
+    })),
+  } satisfies PackOpeningSummary;
 }
 
 export async function openDisplay(
@@ -1312,17 +1354,18 @@ export async function openDisplay(
     idempotencyKey?: string | null;
   },
 ) {
-  const viewer = await prisma.user.findUnique({
-    where: {
-      id: options.viewerId,
-    },
-  });
+  const [viewer, set] = await Promise.all([
+    prisma.user.findUnique({
+      where: {
+        id: options.viewerId,
+      },
+    }),
+    loadSetOrThrow(prisma, options.setId),
+  ]);
 
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
-
-  const set = await loadSetOrThrow(prisma, options.setId);
 
   const createdBatchId = await prisma.$transaction(async (tx) => {
     await requireRunMembership(tx, {
@@ -1422,35 +1465,51 @@ export async function openDisplay(
       },
     });
 
-    for (let index = 0; index < economy.displaySize; index += 1) {
+    const openedAtBase = Date.now();
+    const displayPacks = Array.from({ length: economy.displaySize }, (_, index) => {
+      const id = randomUUID();
       const randomSeed = randomUUID();
       const auditHash = createHash("sha1")
         .update(`${viewer.id}:${set.id}:${randomSeed}:${Date.now()}:${index}`)
         .digest("hex");
-      const pulls = buildPackPulls(set);
-      const opening = await tx.packOpening.create({
-        data: {
-          userId: viewer.id,
-          setId: set.id,
-          runId: options.runId,
-          batchId: batch.id,
-          randomSeed,
-          auditHash,
-        },
-      });
+      return {
+        id,
+        randomSeed,
+        auditHash,
+        openedAt: new Date(openedAtBase + index),
+        pulls: buildPackPulls(set),
+      };
+    });
 
-      await tx.packPull.createMany({
-        data: pulls.map((pull) => ({
+    await tx.packOpening.createMany({
+      data: displayPacks.map((opening) => ({
+        id: opening.id,
+        userId: viewer.id,
+        setId: set.id,
+        runId: options.runId,
+        batchId: batch.id,
+        openedAt: opening.openedAt,
+        randomSeed: opening.randomSeed,
+        auditHash: opening.auditHash,
+      })),
+    });
+
+    await tx.packPull.createMany({
+      data: displayPacks.flatMap((opening) =>
+        opening.pulls.map((pull) => ({
+          id: pull.id,
           openingId: opening.id,
           cardId: pull.cardId,
           setCardId: pull.setCardId,
           slotIndex: pull.slotIndex,
           rarity: pull.rarity,
         })),
-      });
+      ),
+    });
 
-      await tx.collectionEntry.createMany({
-        data: pulls.map((pull) => ({
+    await tx.collectionEntry.createMany({
+      data: displayPacks.flatMap((opening) =>
+        opening.pulls.map((pull) => ({
           userId: viewer.id,
           cardId: pull.cardId,
           setCardId: pull.setCardId,
@@ -1458,8 +1517,8 @@ export async function openDisplay(
           source: OwnershipSource.PACK_OPENING,
           sourceReferenceId: opening.id,
         })),
-      });
-    }
+      ),
+    });
 
     return batch.id;
   });

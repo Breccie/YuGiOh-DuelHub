@@ -458,6 +458,7 @@ export function CollectionBinderConsole({
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"binder" | null>(null);
   const [, startTransition] = useTransition();
+
   const editorBinderId =
     searchParams.get("mode") === "edit" ? searchParams.get("binder") : null;
   const editorInitialPageIndex = Math.max(
@@ -468,10 +469,8 @@ export function CollectionBinderConsole({
   const editorInitialSlotIndex = Number.isFinite(parsedEditorSlotIndex)
     ? Math.max(0, Math.min(binderSlotCount - 1, parsedEditorSlotIndex))
     : null;
-  const visibleBinders = binderOptions.filter((binder) => getBinderFilledSlots(binder) > 0);
-  const hiddenEmptyBinderCount = binderOptions.length - visibleBinders.length;
   const activeBinder =
-    visibleBinders.find((binder) => binder.isActive) ?? visibleBinders[0] ?? null;
+    binderOptions.find((binder) => binder.isActive) ?? binderOptions[0] ?? null;
 
   function updateEditorRoute(
     nextBinderId: string | null,
@@ -649,7 +648,7 @@ export function CollectionBinderConsole({
                     {collectionProgress.owned}
                   </p>
                 </div>
-                <StatusPill tone="slate">{visibleBinders.length} befüllt</StatusPill>
+                <StatusPill tone="slate">{binderOptions.length} Binder</StatusPill>
               </div>
             </header>
 
@@ -740,16 +739,11 @@ export function CollectionBinderConsole({
                 <section>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-[#d9c7b1]">
-                      {visibleBinders.length} gefüllte Binder
+                      {binderOptions.length} Binder
                     </p>
-                    {hiddenEmptyBinderCount > 0 ? (
-                      <span className="text-xs uppercase tracking-[0.14em] text-[#9f8c77]">
-                        {hiddenEmptyBinderCount} leer ausgeblendet
-                      </span>
-                    ) : null}
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {visibleBinders.map((binder) => (
+                    {binderOptions.map((binder) => (
                       <BinderShelfCard
                         key={binder.id}
                         binder={binder}
@@ -764,10 +758,10 @@ export function CollectionBinderConsole({
                     ))}
                     <AddBinderTile onClick={() => setCreatorOpen(true)} />
                   </div>
-                  {visibleBinders.length === 0 ? (
+                  {binderOptions.length === 0 ? (
                     <div className="mt-4 rounded-[18px] border border-dashed border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.02)] px-4 py-5 text-sm text-[#b9aa96]">
-                      Noch kein gefüllter Binder. Erstelle einen Binder über die Plus-Kachel und
-                      fülle ihn im Editor mit Karten aus deiner Sammlung.
+                      Noch kein Binder angelegt. Erstelle deinen ersten Binder über die
+                      Plus-Kachel.
                     </div>
                   ) : null}
                 </section>

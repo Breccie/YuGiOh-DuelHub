@@ -54,10 +54,10 @@ type HoverCardState = {
 const openingSpeeds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 type OpeningSpeed = (typeof openingSpeeds)[number];
 
-const cardDealBaseDelay = 220;
-const cardDealStepDelay = 170;
-const cardDealDuration = 1050;
-const packFadeDuration = 680;
+const cardDealBaseDelay = 90;
+const cardDealStepDelay = 60;
+const cardDealDuration = 460;
+const packFadeDuration = 260;
 
 function classes(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
@@ -228,7 +228,7 @@ export function PackOpeningStation({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [packPhase, setPackPhase] = useState<PackOpeningPhase>("idle");
-  const [openingSpeed, setOpeningSpeed] = useState<OpeningSpeed>(1);
+  const [openingSpeed, setOpeningSpeed] = useState<OpeningSpeed>(3);
   const [hoverCard, setHoverCard] = useState<HoverCardState | null>(null);
   const timersRef = useRef<number[]>([]);
   const packOriginRef = useRef<HTMLDivElement | null>(null);
