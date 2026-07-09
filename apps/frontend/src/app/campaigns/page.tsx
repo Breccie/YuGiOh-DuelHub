@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import type { RunListResponse } from "@ygo/contracts";
+import type { RunListResponse, ViewerSession } from "@ygo/contracts";
 import { CampaignSelect } from "@/components/campaigns/campaign-select";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
@@ -19,17 +19,31 @@ async function getOnlineRunsPayload() {
   }
 }
 
+async function getOnlineSession() {
+  const payload = await fetchApiServiceJson<{ session: ViewerSession | null }>(
+    "/api/v1/auth/session",
+  );
+
+  if (!payload.session) {
+    redirect("/login");
+  }
+
+  return payload.session;
+}
+
 export default async function CampaignsPage() {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
+  const onlineMode = shouldProxyToApiService();
+  const prisma = onlineMode ? undefined : getPrisma();
+  const session = onlineMode ? await getOnlineSession() : await getViewerSession(prisma);
 
   if (!session) {
     redirect("/login");
   }
 
-  const payload = shouldProxyToApiService()
-    ? await getOnlineRunsPayload()
-    : await listRuns(prisma, session.userId);
+  const payload =
+    onlineMode || !prisma
+      ? await getOnlineRunsPayload()
+      : await listRuns(prisma, session.userId);
   const activeRun =
     payload.runs.find((run) => run.id === payload.activeRunId) ??
     payload.runs[0] ??
