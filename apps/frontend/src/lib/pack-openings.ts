@@ -430,7 +430,7 @@ export async function getPackDashboardSnapshot(
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
-  const [sets, setCardCounts, openingStats, recentOpenings, run, wallet, setUnlocks] =
+  const [sets, openingStats, recentOpenings, run, wallet, setUnlocks] =
     await Promise.all([
     prisma.cardSet.findMany({
       where: {
@@ -449,12 +449,11 @@ export async function getPackDashboardSnapshot(
         packSize: true,
         isOpenable: true,
         imageUrl: true,
-      },
-    }),
-    prisma.setCard.groupBy({
-      by: ["setId"],
-      _count: {
-        _all: true,
+        _count: {
+          select: {
+            setCards: true,
+          },
+        },
       },
     }),
     prisma.packOpening.groupBy({
@@ -534,9 +533,6 @@ export async function getPackDashboardSnapshot(
     ]),
   );
   const unlockBySetId = new Map(setUnlocks.map((unlock) => [unlock.setId, unlock]));
-  const cardPoolSizeBySetId = new Map(
-    setCardCounts.map((entry) => [entry.setId, entry._count._all]),
-  );
 
   const hydratedSets = sets
     .map((set) => {
@@ -616,7 +612,7 @@ export async function getPackDashboardSnapshot(
         releaseDate: set.releaseDate.toISOString(),
         productType: set.effectiveConfiguration.productType,
         packSize: set.effectiveConfiguration.packSize,
-        cardPoolSize: cardPoolSizeBySetId.get(set.id) ?? 0,
+        cardPoolSize: set._count.setCards,
         imageUrl: resolveAppImageUrl(set.imageUrl),
         totalOpened: openingStatsBySetId.get(set.id)?.totalOpened ?? 0,
         lastOpenedAt: openingStatsBySetId.get(set.id)?.lastOpenedAt ?? null,
