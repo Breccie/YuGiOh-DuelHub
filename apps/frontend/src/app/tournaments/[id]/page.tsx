@@ -5,6 +5,7 @@ import {
   fetchApiServiceJson,
   shouldProxyToApiService,
 } from "@/lib/api-service-proxy";
+import { getOnlineViewerSession } from "@/lib/online-session";
 import { getPrisma } from "@/lib/prisma";
 import {
   getTournamentDetail,
@@ -16,6 +17,19 @@ export default async function TournamentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
+  if (shouldProxyToApiService()) {
+    const [session, payload] = await Promise.all([
+      getOnlineViewerSession(),
+      fetchApiServiceJson<{ tournament: TournamentDetail }>(
+        `/api/v1/tournaments/${id}`,
+      ),
+    ]);
+
+    return <TournamentDetailConsole session={session} tournament={payload.tournament} />;
+  }
+
   const prisma = getPrisma();
   const session = await getViewerSession(prisma);
 
@@ -23,14 +37,7 @@ export default async function TournamentDetailPage({
     redirect("/login");
   }
 
-  const { id } = await params;
-  const tournament = shouldProxyToApiService()
-    ? (
-        await fetchApiServiceJson<{ tournament: TournamentDetail }>(
-      `/api/v1/tournaments/${id}`,
-    )
-  ).tournament
-    : await getTournamentDetail(prisma, session.userId, id);
+  const tournament = await getTournamentDetail(prisma, session.userId, id);
 
   return <TournamentDetailConsole session={session} tournament={tournament} />;
 }

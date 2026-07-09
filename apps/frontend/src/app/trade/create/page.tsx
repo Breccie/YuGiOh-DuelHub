@@ -41,19 +41,19 @@ function formatNumber(value: number) {
 }
 
 export default async function TradeCreatePage() {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   if (shouldProxyToApiService()) {
     const pageData = await fetchApiServiceJson<RemoteTradeCreatePayload>(
       "/api/v1/trades/create-view",
     );
 
     return <TradeCreateConsole {...pageData} />;
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const viewer = await prisma.user.findUnique({

@@ -10,6 +10,7 @@ import {
   fetchApiServiceJson,
   shouldProxyToApiService,
 } from "@/lib/api-service-proxy";
+import { getOnlineViewerSession } from "@/lib/online-session";
 import { getPrisma } from "@/lib/prisma";
 import {
   getActiveRun,
@@ -19,14 +20,8 @@ import {
 import { listTournamentOverviews } from "@/lib/tournament-service";
 
 export default async function TournamentsPage() {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   if (shouldProxyToApiService()) {
+    const session = await getOnlineViewerSession();
     const [tournamentPayload, activeRun] = await Promise.all([
       fetchApiServiceJson<{ tournaments: TournamentOverviewDto[] }>(
         "/api/v1/tournaments",
@@ -53,6 +48,13 @@ export default async function TournamentsPage() {
         }}
       />
     );
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const activeRun = await getActiveRun(prisma, session.userId);

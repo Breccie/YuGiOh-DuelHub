@@ -41,13 +41,6 @@ export default async function CollectionPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const editorMode = getSingleQueryValue(resolvedSearchParams?.mode);
   const editorBinderId = getSingleQueryValue(resolvedSearchParams?.binder);
@@ -83,6 +76,13 @@ export default async function CollectionPage({
         initialEditorSnapshot={initialEditorSnapshot}
       />
     );
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const [collectionSnapshot, collectionShowcase, totalCards, initialEditorSnapshot] =

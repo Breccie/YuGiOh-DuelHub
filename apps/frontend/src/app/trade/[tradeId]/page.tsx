@@ -64,19 +64,19 @@ export default async function TradeDetailPage({
 }: {
   params: Promise<{ tradeId: string }>;
 }) {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   const { tradeId } = await params;
 
   if (shouldProxyToApiService()) {
     const pageData = await loadRemoteTradeDetail(tradeId);
 
     return <TradeDetailConsole {...pageData} />;
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const viewer = await prisma.user.findUnique({

@@ -5,6 +5,7 @@ import {
   fetchApiServiceJson,
   shouldProxyToApiService,
 } from "@/lib/api-service-proxy";
+import { getOnlineViewerSession } from "@/lib/online-session";
 import { listDuelRequests } from "@/lib/duel-service";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
@@ -15,19 +16,20 @@ type RemoteDuelsPayload = {
 };
 
 export default async function DuelsPage() {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   if (shouldProxyToApiService()) {
+    const session = await getOnlineViewerSession();
     const pageData = await fetchApiServiceJson<RemoteDuelsPayload>("/api/v1/duels");
 
     return (
       <DuelsConsole session={session} duelRequests={pageData.duels} decks={pageData.decks} />
     );
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const activeRun = await getActiveRun(prisma, session.userId);

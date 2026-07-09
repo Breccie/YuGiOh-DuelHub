@@ -1,10 +1,25 @@
 import { redirect } from "next/navigation";
+import type { ActiveRunResponse } from "@ygo/contracts";
 import { CampaignSettingsConsole } from "@/components/campaign-settings-console";
+import {
+  fetchApiServiceJson,
+  shouldProxyToApiService,
+} from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
+import { getOnlineViewerSession } from "@/lib/online-session";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
 export default async function CampaignSettingsPage() {
+  if (shouldProxyToApiService()) {
+    const [session, activeRun] = await Promise.all([
+      getOnlineViewerSession(),
+      fetchApiServiceJson<ActiveRunResponse>("/api/v1/runs/active"),
+    ]);
+
+    return <CampaignSettingsConsole session={session} activeRun={activeRun.run} />;
+  }
+
   const prisma = getPrisma();
   const session = await getViewerSession(prisma);
 

@@ -81,19 +81,19 @@ function toTradeEntry(trade: Awaited<ReturnType<typeof listTradesForViewer>>[num
 }
 
 export default async function TradePage() {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   if (shouldProxyToApiService()) {
     const pageData = await fetchApiServiceJson<RemoteTradeOverviewPayload>(
       "/api/v1/trades/overview",
     );
 
     return <TradeConsole {...pageData} />;
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const viewer = await prisma.user.findUnique({

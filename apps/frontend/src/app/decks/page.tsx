@@ -25,13 +25,6 @@ export default async function DecksPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const prisma = getPrisma();
-  const session = await getViewerSession(prisma);
-
-  if (!session) {
-    redirect("/login");
-  }
-
   const params = (await searchParams) ?? {};
   const deckId = readSearchParam(params.deck);
 
@@ -42,6 +35,13 @@ export default async function DecksPage({
     );
 
     return <DeckOverviewConsole {...pageData} />;
+  }
+
+  const prisma = getPrisma();
+  const session = await getViewerSession(prisma);
+
+  if (!session) {
+    redirect("/login");
   }
 
   const snapshot = await getDeckLegalitySnapshot({
