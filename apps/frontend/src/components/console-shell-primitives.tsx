@@ -92,7 +92,7 @@ function TopbarStatusChip({
   return (
     <Link
       href={href}
-      className="group flex min-h-[58px] min-w-[132px] items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md transition hover:border-[rgba(208,170,110,0.24)] hover:bg-[rgba(18,22,28,0.76)]"
+      className="group flex h-[68px] w-[150px] min-w-0 shrink-0 items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md transition hover:border-[rgba(208,170,110,0.24)] hover:bg-[rgba(18,22,28,0.76)]"
     >
       <AssetIcon
         name={iconName}
@@ -239,7 +239,7 @@ export function ConsoleGlobalStatusBar({
   }, []);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5">
+    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5 xl:flex-nowrap">
       <TopbarStatusChip
         href="/campaigns"
         iconName="shield"
@@ -335,7 +335,7 @@ export function ConsoleProfileMenuChip({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex min-h-[68px] items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-3 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md"
+        className="flex h-[68px] w-[190px] shrink-0 items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-3 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md"
       >
         <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[radial-gradient(circle,rgba(35,49,68,0.92),rgba(10,12,16,0.98))] text-[#d9c5ac]">
           <AssetIcon name="profile-signet" className="h-7 w-7 text-current" />

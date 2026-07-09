@@ -23,7 +23,7 @@ function LoadingMetric({
   label: string;
 }) {
   return (
-    <div className="flex min-h-[58px] min-w-[132px] items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
+    <div className="flex h-[68px] w-[150px] min-w-0 shrink-0 items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
       <AssetIcon name={iconName} className="h-5 w-5 text-[#d0b38c]" />
       <div className="min-w-0 flex-1">
         <p className="text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">
@@ -56,12 +56,12 @@ export default function Loading() {
         <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
             <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5 xl:flex-nowrap">
                 <LoadingMetric iconName="shield" label="Kampagne" />
                 <LoadingMetric iconName="book" label="Sammlung" />
                 <LoadingMetric iconName="users" label="Freunde" />
                 <LoadingMetric iconName="sword" label="Duellanfragen" />
-                <div className="flex min-h-[58px] min-w-[154px] items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
+                <div className="flex h-[68px] w-[190px] shrink-0 items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
                   <AssetIcon name="profile-signet" className="h-8 w-8 text-[#d0b38c]" />
                   <div className="min-w-0 flex-1">
                     <p className="text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">

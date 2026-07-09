@@ -612,8 +612,8 @@ export function CollectionBinderConsole({
           </div>
         </aside>
 
-        <main className="min-w-0 lg:ml-[196px]">
-          <div className="app-workspace mx-auto w-full max-w-[1480px] px-3 pb-4 pt-3 sm:px-4 lg:px-5">
+        <main className="relative min-w-0 flex-1 overflow-hidden lg:ml-[196px]">
+          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
             <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
               <ConsoleGlobalStatusBar
                 viewer={{ displayName: viewer.displayName }}

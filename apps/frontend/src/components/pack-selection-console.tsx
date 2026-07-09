@@ -436,6 +436,7 @@ function DeckCount({
 
 export function PackSelectionConsole({
   viewer,
+  wallet,
   activeRunId,
   collectionProgress,
   selectedSetId,
@@ -768,6 +769,20 @@ export function PackSelectionConsole({
                   </div>
 
                   <div className="mt-7 flex max-w-[320px] flex-col gap-3">
+                    <div className="flex min-h-[64px] items-center justify-between gap-4 rounded-[10px] border border-[rgba(214,164,92,0.22)] bg-[rgba(8,10,14,0.72)] px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.22)]">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-9 w-9 place-items-center rounded-full border border-[rgba(214,164,92,0.2)] bg-[rgba(214,164,92,0.08)] text-[#d7b488]">
+                          <AssetIcon name="cart" className="h-4 w-4 text-current" />
+                        </span>
+                        <span className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a9957b]">
+                          Guthaben
+                        </span>
+                      </div>
+                      <strong className="text-base text-[#f3dfc4]">
+                        {wallet ? `${formatNumber(wallet.balance)} Credits` : "Nicht verfügbar"}
+                      </strong>
+                    </div>
+
                     <div className="flex rounded-full border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-1 text-xs uppercase tracking-[0.16em]">
                       <span className="flex-1 rounded-full bg-[rgba(207,91,66,0.18)] px-3 py-2 text-center text-[#fff0df]">
                         Booster
@@ -783,27 +798,33 @@ export function PackSelectionConsole({
 
                     {selectedSet.canBuy ? (
                       <>
-                        <Link
-                          href={`/packs/${selectedSet.id}`}
-                          onClick={() => setNavigatingSetId(selectedSet.id)}
-                          className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
+                        <button
+                          type="button"
+                          onClick={() => openPackSet(selectedSet.id)}
+                          disabled={navigatingSetId !== null}
+                          className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-70"
                         >
                           <span>
                             {navigatingSetId === selectedSet.id
-                              ? "Pack wird geöffnet..."
-                              : `Pack öffnen (${selectedPackPrice})`}
+                              ? "Booster wird vorbereitet..."
+                              : `Booster öffnen (${selectedPackPrice})`}
                           </span>
                           <AssetIcon name="package" className="h-5 w-5 text-current" />
-                        </Link>
+                        </button>
 
-                        <Link
-                          href={`/packs/${selectedSet.id}`}
-                          onClick={() => setNavigatingSetId(selectedSet.id)}
-                          className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb]"
+                        <button
+                          type="button"
+                          onClick={() => openPackSet(selectedSet.id)}
+                          disabled={navigatingSetId !== null}
+                          className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb] disabled:cursor-wait disabled:opacity-70"
                         >
-                          <span>Display öffnen ({selectedDisplayPrice})</span>
+                          <span>
+                            {navigatingSetId === selectedSet.id
+                              ? "Öffnungsseite wird geladen..."
+                              : `Display öffnen (${selectedDisplayPrice})`}
+                          </span>
                           <AssetIcon name="cart" className="h-4 w-4 text-current" />
-                        </Link>
+                        </button>
                       </>
                     ) : (
                       <div className="rounded-[10px] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm leading-6 text-[#c9b69e]">

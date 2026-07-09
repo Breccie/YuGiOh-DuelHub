@@ -788,7 +788,7 @@ export function PackOpeningStation({
             >
               {isSubmitting || isPending
                 ? "Pack wird geöffnet..."
-                : `Pack öffnen (${packPriceLabel})`}
+                : `Booster öffnen (${packPriceLabel})`}
             </button>
 
             <button
