@@ -1,101 +1,83 @@
 # Yu-Gi-Oh Duel Hub
 
-Yu-Gi-Oh Duel Hub ist ein Progression-, Sammlungs- und Deckbau-Hub fuer Yu-Gi-Oh-Kampagnen. Duelle selbst laufen extern ueber EDOPro; diese App kuemmert sich um Packs, Sammlung, Deckbau, Bannlisten, `.ydk`-Export, Trades, Kampagnen und Turnierorganisation.
+Yu-Gi-Oh Duel Hub ist eine Online-App für gemeinsame Yu-Gi-Oh-Kampagnen. Ihr öffnet Packs, verwaltet getrennte Sammlungen, baut Decks, tauscht Karten und organisiert Turniere. Die eigentlichen Duelle spielt ihr extern über EDOPro.
 
-Yu-Gi-Oh Duel Hub entwickelt sich jetzt in zwei klaren Modi:
+## App starten
 
-- `production` / `online-dev`: Online-Release-Pfad mit Browser/Desktop gegen denselben API-Service und dieselbe PostgreSQL-Kampagne
-- `desktop-demo`: lokale Electron-Vorschau mit Demo-Daten für Binder, Decks, Trades, Kampagnen und Turniere
+**[Yu-Gi-Oh Duel Hub im Browser öffnen](https://yugioh-duel-hub.vercel.app)**
 
-## Architektur
+Die App funktioniert direkt in einem aktuellen Desktop-Browser. Für Duelle und den Import exportierter Decks wird EDOPro separat benötigt.
 
-- `apps/frontend` enthält die Next.js-Oberfläche und die bestehenden Kompatibilitätsrouten.
-- `apps/api` ist das neue Service-Split-Ziel für HTTP-API, Sessions und späteren Mehrnutzerbetrieb.
-- `packages/contracts` ist die gemeinsame Quelle für Zod-Schemas, DTOs und API-Fehlerformen.
-- `packages/domain` kapselt pure Regellogik und Domain-Helfer ohne Next- oder Electron-Abhaengigkeiten.
-- `prisma/` bleibt das Desktop-Demo-Schema, `apps/api/prisma/` ist der neue PostgreSQL-Pfad.
+## Das bietet Duel Hub
 
-## Desktop-Demo
+- Online-Accounts mit mehreren getrennten Kampagnen
+- Kampagnen erstellen, auswählen und gemeinsam spielen
+- Chronologische Booster und Promokarten freischalten
+- Gratispacks pro neuem Set und Packs mit Kampagnen-Credits öffnen
+- Karten automatisch in der richtigen Kampagnensammlung speichern
+- Beliebig viele Binder erstellen und per Drag-and-drop füllen
+- Beliebig viele Decks aus den eigenen Karten bauen
+- Decks gegen verschiedene historische und aktuelle Bannlisten prüfen
+- Genesys-Punkte direkt im Deck-Editor anzeigen und berechnen
+- Decks als `.ydk` für EDOPro exportieren
+- Karten zwischen Spielern anbieten, reservieren und nach beidseitiger Bestätigung tauschen
+- Turniere, Teilnehmer, Runden, Paarungen und Ranglisten verwalten
+- Extern gespielte Ergebnisse melden und vom Gegner bestätigen lassen
+- Credits, Turnierpacks und neue Pack-Freischaltungen als Belohnungen erhalten
+- Freunde verwalten sowie Duell-, Tausch- und Kampagnenanfragen senden
 
-```bash
-npm install
-npm run db:generate
-npm run db:push:legacy
-npm run db:seed:demo
-npm run desktop:dev
-```
+## Schnellstart
 
-`APP_MODE=desktop-demo` ist der Standard für `npm run dev` und ignoriert `API_BASE_URL`, damit eine alte oder nicht erreichbare API-Konfiguration die lokale Demo nicht blockiert.
+1. Öffne die App und erstelle einen Account oder melde dich an.
+2. Erstelle eine Kampagne oder tritt einer Einladung bei.
+3. Wähle die Kampagne aus, in der du spielen möchtest.
+4. Öffne die bereitstehenden Gratispacks oder kaufe weitere Packs mit Credits.
+5. Sortiere deine Karten in Binder und erstelle daraus deine Decks.
+6. Wähle im Deck-Editor die gewünschte Bannliste und exportiere das fertige Deck als `.ydk`.
+7. Spielt das Duell in EDOPro und tragt das Ergebnis anschließend im Turnier ein.
 
-Für einen produktionsnahen lokalen Desktop-Start:
+Alle kampagnenbezogenen Daten bleiben voneinander getrennt. Derselbe Account kann deshalb gleichzeitig an mehreren Kampagnen teilnehmen, ohne Sammlungen, Decks, Credits oder Freischaltungen zu vermischen.
 
-```bash
-npm run desktop:preview
-```
+## Packs und Sammlung
 
-Windows-Build:
+Neue Sets werden im Verlauf einer Kampagne freigeschaltet. Beim Freischalten erhält jeder Spieler die in den Kampagneneinstellungen festgelegte Anzahl an Gratispacks. Standardmäßig entspricht das einem Display.
 
-```bash
-npm run desktop:dist
-```
+Gezogene Karten landen sofort in der aktiven Kampagnensammlung. In der Sammlung können Karten durchsucht und nach Kartentyp oder Seltenheit gefiltert werden. Binder lassen sich frei anlegen, benennen, gestalten und mit Karten aus der Sammlung füllen.
 
-Die Desktop-Builds bundlen nur noch den expliziten Demo-Seed und nicht die aktive Entwicklungsdatenbank.
+## Deck-Editor
 
-## Online-Release
+Im Deck-Editor stehen die Karten der aktiven Kampagne zur Verfügung:
 
-```bash
-npm run online:dev
-```
+- Linksklick fügt eine einzelne Karte hinzu.
+- Rechtsklick entfernt eine einzelne Kopie.
+- Karten können per Drag-and-drop in Main, Extra oder Side Deck verschoben werden.
+- Suche sowie Karten-, Seltenheits- und Bannlistenstatusfilter grenzen die Auswahl ein.
+- Ein Wechsel der Bannliste aktualisiert Limits, Verbote und Legalität sofort.
 
-`online:dev` startet PostgreSQL über Docker Compose, führt Prisma Generate/Migration/Base-Seed aus und startet danach API plus Frontend parallel. Dafür muss in `.env` mindestens `APP_MODE=online-dev`, `API_BASE_URL`, `API_DATABASE_URL`, `COOKIE_SECRET` und `CORS_ORIGIN` gesetzt sein. `npm run db:migrate` ist bewusst nicht-interaktiv und nutzt `prisma migrate deploy`; neue lokale Migrationen werden mit `npm run db:migrate:dev` erzeugt.
+Nach dem Bau kann das Deck als `.ydk` exportiert und in EDOPro geladen werden. Duelle selbst werden nicht innerhalb von Duel Hub simuliert.
 
-Für den lokalen Online-Smoke ohne den kombinierten Dev-Start:
+## Tauschen
 
-```bash
-npm run online:infra
-npm run online:prepare
-npm run test:e2e:online
-```
+Ein Spieler erstellt ein Angebot und wählt die angebotenen sowie gewünschten Karten aus. Der andere Spieler kann annehmen oder ein Gegenangebot senden. Beteiligte Karten werden reserviert, damit sie nicht gleichzeitig in einem weiteren Tausch verwendet werden können. Der Besitzerwechsel erfolgt erst nach der Bestätigung beider Spieler.
 
-`test:e2e:online` startet API und Frontend selbst auf Testports. Wenn Docker/Postgres nicht läuft, bricht der Smoke früh mit einer Preflight-Meldung ab, statt später im Cleanup einen Prisma-Fehler zu werfen.
+## Turniere und Kampagnenfortschritt
 
-Nach einem Render-Deploy prueft `/health` nur den API-Prozess; `/ready` prueft zusaetzlich die Postgres-Verbindung.
+Kampagnen-Hosts können Turniere erstellen, Teilnehmer verwalten, Runden starten und den Fortschritt bei Bedarf manuell anpassen. Duelle werden extern gespielt: Ein Spieler trägt den Score ein, der Gegner bestätigt das Ergebnis.
 
-Der Ziel-Stack für den ersten Freundeskreis-Release ist Supabase Free Postgres, Render Free API und Vercel Frontend. Die passenden Vorlagen liegen in `.env.online-api.example` und `.env.online-frontend.example`; für Prisma/Supabase wird die Supavisor Session-pooler-URL auf Port `5432` genutzt. Details stehen in [docs/online-release.md](/C:/Users/Emil/Documents/Yu-Gi-Oh/docs/online-release.md).
+Nach dem Turnierabschluss berechnet Duel Hub die Rangliste und verteilt die eingestellten Belohnungen. Dazu können Credits, besondere Packs und die Freischaltung des nächsten chronologischen Sets gehören. Credits lassen sich auch für ältere Packs verwenden, um Lücken in der Sammlung zu schließen.
 
-Der neue API-Standard liegt unter `/api/v1/*` im Service und wird schrittweise über die bestehenden Next-Kompatibilitätsrouten gespiegelt. Aktuell sind unter anderem `auth`, `dashboard`, `collection`, `decks`, `duels`, `friends`, `packs`, `profiles`, `rules`, `tournaments` und `trades` im Service verdrahtet. `duels` ist dabei kein In-App-Spielclient, sondern hoechstens Koordination/Ergebnis- oder EDOPro-Kontext. Wenn die API im Online-Modus nicht erreichbar ist, antworten die Proxies mit `service_unavailable` statt auf lokale Datenbanklogik zurückzufallen.
+## Voraussetzungen
 
-## Wichtige Bereiche
+- Ein aktueller Browser wie Chrome, Edge oder Firefox
+- Eine Internetverbindung für Accounts, Kampagnen und gemeinsame Aktionen
+- Optional EDOPro für Duelle und `.ydk`-Decks
 
-- `/login` für Duelist-Accounts und Sessions
-- `/collection` für Sammlung, Binder und Showcase
-- `/decks` für Deckbau, Bannlisten-Legalität und `.ydk`-Export nach EDOPro
-- `/trade` für Trade-Threads und Abschlusslogik
-- `/duels` nur fuer externe EDOPro-Koordination oder spaetere Ergebnisnotizen, nicht fuer In-App-Duelle
-- `/rules` für Progression, Saison, Banlist, Deckbau, EDOPro und Trade-Regeln
-- `/tournaments` für Kampagnen-Turniere, Pairings, Standings, Set-Freischaltungen und Waehrungsbelohnungen
-- `/settings` für Profil, Desktop-Präferenzen und Session-Verwaltung
+## Projektstatus
 
-## Daten und Import
+Duel Hub ist als Online-Version für private Kampagnen und Freundesgruppen nutzbar. Packs, Sammlungen, Binder, Deckbau, Bannlisten, Export, Freunde, Trades und Turnierorganisation sind miteinander verbunden und kampagnengebunden.
 
-Echte Karten-, Set- und Bannlistendaten können über den Importer nachgeladen werden:
+Fehler oder Verbesserungsvorschläge können über die [GitHub-Issues](https://github.com/Breccie/YuGiOh-DuelHub/issues) gemeldet werden.
 
-```bash
-npm run import:ygo
-```
+## Hinweis
 
-Feinsteuerung für historische Korrekturen bleibt in:
-
-- [data/import-overrides/set-overrides.json](/C:/Users/Emil/Documents/Yu-Gi-Oh/data/import-overrides/set-overrides.json)
-- [data/import-overrides/errata-timeline.json](/C:/Users/Emil/Documents/Yu-Gi-Oh/data/import-overrides/errata-timeline.json)
-- [data/banlists/README.md](/C:/Users/Emil/Documents/Yu-Gi-Oh/data/banlists/README.md)
-
-## Entwicklung
-
-- `npm run typecheck` prüft Frontend, API-Service und gemeinsame Packages
-- `npm run lint` prüft Frontend, API, Packages und Build-Skripte
-- `npm run test` führt die neuen Vitest-Checks für Domain- und API-Bausteine aus
-- `npm run test:e2e:online` prüft den Online-Kernflow mit zwei Accounts, gemeinsamer Kampagne, Pack-Opening, Trade, Turnier-Score-Bestaetigung und Reward
-- `npm run db:studio` öffnet Prisma Studio für das neue API-Schema
-
-Mehr Architektur-Details stehen in [docs/architecture.md](/C:/Users/Emil/Documents/Yu-Gi-Oh/docs/architecture.md).
+Yu-Gi-Oh Duel Hub ist ein inoffizielles Fanprojekt und steht in keiner Verbindung zu Konami. Yu-Gi-Oh! und alle zugehörigen Namen, Karten und Grafiken sind Eigentum ihrer jeweiligen Rechteinhaber.
