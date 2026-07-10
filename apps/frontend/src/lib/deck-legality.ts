@@ -18,6 +18,7 @@ type OwnershipSummary = {
   currentOracleText: string | null;
   currentPendulumText: string | null;
   firstErrataDate: Date | null;
+  rarities: string[];
   totalCopies: number;
   availableCopies: number;
   reservedCopies: number;
@@ -125,6 +126,7 @@ export type DeckLegalitySnapshot = {
       sideCopies: number;
       legalLimit: number;
       pointValue: number;
+      rarities: string[];
     }>;
   };
 };
@@ -419,6 +421,7 @@ function evaluateDeck(
       currentOracleText: deckCard.card.currentOracleText,
       currentPendulumText: deckCard.card.currentPendulumText,
       firstErrataDate: getFirstErrataDate(deckCard.card.textVersions),
+      rarities: [],
       totalCopies: 0,
       availableCopies: 0,
       reservedCopies: 0,
@@ -549,6 +552,11 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       select: {
         cardId: true,
         lockState: true,
+        setCard: {
+          select: {
+            rarity: true,
+          },
+        },
         card: {
           select: {
             name: true,
@@ -593,6 +601,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
         currentOracleText: entry.card.currentOracleText,
         currentPendulumText: entry.card.currentPendulumText,
         firstErrataDate,
+        rarities: [],
         totalCopies: 0,
         availableCopies: 0,
         reservedCopies: 0,
@@ -602,6 +611,10 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
 
     const bucket = ownershipByCardId.get(entry.cardId)!;
     bucket.totalCopies += 1;
+
+    if (entry.setCard?.rarity && !bucket.rarities.includes(entry.setCard.rarity)) {
+      bucket.rarities.push(entry.setCard.rarity);
+    }
 
     if (entry.lockState === EntryLockState.AVAILABLE) {
       bucket.availableCopies += 1;
@@ -730,6 +743,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
             ? 0
             : activeBanlistAllowanceByCardId.get(cardId) ?? 3,
           pointValue: activeBanlistPointsByCardId.get(cardId) ?? 0,
+          rarities: ownership.rarities.slice().sort((left, right) => left.localeCompare(right)),
         };
       })
       .sort((left, right) => {

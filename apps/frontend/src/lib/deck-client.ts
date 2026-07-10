@@ -8,9 +8,11 @@ import type {
 } from "@ygo/contracts";
 import {
   apiDeleteJson,
+  apiGetJson,
   apiPatchJson,
   apiPostJson,
 } from "@/lib/api-client";
+import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 import { refreshLocalSyncCacheSoon } from "@/lib/sync-cache-refresh";
 
 type DeckMutationResponse = {
@@ -34,7 +36,20 @@ type DeckExportResponse = {
   export: DeckExportResult;
 };
 
+type DeckEditorOverviewResponse = {
+  activeDeck: DeckLegalitySnapshot["activeDeck"];
+  availableBanlists: DeckLegalitySnapshot["editor"]["availableBanlists"];
+  collectionCards: DeckLegalitySnapshot["editor"]["collectionCards"];
+};
+
 export const deckClient = {
+  getEditorOverview(deckId: string) {
+    return apiGetJson<DeckEditorOverviewResponse>(
+      `/api/decks?deckId=${encodeURIComponent(deckId)}`,
+      { cache: "no-store" },
+    );
+  },
+
   async create(input: CreateDeckRequest) {
     const response = await apiPostJson<DeckMutationResponse, CreateDeckRequest>(
       "/api/decks",

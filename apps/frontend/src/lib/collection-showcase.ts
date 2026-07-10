@@ -1304,7 +1304,7 @@ export async function saveCollectionBinderPage(
     });
 
   const updatedPage = await prisma.$transaction(async (tx) => {
-    return tx.collectionBinderPage.update({
+    const savedPage = await tx.collectionBinderPage.update({
       where: {
         id: page.id,
       },
@@ -1335,6 +1335,13 @@ export async function saveCollectionBinderPage(
         },
       },
     });
+
+    await tx.collectionBinder.update({
+      where: { id: binderId },
+      data: { updatedAt: new Date() },
+    });
+
+    return savedPage;
   });
 
   return mapBinderPage(updatedPage);

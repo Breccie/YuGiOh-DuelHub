@@ -22,6 +22,7 @@ type CollectionCard = DeckLegalitySnapshot["editor"]["collectionCards"][number];
 type BanlistOption = DeckLegalitySnapshot["editor"]["availableBanlists"][number];
 type DeckSection = DeckSectionValue;
 type KindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
+type LimitFilter = "ALL" | "LEGAL" | "FORBIDDEN" | "LIMITED" | "SEMI_LIMITED";
 type PreviewTarget =
   | { source: "collection"; cardId: string }
   | { source: "deck"; cardId: string; section: DeckSection };
@@ -156,18 +157,6 @@ function isExtraDeckMonster(card: Pick<CollectionCard | DeckCard, "kind" | "mons
 
 function getDefaultSectionForCard(card: CollectionCard): DeckSection {
   return isExtraDeckMonster(card) ? "EXTRA" : "MAIN";
-}
-
-function getSectionCopies(card: CollectionCard, section: DeckSection) {
-  if (section === "MAIN") {
-    return card.mainCopies;
-  }
-
-  if (section === "EXTRA") {
-    return card.extraCopies;
-  }
-
-  return card.sideCopies;
 }
 
 function encodeDragPayload(payload: DragCardPayload) {
@@ -576,14 +565,14 @@ function InfoRow({
 }
 
 export function DeckEditorConsole({
-  activeDeck,
+  activeDeck: initialActiveDeck,
   availableBanlists,
-  collectionCards,
+  collectionCards: initialCollectionCards,
 }: DeckEditorConsoleProps) {
   const router = useRouter();
+  const [activeDeck, setActiveDeck] = useState(initialActiveDeck);
+  const [collectionCards, setCollectionCards] = useState(initialCollectionCards);
   const [createDeckName, setCreateDeckName] = useState("");
-  const [createBanlistId, setCreateBanlistId] = useState(availableBanlists[0]?.id ?? "");
-  const [createSnapshotDate, setCreateSnapshotDate] = useState("");
   const [activeDeckName, setActiveDeckName] = useState(activeDeck?.name ?? "");
   const [activeBanlistId, setActiveBanlistId] = useState(
     activeDeck?.banlistId ?? availableBanlists[0]?.id ?? "",
@@ -593,6 +582,8 @@ export function DeckEditorConsole({
   );
   const [cardSearch, setCardSearch] = useState("");
   const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
+  const [limitFilter, setLimitFilter] = useState<LimitFilter>("ALL");
+  const [rarityFilter, setRarityFilter] = useState("ALL");
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -632,13 +623,27 @@ export function DeckEditorConsole({
           return false;
         }
 
+        if (rarityFilter !== "ALL" && !card.rarities.includes(rarityFilter)) {
+          return false;
+        }
+
+        if (limitFilter === "FORBIDDEN" && card.legalLimit !== 0) return false;
+        if (limitFilter === "LIMITED" && card.legalLimit !== 1) return false;
+        if (limitFilter === "SEMI_LIMITED" && card.legalLimit !== 2) return false;
+        if (limitFilter === "LEGAL" && card.legalLimit <= 0) return false;
+
         if (!normalizedSearch) {
           return true;
         }
 
         return `${card.name} ${card.kind}`.toLowerCase().includes(normalizedSearch);
       }),
-    [collectionCards, kindFilter, normalizedSearch],
+    [collectionCards, kindFilter, limitFilter, normalizedSearch, rarityFilter],
+  );
+
+  const rarityOptions = useMemo(
+    () => Array.from(new Set(collectionCards.flatMap((card) => card.rarities))).sort(),
+    [collectionCards],
   );
 
   const resolvedPreview = useMemo(() => {
@@ -718,12 +723,17 @@ export function DeckEditorConsole({
     }
   }
 
+  async function refreshEditorSnapshot(deckId: string) {
+    const payload = await deckClient.getEditorOverview(deckId);
+    setActiveDeck(payload.activeDeck);
+    setCollectionCards(payload.collectionCards);
+  }
+
   async function handleCreateDeck() {
     await runMutation(async () => {
       const payload = await deckClient.create({
         name: createDeckName,
-        banlistId: createBanlistId || null,
-        snapshotDate: createSnapshotDate || null,
+        banlistId: availableBanlists[0]?.id ?? null,
       });
 
       if (payload.deck?.id) {
@@ -748,7 +758,7 @@ export function DeckEditorConsole({
       });
 
       setSuccess(`Deck "${payload.deck?.name ?? activeDeck.name}" wurde aktualisiert.`);
-      router.refresh();
+      await refreshEditorSnapshot(activeDeck.id);
     });
   }
 
@@ -775,7 +785,7 @@ export function DeckEditorConsole({
           nextBanlist?.name ?? "ausgewählte Liste"
         }" aktualisiert.`,
       );
-      router.refresh();
+      await refreshEditorSnapshot(activeDeck.id);
     });
   }
 
@@ -807,7 +817,7 @@ export function DeckEditorConsole({
         section,
         quantity,
       });
-      router.refresh();
+      await refreshEditorSnapshot(activeDeck.id);
     });
   }
 
@@ -821,7 +831,7 @@ export function DeckEditorConsole({
         cardId,
         section,
       });
-      router.refresh();
+      await refreshEditorSnapshot(activeDeck.id);
     });
   }
 
@@ -841,7 +851,7 @@ export function DeckEditorConsole({
     await handleSetCardQuantity(
       card.cardId,
       section,
-      (existing?.quantity ?? getSectionCopies(card, section)) + 1,
+      (existing?.quantity ?? 0) + 1,
     );
   }
 
@@ -1013,7 +1023,7 @@ export function DeckEditorConsole({
             </div>
           </div>
         ) : (
-          <div className="grid gap-5 xl:grid-cols-[1fr_0.7fr_1fr_auto] xl:items-end">
+          <div className="grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
             <label className="block space-y-2">
               <span className="text-sm font-semibold text-[#f0dfcc]">Deckname</span>
               <input
@@ -1025,31 +1035,12 @@ export function DeckEditorConsole({
               />
             </label>
 
-            <label className="block space-y-2">
-              <span className="text-sm font-semibold text-[#f0dfcc]">Snapshot</span>
-              <input
-                value={createSnapshotDate}
-                onChange={(event) => setCreateSnapshotDate(event.target.value)}
-                type="date"
-                className="ui-input"
-                disabled={isSubmitting}
-              />
-            </label>
-
-            <BanlistSelect
-              label="Bannliste"
-              availableBanlists={availableBanlists}
-              selectedBanlistId={createBanlistId}
-              onSelect={setCreateBanlistId}
-              disabled={isSubmitting}
-            />
-
             <button
               type="button"
               onClick={() => {
                 void handleCreateDeck();
               }}
-              disabled={isSubmitting || !createDeckName.trim() || !createBanlistId}
+              disabled={isSubmitting || !createDeckName.trim()}
               className="ui-button-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? "Erstelle..." : "Deck erstellen"}
@@ -1097,6 +1088,17 @@ export function DeckEditorConsole({
                     {filter.label}
                   </button>
                 ))}
+                <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value)} className="ui-input min-w-[170px]" aria-label="Seltenheit filtern">
+                  <option value="ALL">Alle Seltenheiten</option>
+                  {rarityOptions.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                </select>
+                <select value={limitFilter} onChange={(event) => setLimitFilter(event.target.value as LimitFilter)} className="ui-input min-w-[170px]" aria-label="Bannlistenstatus filtern">
+                  <option value="ALL">Alle Status</option>
+                  <option value="LEGAL">Erlaubt</option>
+                  <option value="FORBIDDEN">Verboten</option>
+                  <option value="LIMITED">Limitiert</option>
+                  <option value="SEMI_LIMITED">Semi-limitiert</option>
+                </select>
               </div>
             </div>
 

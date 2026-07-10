@@ -26,6 +26,7 @@ import type {
 } from "@/lib/collection-showcase";
 
 type EditorKindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
+type EditorRarityFilter = "ALL" | string;
 
 type ActiveDragState = {
   clientX: number;
@@ -232,6 +233,7 @@ export function BinderCollectionEditor({
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(initialSelectedSlotIndex);
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryKind, setInventoryKind] = useState<EditorKindFilter>("ALL");
+  const [inventoryRarity, setInventoryRarity] = useState<EditorRarityFilter>("ALL");
   const [isLoading, setIsLoading] = useState(isOpen && initialSnapshot === null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -248,6 +250,7 @@ export function BinderCollectionEditor({
   const [slotContextMenu, setSlotContextMenu] = useState<SlotContextMenuState | null>(null);
 
   const saveSequenceRef = useRef(0);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const activeDragRef = useRef<ActiveDragState | null>(null);
   const dragCandidateRef = useRef<DragCandidateState | null>(null);
   const suppressClickRef = useRef(false);
@@ -293,7 +296,12 @@ export function BinderCollectionEditor({
       setLoadError(null);
 
       try {
-        const typedPayload = await collectionClient.getBinderEditor(binderId);
+        let typedPayload = await collectionClient.getBinderEditor(binderId);
+
+        if (typedPayload.binder.pages.length === 0) {
+          await collectionClient.createBinderPage(binderId);
+          typedPayload = await collectionClient.getBinderEditor(binderId);
+        }
 
         if (cancelled) {
           return;
@@ -452,6 +460,16 @@ export function BinderCollectionEditor({
       return left.name.localeCompare(right.name, "de");
     });
 
+  const inventoryRarities = Array.from(
+    new Set(
+      (snapshot?.inventoryCards ?? []).flatMap((card) =>
+        card.printings
+          .map((printing) => printing.rarity)
+          .filter((rarity): rarity is string => Boolean(rarity)),
+      ),
+    ),
+  ).sort((left, right) => left.localeCompare(right, "de"));
+
   async function persistPage(nextPages: CollectionBinderPageDto[], pageIndex: number) {
     const page = nextPages[pageIndex];
 
@@ -464,10 +482,15 @@ export function BinderCollectionEditor({
     setSaveStatus("saving");
     setSaveError(null);
 
-    try {
-      const payload = await collectionClient.saveBinderPage(binderId, page.id, {
+    const saveOperation = saveQueueRef.current
+      .catch(() => undefined)
+      .then(() => collectionClient.saveBinderPage(binderId, page.id, {
           slots: page.slots.map(buildSlotSavePayload),
-      });
+      }));
+    saveQueueRef.current = saveOperation.then(() => undefined, () => undefined);
+
+    try {
+      const payload = await saveOperation;
 
       if (saveSequenceRef.current !== requestId) {
         return;
@@ -501,6 +524,14 @@ export function BinderCollectionEditor({
       setSaveStatus("error");
       setSaveError(getApiErrorMessage(error, "Binder-Seite konnte nicht gespeichert werden."));
     }
+  }
+
+  async function handleCloseEditor() {
+    if (saveStatus === "saving") {
+      await saveQueueRef.current;
+    }
+
+    onClose();
   }
 
   async function handleSaveAll() {
@@ -751,6 +782,8 @@ export function BinderCollectionEditor({
         printing,
       };
     }),
+  ).filter(
+    (tile) => inventoryRarity === "ALL" || tile.printing.rarity === inventoryRarity,
   );
   const inventoryCardCount = snapshot?.inventoryCards.length ?? 0;
   const totalOwnedCopies =
@@ -793,8 +826,8 @@ export function BinderCollectionEditor({
           <ConsoleSidebarUtilityActions />
         </aside>
 
-        <main className="relative z-10 flex h-screen min-w-0 flex-col overflow-hidden lg:ml-[272px]">
-          <div className="flex h-full min-h-0 flex-col px-5 pb-5 pt-4 sm:px-7 xl:px-8">
+        <main className="relative z-10 h-screen min-w-0 overflow-y-auto lg:ml-[272px]">
+          <div className="flex min-h-full flex-col px-5 pb-5 pt-4 sm:px-7 xl:px-8">
             <div className="flex justify-end gap-3">
               <WindowChromeButton label="Minimieren" name="window-min" />
               <WindowChromeButton label="Fenster" name="window-max" />
@@ -842,10 +875,10 @@ export function BinderCollectionEditor({
 
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={() => void handleCloseEditor()}
                   className="min-h-[42px] rounded-[4px] border border-[rgba(255,255,255,0.12)] bg-[rgba(10,13,18,0.66)] px-5 text-sm font-semibold uppercase tracking-[0.14em] text-[#ead9c3] transition hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(18,22,28,0.82)]"
                 >
-                  Abbrechen
+                  Schließen
                 </button>
                 <button
                   type="button"
@@ -907,7 +940,7 @@ export function BinderCollectionEditor({
               </div>
             </section>
 
-            <div className="mt-4 min-h-0 flex-1 overflow-visible">
+            <div className="mt-4 min-h-[680px] flex-1 overflow-visible">
           {isLoading ? (
             <div className="mx-auto mt-24 max-w-md rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(6,9,14,0.8)] px-6 py-5 text-sm text-[#d7c7b3]">
               Binder-Editor wird geladen...
@@ -1026,7 +1059,7 @@ export function BinderCollectionEditor({
                   </div>
                 ) : null}
 
-                <div className="min-h-0 flex-1 overflow-hidden px-3 py-3">
+                <div className="min-h-0 flex-1 overflow-auto px-3 py-3">
                   <BinderOpenSpread
                     compact
                     editable
@@ -1124,6 +1157,17 @@ export function BinderCollectionEditor({
                                       : "Token"}
                             </button>
                           ))}
+                          <select
+                            value={inventoryRarity}
+                            onChange={(event) => setInventoryRarity(event.target.value)}
+                            className="rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b0f15] px-3 py-2 text-xs font-semibold text-[#e8d6c0] outline-none"
+                            aria-label="Seltenheit filtern"
+                          >
+                            <option value="ALL">Alle Seltenheiten</option>
+                            {inventoryRarities.map((rarity) => (
+                              <option key={rarity} value={rarity}>{rarity}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -1259,30 +1303,20 @@ export function BinderCollectionEditor({
             transform: `translate(${activeDrag.clientX - 44}px, ${activeDrag.clientY - 58}px)`,
           }}
         >
-          <div className="pointer-events-none flex min-w-[210px] items-center gap-3 rounded-[18px] border border-[rgba(255,255,255,0.12)] bg-[rgba(6,9,14,0.94)] px-3 py-3 shadow-[0_20px_44px_rgba(0,0,0,0.42)] backdrop-blur-xl">
-            <div className="relative aspect-[59/86] w-[58px] shrink-0 overflow-hidden rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)]">
+          <div className="pointer-events-none relative aspect-[59/86] w-[72px] overflow-hidden rounded-[8px] border border-[rgba(214,164,92,0.52)] bg-[#090c11] shadow-[0_18px_38px_rgba(0,0,0,0.52)]">
               {activeDrag.payload.imageUrl ? (
                 <Image
                   src={activeDrag.payload.imageUrl}
                   alt={activeDrag.payload.cardName}
                   fill
-                  sizes="58px"
+                  sizes="72px"
                   unoptimized
                   draggable={false}
                   className="object-contain object-center"
                 />
-              ) : null}
-            </div>
-            <div className="min-w-0">
-              <p className="line-clamp-2 text-sm font-semibold text-[#f4e4cf]">
-                {activeDrag.payload.cardName}
-              </p>
-              <p className="mt-1 truncate text-[0.68rem] uppercase tracking-[0.14em] text-[#b19b83]">
-                {activeDrag.payload.printingLabel ??
-                  activeDrag.payload.setCode ??
-                  "Druckversion"}
-              </p>
-            </div>
+              ) : (
+                <span className="flex h-full items-center justify-center px-2 text-center text-[0.6rem] text-[#eadbc7]">{activeDrag.payload.cardName}</span>
+              )}
           </div>
         </div>
       ) : null}

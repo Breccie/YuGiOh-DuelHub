@@ -625,6 +625,9 @@ export function buildCachedDeckOverviewPayload(
         sideCopies: 0,
         legalLimit: 3,
         pointValue: 0,
+        rarities: card.printings
+          .map((printing) => printing.rarity)
+          .filter((rarity): rarity is string => Boolean(rarity)),
       })) ?? [],
   };
 }

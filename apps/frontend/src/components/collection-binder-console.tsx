@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useState, useTransition, type ReactNode } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { BinderCollectionEditor } from "@/components/binder-collection-editor";
@@ -444,6 +445,7 @@ function ActiveBinderShowcase({
 export function CollectionBinderConsole({
   viewer,
   binders,
+  cards,
   collectionProgress,
   initialEditorSnapshot = null,
 }: CollectionBinderConsoleProps) {
@@ -457,6 +459,9 @@ export function CollectionBinderConsole({
   const [activePreviewPageIndex, setActivePreviewPageIndex] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"binder" | null>(null);
+  const [collectionSearch, setCollectionSearch] = useState("");
+  const [collectionKind, setCollectionKind] = useState("ALL");
+  const [collectionRarity, setCollectionRarity] = useState("ALL");
   const [, startTransition] = useTransition();
 
   const editorBinderId =
@@ -471,6 +476,32 @@ export function CollectionBinderConsole({
     : null;
   const activeBinder =
     binderOptions.find((binder) => binder.isActive) ?? binderOptions[0] ?? null;
+  const collectionRarities = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          cards.flatMap((card) =>
+            card.printings
+              .map((printing) => printing.rarity)
+              .filter((rarity): rarity is string => Boolean(rarity)),
+          ),
+        ),
+      ).sort((left, right) => left.localeCompare(right, "de")),
+    [cards],
+  );
+  const filteredCollectionCards = useMemo(() => {
+    const search = collectionSearch.trim().toLowerCase();
+
+    return cards.filter((card) => {
+      if (collectionKind !== "ALL" && card.kind !== collectionKind) return false;
+      if (
+        collectionRarity !== "ALL" &&
+        !card.printings.some((printing) => printing.rarity === collectionRarity)
+      ) return false;
+
+      return !search || `${card.name} ${card.slug}`.toLowerCase().includes(search);
+    });
+  }, [cards, collectionKind, collectionRarity, collectionSearch]);
 
   function updateEditorRoute(
     nextBinderId: string | null,
@@ -504,6 +535,23 @@ export function CollectionBinderConsole({
     if (!nextBinderId) {
       router.refresh();
     }
+  }
+
+  async function handleEditorClose() {
+    if (editorBinderId) {
+      try {
+        const payload = await collectionClient.getBinderEditor(editorBinderId);
+        setBinderOptions((current) =>
+          current.map((binder) =>
+            binder.id === editorBinderId ? payload.binder : binder,
+          ),
+        );
+      } catch {
+        // The route refresh below remains the fallback if the targeted reload fails.
+      }
+    }
+
+    updateEditorRoute(null);
   }
 
   async function handleActivateBinder(binderId: string) {
@@ -787,6 +835,55 @@ export function CollectionBinderConsole({
                 />
               ) : null}
             </div>
+
+            <Panel className="mt-7 p-4 sm:p-5">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="text-[0.7rem] uppercase tracking-[0.22em] text-[#cb5c44]">Kartensammlung</p>
+                  <h2 className="font-display inscription-text-soft mt-1 text-2xl text-[#f5dfc0]">Alle Karten</h2>
+                </div>
+                <StatusPill tone="slate">{filteredCollectionCards.length} Karten</StatusPill>
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_200px]">
+                <label className="flex items-center gap-3 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                  <AssetIcon name="search" className="h-4 w-4 text-[#b9a894]" />
+                  <input value={collectionSearch} onChange={(event) => setCollectionSearch(event.target.value)} className="w-full bg-transparent text-sm outline-none" placeholder="Karten suchen" />
+                </label>
+                <select value={collectionKind} onChange={(event) => setCollectionKind(event.target.value)} className="ui-input" aria-label="Kartentyp filtern">
+                  <option value="ALL">Alle Kartentypen</option>
+                  <option value="MONSTER">Monster</option>
+                  <option value="SPELL">Zauber</option>
+                  <option value="TRAP">Fallen</option>
+                  <option value="TOKEN">Token</option>
+                </select>
+                <select value={collectionRarity} onChange={(event) => setCollectionRarity(event.target.value)} className="ui-input" aria-label="Seltenheit filtern">
+                  <option value="ALL">Alle Seltenheiten</option>
+                  {collectionRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
+                </select>
+              </div>
+
+              <div className="mt-4 grid max-h-[46rem] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-7">
+                {filteredCollectionCards.map((card) => (
+                  <article key={card.cardId} className="rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-2">
+                    <div className="relative aspect-[59/86] overflow-hidden rounded-[6px] bg-[#080b10]">
+                      {card.imageUrl ? <Image src={card.imageUrl} alt={card.name} fill sizes="160px" className="object-contain" unoptimized /> : null}
+                      <span className="absolute bottom-1 right-1 rounded-[3px] bg-[rgba(4,6,10,0.82)] px-1.5 py-0.5 text-[0.58rem] font-bold">{card.totalCopies}x</span>
+                    </div>
+                    <p className="mt-2 truncate text-xs font-semibold text-[#f1deca]">{card.name}</p>
+                    <p className="mt-1 truncate text-[0.58rem] uppercase tracking-[0.1em] text-[#9f8c77]">
+                      {Array.from(
+                        new Set(
+                          card.printings
+                            .map((printing) => printing.rarity)
+                            .filter((rarity): rarity is string => Boolean(rarity)),
+                        ),
+                      ).join(" · ") || "Ohne Seltenheit"}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </Panel>
           </div>
         </main>
       </div>
@@ -799,7 +896,7 @@ export function CollectionBinderConsole({
           initialSnapshot={initialEditorSnapshot}
           initialSlotIndex={editorInitialSlotIndex}
           isOpen
-          onClose={() => updateEditorRoute(null)}
+          onClose={() => void handleEditorClose()}
         />
       ) : null}
     </div>

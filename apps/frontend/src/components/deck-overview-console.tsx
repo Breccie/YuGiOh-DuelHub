@@ -295,7 +295,6 @@ export function DeckOverviewConsole({
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [draftDeckName, setDraftDeckName] = useState("");
-  const [draftBanlistId, setDraftBanlistId] = useState(availableBanlists[0]?.id ?? "");
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const [creatorFeedback, setCreatorFeedback] = useState<string | null>(null);
   const selectedDeck =
@@ -315,7 +314,6 @@ export function DeckOverviewConsole({
           }
         : null;
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
-  const resolvedDraftBanlistId = draftBanlistId || availableBanlists[0]?.id || "";
 
   function scrollLibrary(direction: "left" | "right") {
     libraryRowRef.current?.scrollBy({
@@ -377,7 +375,7 @@ export function DeckOverviewConsole({
     try {
       const payload = await deckClient.create({
         name: trimmedName,
-        banlistId: resolvedDraftBanlistId || null,
+        banlistId: availableBanlists[0]?.id ?? null,
       });
 
       if (!payload.deck?.id) {
@@ -646,7 +644,7 @@ export function DeckOverviewConsole({
 
                 {creatorOpen ? (
                   <div className="mt-3 rounded-[18px] border border-[rgba(208,170,110,0.14)] bg-[rgba(255,255,255,0.025)] p-4">
-                    <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,0.9fr)_auto_auto] lg:items-end">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto_auto] lg:items-end">
                       <label className="block">
                         <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9f8c77]">
                           Deckname
@@ -658,23 +656,6 @@ export function DeckOverviewConsole({
                           placeholder="z.B. Chaos Control"
                           disabled={isCreatingDeck}
                         />
-                      </label>
-                      <label className="block">
-                        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9f8c77]">
-                          Bannliste
-                        </span>
-                        <select
-                          value={resolvedDraftBanlistId}
-                          onChange={(event) => setDraftBanlistId(event.target.value)}
-                          className="ui-input mt-2"
-                          disabled={isCreatingDeck || availableBanlists.length === 0}
-                        >
-                          {availableBanlists.map((banlist) => (
-                            <option key={banlist.id} value={banlist.id}>
-                              {banlist.name}
-                            </option>
-                          ))}
-                        </select>
                       </label>
                       <button
                         type="button"
