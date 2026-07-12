@@ -5,7 +5,7 @@ import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 
 export default async function LoginPage() {
   if (shouldProxyToApiService()) {
-    return <LoginScreen recentAccounts={[]} />;
+    return <LoginScreen recentAccounts={[]} showDemoAccounts={false} />;
   }
 
   const session = await getViewerSession();
@@ -16,5 +16,5 @@ export default async function LoginPage() {
 
   const recentAccounts = await listRecentAccounts();
 
-  return <LoginScreen recentAccounts={recentAccounts} />;
+  return <LoginScreen recentAccounts={recentAccounts} showDemoAccounts />;
 }
