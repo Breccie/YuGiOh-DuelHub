@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   collectionBinderSlotCount,
   createCollectionBinder,
+  getCollectionShowcaseSnapshot,
   saveCollectionBinderPage,
   type SaveBinderPageSlotInput,
 } from "@/lib/collection-showcase";
@@ -19,6 +20,45 @@ function emptyPageSlots(): SaveBinderPageSlotInput[] {
 describe("collection binder saving", () => {
   afterAll(async () => {
     await prisma.$disconnect();
+  });
+
+  it("creates exactly one default working binder for a new campaign", async () => {
+    const tag = `vitest-binder-default-${Date.now()}`;
+    const user = await prisma.user.create({
+      data: {
+        duelistId: tag.toUpperCase(),
+        email: `${tag}@example.test`,
+        passwordHash: "test-hash",
+        displayName: "Default Binder Tester",
+      },
+    });
+
+    try {
+      const run = await prisma.playGroupRun.create({
+        data: {
+          ownerId: user.id,
+          name: `${tag} Campaign`,
+          memberships: { create: { userId: user.id, role: "OWNER" } },
+        },
+      });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { activeRunId: run.id },
+      });
+
+      const snapshot = await getCollectionShowcaseSnapshot(prisma, user.id);
+
+      expect(snapshot.binders).toHaveLength(1);
+      expect(snapshot.binders[0]).toEqual(
+        expect.objectContaining({
+          name: "Kampagnen-Binder",
+          isActive: true,
+        }),
+      );
+      expect(snapshot.binders[0]?.pages).toHaveLength(1);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } });
+    }
   });
 
   it("blocks newly placed reserved copies but keeps already saved reserved slots readable", async () => {
