@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { DeckOverviewLoader } from "@/components/deck-overview-loader";
 import { DeckOverviewConsole } from "@/components/deck-overview-console";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getPrisma } from "@/lib/prisma";
-import { getActiveRun } from "@/lib/run-service";
 import Loading from "../loading";
 
 function formatNumber(value: number) {
@@ -31,7 +31,7 @@ async function DecksPageContent() {
   });
 
   const viewerId = snapshot.viewer.id;
-  const activeRun = await getActiveRun(prisma, viewerId);
+  const activeRun = await requireActiveCampaign(prisma, viewerId);
 
   const [totalCards, recentCollectionEntries, deckPreviewRows] = await Promise.all([
     prisma.card.count(),

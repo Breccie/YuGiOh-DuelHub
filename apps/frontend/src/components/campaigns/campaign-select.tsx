@@ -45,11 +45,16 @@ export function CampaignSelect({
   const router = useRouter();
   const [pendingRunId, setPendingRunId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
   const [name, setName] = useState("");
   const [startingCredits, setStartingCredits] = useState("2400");
   const [defaultPackPrice, setDefaultPackPrice] = useState("100");
   const [defaultDisplaySize, setDefaultDisplaySize] = useState("24");
   const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState("24");
+  const [initialSetUnlockCount, setInitialSetUnlockCount] = useState("5");
+  const [setsPerProgressionStep, setSetsPerProgressionStep] = useState("1");
+  const [separatePromoProgression, setSeparatePromoProgression] = useState(true);
   const [tournamentWinnerCredits, setTournamentWinnerCredits] = useState("900");
   const [tournamentRunnerUpCredits, setTournamentRunnerUpCredits] = useState("500");
   const [tournamentParticipationCredits, setTournamentParticipationCredits] = useState("250");
@@ -92,6 +97,8 @@ export function CampaignSelect({
     const parsedPackPrice = parseIntegerField(defaultPackPrice);
     const parsedDisplaySize = parseIntegerField(defaultDisplaySize);
     const parsedFreePacks = parseIntegerField(freePacksPerSetUnlock);
+    const parsedInitialSets = parseIntegerField(initialSetUnlockCount);
+    const parsedSetsPerStep = parseIntegerField(setsPerProgressionStep);
     const parsedWinnerCredits = parseIntegerField(tournamentWinnerCredits);
     const parsedRunnerUpCredits = parseIntegerField(tournamentRunnerUpCredits);
     const parsedParticipationCredits = parseIntegerField(tournamentParticipationCredits);
@@ -101,6 +108,8 @@ export function CampaignSelect({
       parsedPackPrice === null ||
       parsedDisplaySize === null ||
       parsedFreePacks === null ||
+      parsedInitialSets === null ||
+      parsedSetsPerStep === null ||
       parsedWinnerCredits === null ||
       parsedRunnerUpCredits === null ||
       parsedParticipationCredits === null
@@ -119,6 +128,9 @@ export function CampaignSelect({
         defaultPackPrice: parsedPackPrice,
         defaultDisplaySize: parsedDisplaySize,
         freePacksPerSetUnlock: parsedFreePacks,
+        initialSetUnlockCount: parsedInitialSets,
+        setsPerProgressionStep: parsedSetsPerStep,
+        separatePromoProgression,
         tournamentWinnerCredits: parsedWinnerCredits,
         tournamentRunnerUpCredits: parsedRunnerUpCredits,
         tournamentParticipationCredits: parsedParticipationCredits,
@@ -135,6 +147,33 @@ export function CampaignSelect({
       );
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function joinCampaign(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const code = inviteCode.trim();
+
+    if (!code) {
+      setErrorMessage("Bitte einen Einladungscode eingeben.");
+      return;
+    }
+
+    setJoining(true);
+    setErrorMessage(null);
+
+    try {
+      await runClient.join({ inviteCode: code });
+      startTransition(() => {
+        router.push("/");
+        router.refresh();
+      });
+    } catch (error) {
+      setErrorMessage(
+        getApiErrorMessage(error, "Kampagne konnte nicht beigetreten werden."),
+      );
+    } finally {
+      setJoining(false);
     }
   }
 
@@ -255,12 +294,71 @@ export function CampaignSelect({
               />
             </label>
           </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+            <label className="block">
+              <span className="ui-kicker">Sets zum Start</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={initialSetUnlockCount}
+                onChange={(event) => setInitialSetUnlockCount(event.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className="ui-kicker">Sets pro Fortschritt</span>
+              <input
+                className="ui-input mt-2"
+                inputMode="numeric"
+                value={setsPerProgressionStep}
+                onChange={(event) => setSetsPerProgressionStep(event.target.value)}
+              />
+            </label>
+            <label className="flex min-h-[76px] items-center gap-3 rounded-[14px] border border-[rgba(184,142,89,0.14)] px-4 py-3">
+              <input
+                type="checkbox"
+                checked={separatePromoProgression}
+                onChange={(event) => setSeparatePromoProgression(event.target.checked)}
+              />
+              <span className="text-sm text-[#f0dcc0]">Promos getrennt freischalten</span>
+            </label>
+          </div>
           <p className="mt-4 text-sm leading-7 text-[#cdb79c]">
             Gratispacks meint die kostenlosen Packs, die Spieler beim Freischalten
             eines neuen Boosters direkt bekommen. Standard ist ein Display.
           </p>
         </form>
       </section>
+
+      <form
+        onSubmit={joinCampaign}
+        className="panel-surface rounded-[24px] px-5 py-5"
+      >
+        <div className="grid items-end gap-4 lg:grid-cols-[1fr_minmax(260px,0.65fr)_auto]">
+          <div>
+            <p className="ui-kicker">Bestehender Kampagne beitreten</p>
+            <p className="mt-2 text-sm leading-6 text-[#cdb79c]">
+              Lass dir den Einladungscode vom Host der Kampagne geben.
+            </p>
+          </div>
+          <label className="block">
+            <span className="ui-kicker">Einladungscode</span>
+            <input
+              className="ui-input mt-2 uppercase"
+              value={inviteCode}
+              onChange={(event) => setInviteCode(event.target.value)}
+              placeholder="z.B. A1B2C3D4E5"
+              autoComplete="off"
+            />
+          </label>
+          <button
+            type="submit"
+            className="ui-button-primary min-h-[52px]"
+            disabled={joining}
+          >
+            {joining ? "Trete bei..." : "Beitreten"}
+          </button>
+        </div>
+      </form>
 
       {errorMessage ? (
         <div className="rounded-[18px] border border-[rgba(204,97,78,0.22)] bg-[rgba(141,61,48,0.14)] px-4 py-3 text-sm text-[#ffd8cf]">
@@ -306,6 +404,15 @@ export function CampaignSelect({
                 <span>{run.memberCount} Mitglied(er)</span>
                 <span>Seit {formatDate(run.createdAt)}</span>
               </div>
+
+              {run.viewerRole === "OWNER" && run.inviteCode ? (
+                <div className="mt-4 rounded-[14px] border border-[rgba(208,170,110,0.18)] bg-[rgba(208,170,110,0.06)] px-4 py-3">
+                  <p className="ui-kicker">Einladungscode</p>
+                  <p className="mt-1 font-mono text-lg tracking-[0.18em] text-[#f3dfbf]">
+                    {run.inviteCode}
+                  </p>
+                </div>
+              ) : null}
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <button

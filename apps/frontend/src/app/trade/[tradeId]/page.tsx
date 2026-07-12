@@ -1,12 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { TradeDetailConsole } from "@/components/trade-detail-console";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import {
   fetchApiServiceJson,
   shouldProxyToApiService,
 } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
-import { getActiveRun } from "@/lib/run-service";
 import { getTradeDetail } from "@/lib/trade-service";
 
 type RemoteTradeDetailPayload = Parameters<typeof TradeDetailConsole>[0];
@@ -17,6 +17,14 @@ async function loadRemoteTradeDetail(tradeId: string) {
       `/api/v1/trades/${tradeId}/view`,
     );
   } catch (error) {
+    if (
+      error instanceof Error &&
+      "status" in error &&
+      Number((error as Error & { status?: number }).status) === 409
+    ) {
+      redirect("/campaigns");
+    }
+
     if (
       error instanceof Error &&
       "status" in error &&
@@ -89,7 +97,7 @@ export default async function TradeDetailPage({
     redirect("/login");
   }
 
-  const activeRun = await getActiveRun(prisma, viewer.id);
+  const activeRun = await requireActiveCampaign(prisma, viewer.id);
   const [uniqueOwnedCards, latestBanlist, earliestSet, trade] = await Promise.all([
     prisma.collectionEntry.groupBy({
       by: ["cardId"],

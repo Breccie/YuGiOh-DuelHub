@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CollectionBinderLoader } from "@/components/collection-binder-loader";
 import { CollectionBinderConsole } from "@/components/collection-binder-console";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import {
@@ -24,6 +25,8 @@ async function CollectionPageContent() {
   if (!session) {
     redirect("/login");
   }
+
+  await requireActiveCampaign(prisma, session.userId);
 
   const [collectionSnapshot, collectionShowcase, totalCards, initialEditorSnapshot] =
     await Promise.all([

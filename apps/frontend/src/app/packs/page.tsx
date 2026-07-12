@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { PackSelectionConsole } from "@/components/pack-selection-console";
 import { PackSelectionLoader } from "@/components/pack-selection-loader";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { buildPackSelectionPayload } from "@/lib/packs-data";
 import { getPrisma } from "@/lib/prisma";
-import { getActiveRun } from "@/lib/run-service";
 import Loading from "../loading";
 
 async function PacksPageContent() {
@@ -21,7 +21,7 @@ async function PacksPageContent() {
     redirect("/login");
   }
 
-  const activeRun = await getActiveRun(prisma, session.userId);
+  const activeRun = await requireActiveCampaign(prisma, session.userId);
 
   return (
     <PackSelectionConsole

@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient, RunRole } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import { DomainError, applyLedgerAmount } from "@ygo/domain";
 import { isStandardProgressionPack } from "@/lib/pack-product-classification";
 
@@ -10,6 +11,10 @@ const DEBUG_CREDIT_DUELIST_IDS = new Set(["YUGI-001", "YUGIMOTO", "YUGI001"]);
 const INITIAL_UNLOCK_COUNT = 5;
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
+
+function createInviteCode() {
+  return randomBytes(5).toString("hex").toUpperCase();
+}
 
 type RunWithMemberships = Prisma.PlayGroupRunGetPayload<{
   include: {
@@ -31,12 +36,16 @@ export function serializeRun(run: RunWithMemberships, viewerId: string) {
     id: run.id,
     ownerId: run.ownerId,
     name: run.name,
+    inviteCode: run.inviteCode,
     description: run.description ?? null,
     status: run.status,
     historyCursor: run.historyCursor?.toISOString() ?? null,
     defaultPackPrice: run.defaultPackPrice,
     defaultDisplaySize: run.defaultDisplaySize,
     freePacksPerSetUnlock: run.freePacksPerSetUnlock,
+    initialSetUnlockCount: run.initialSetUnlockCount,
+    setsPerProgressionStep: run.setsPerProgressionStep,
+    separatePromoProgression: run.separatePromoProgression,
     tournamentWinnerCredits: run.tournamentWinnerCredits,
     tournamentRunnerUpCredits: run.tournamentRunnerUpCredits,
     tournamentParticipationCredits: run.tournamentParticipationCredits,
@@ -149,7 +158,11 @@ async function backfillLegacyUserData(
   ]);
 }
 
-async function ensureInitialSetUnlocks(prisma: PrismaLike, runId: string) {
+async function ensureInitialSetUnlocks(
+  prisma: PrismaLike,
+  runId: string,
+  initialSetUnlockCount: number,
+) {
   const existingUnlockCount = await prisma.runSetUnlock.count({
     where: {
       runId,
@@ -180,7 +193,7 @@ async function ensureInitialSetUnlocks(prisma: PrismaLike, runId: string) {
     })
   )
     .filter(isStandardProgressionPack)
-    .slice(0, INITIAL_UNLOCK_COUNT);
+    .slice(0, initialSetUnlockCount);
 
   if (initialSets.length === 0) {
     return;
@@ -326,6 +339,7 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
       data: {
         ownerId: userId,
         name: DEFAULT_RUN_NAME,
+        inviteCode: createInviteCode(),
         description: DEFAULT_RUN_DESCRIPTION,
         defaultPackPrice: 100,
         defaultDisplaySize: 24,
@@ -356,7 +370,7 @@ export async function ensureDefaultRun(prisma: PrismaClient, userId: string) {
       userId,
       startingCredits: run.startingCredits,
     });
-    await ensureInitialSetUnlocks(tx, run.id);
+    await ensureInitialSetUnlocks(tx, run.id, run.initialSetUnlockCount);
     await backfillLegacyUserData(tx, userId, run.id);
     await tx.user.update({
       where: {
@@ -407,6 +421,22 @@ export async function listRuns(prisma: PrismaClient, userId: string) {
     }),
   ]);
   const membershipRunIds = new Set(memberships.map((membership) => membership.runId));
+
+  await Promise.all(
+    memberships.map(async (membership) => {
+      if (membership.run.ownerId !== userId || membership.run.inviteCode) {
+        return;
+      }
+
+      const updatedRun = await prisma.playGroupRun.update({
+        where: { id: membership.runId },
+        data: { inviteCode: createInviteCode() },
+        select: { inviteCode: true },
+      });
+      membership.run.inviteCode = updatedRun.inviteCode;
+    }),
+  );
+
   const activeRunId =
     user?.activeRunId && membershipRunIds.has(user.activeRunId)
       ? user.activeRunId
@@ -553,6 +583,9 @@ export async function createRun(
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
     freePacksPerSetUnlock?: number;
+    initialSetUnlockCount?: number;
+    setsPerProgressionStep?: number;
+    separatePromoProgression?: boolean;
     tournamentWinnerCredits?: number;
     tournamentRunnerUpCredits?: number;
     tournamentParticipationCredits?: number;
@@ -564,11 +597,15 @@ export async function createRun(
       data: {
         ownerId: userId,
         name: input.name.trim(),
+        inviteCode: createInviteCode(),
         description: input.description?.trim() || null,
         startingCredits: input.startingCredits ?? 2400,
         defaultPackPrice: input.defaultPackPrice ?? 100,
         defaultDisplaySize: input.defaultDisplaySize ?? 24,
         freePacksPerSetUnlock: input.freePacksPerSetUnlock ?? 24,
+        initialSetUnlockCount: input.initialSetUnlockCount ?? INITIAL_UNLOCK_COUNT,
+        setsPerProgressionStep: input.setsPerProgressionStep ?? 1,
+        separatePromoProgression: input.separatePromoProgression ?? true,
         tournamentWinnerCredits: input.tournamentWinnerCredits ?? 300,
         tournamentRunnerUpCredits: input.tournamentRunnerUpCredits ?? 150,
         tournamentParticipationCredits: input.tournamentParticipationCredits ?? 50,
@@ -594,7 +631,7 @@ export async function createRun(
       userId,
       startingCredits: run.startingCredits,
     });
-    await ensureInitialSetUnlocks(tx, run.id);
+    await ensureInitialSetUnlocks(tx, run.id, run.initialSetUnlockCount);
     await tx.user.update({
       where: {
         id: userId,
@@ -612,6 +649,37 @@ export async function createRun(
   );
 }
 
+export async function joinRunByInviteCode(
+  prisma: PrismaClient,
+  userId: string,
+  inviteCode: string,
+) {
+  const normalizedCode = inviteCode.trim().replace(/[-\s]/g, "").toUpperCase();
+  const run = await prisma.playGroupRun.findUnique({
+    where: { inviteCode: normalizedCode },
+  });
+
+  if (!run || run.status !== "ACTIVE") {
+    throw new DomainError({
+      code: "invalid_invite_code",
+      message: "Dieser Einladungscode ist ungültig oder die Kampagne ist geschlossen.",
+      status: 404,
+    });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.runMembership.upsert({
+      where: { runId_userId: { runId: run.id, userId } },
+      create: { runId: run.id, userId, role: "PLAYER" },
+      update: {},
+    });
+    await tx.user.update({ where: { id: userId }, data: { activeRunId: run.id } });
+  });
+
+  await getOrCreateWallet(prisma, { runId: run.id, userId });
+  return getActiveRun(prisma, userId);
+}
+
 export async function updateRunSettings(
   prisma: PrismaClient,
   options: {
@@ -620,6 +688,9 @@ export async function updateRunSettings(
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
     freePacksPerSetUnlock?: number;
+    initialSetUnlockCount?: number;
+    setsPerProgressionStep?: number;
+    separatePromoProgression?: boolean;
     tournamentWinnerCredits?: number;
     tournamentRunnerUpCredits?: number;
     tournamentParticipationCredits?: number;
@@ -639,6 +710,9 @@ export async function updateRunSettings(
       defaultPackPrice: options.defaultPackPrice,
       defaultDisplaySize: options.defaultDisplaySize,
       freePacksPerSetUnlock: options.freePacksPerSetUnlock,
+      initialSetUnlockCount: options.initialSetUnlockCount,
+      setsPerProgressionStep: options.setsPerProgressionStep,
+      separatePromoProgression: options.separatePromoProgression,
       tournamentWinnerCredits: options.tournamentWinnerCredits,
       tournamentRunnerUpCredits: options.tournamentRunnerUpCredits,
       tournamentParticipationCredits: options.tournamentParticipationCredits,

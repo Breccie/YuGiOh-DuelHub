@@ -1,5 +1,8 @@
 # Roadmap zum Online-Release
 
+Das langfristige kampagnenzentrierte Sandbox-Zielbild und der Ausbauplan stehen in
+[docs/product-vision.md](docs/product-vision.md).
+
 Stand: 2026-07-08
 
 ## Release-Reihenfolge

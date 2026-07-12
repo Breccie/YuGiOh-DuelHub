@@ -1,0 +1,4 @@
+ALTER TABLE "PlayGroupRun"
+ADD COLUMN "initialSetUnlockCount" INTEGER NOT NULL DEFAULT 5,
+ADD COLUMN "setsPerProgressionStep" INTEGER NOT NULL DEFAULT 1,
+ADD COLUMN "separatePromoProgression" BOOLEAN NOT NULL DEFAULT true;

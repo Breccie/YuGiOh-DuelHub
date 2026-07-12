@@ -845,12 +845,16 @@ export const playGroupRunSchema = z.object({
   id: z.string(),
   ownerId: z.string(),
   name: z.string(),
+  inviteCode: z.string().nullable(),
   description: z.string().nullable(),
   status: runStatusSchema,
   historyCursor: z.string().nullable(),
   defaultPackPrice: z.number().int(),
   defaultDisplaySize: z.number().int(),
   freePacksPerSetUnlock: z.number().int(),
+  initialSetUnlockCount: z.number().int(),
+  setsPerProgressionStep: z.number().int(),
+  separatePromoProgression: z.boolean(),
   tournamentWinnerCredits: z.number().int(),
   tournamentRunnerUpCredits: z.number().int(),
   tournamentParticipationCredits: z.number().int(),
@@ -890,16 +894,27 @@ export const createRunRequestSchema = z.object({
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
   freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
+  initialSetUnlockCount: z.number().int().min(0).max(100).optional(),
+  setsPerProgressionStep: z.number().int().min(1).max(20).optional(),
+  separatePromoProgression: z.boolean().optional(),
   tournamentWinnerCredits: z.number().int().min(0).max(999_999).optional(),
   tournamentRunnerUpCredits: z.number().int().min(0).max(999_999).optional(),
   tournamentParticipationCredits: z.number().int().min(0).max(999_999).optional(),
 });
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
+export const joinRunRequestSchema = z.object({
+  inviteCode: z.string().trim().min(1).max(32),
+});
+export type JoinRunRequest = z.infer<typeof joinRunRequestSchema>;
+
 export const updateRunSettingsRequestSchema = z.object({
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
   freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
+  initialSetUnlockCount: z.number().int().min(0).max(100).optional(),
+  setsPerProgressionStep: z.number().int().min(1).max(20).optional(),
+  separatePromoProgression: z.boolean().optional(),
   tournamentWinnerCredits: z.number().int().min(0).max(999_999).optional(),
   tournamentRunnerUpCredits: z.number().int().min(0).max(999_999).optional(),
   tournamentParticipationCredits: z.number().int().min(0).max(999_999).optional(),
