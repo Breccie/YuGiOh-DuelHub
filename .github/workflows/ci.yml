@@ -38,6 +38,9 @@ jobs:
       - name: Generate Prisma clients
         run: npm run db:generate
 
+      - name: Prepare test database
+        run: npx prisma db push --schema prisma/schema.prisma --skip-generate
+
       - name: Typecheck
         run: npm run typecheck
 
