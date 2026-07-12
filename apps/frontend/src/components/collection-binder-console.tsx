@@ -623,6 +623,32 @@ export function CollectionBinderConsole({
     }
   }
 
+  async function handleDeleteEmptyBinder(binder: CollectionBinderDto) {
+    if (busyAction || !window.confirm(`Leeren Binder „${binder.name}“ wirklich löschen?`)) {
+      return;
+    }
+
+    setBusyAction("binder");
+    setFeedbackMessage(null);
+
+    try {
+      const result = await collectionClient.deleteEmptyBinder(binder.id);
+      setBinderOptions((current) =>
+        current
+          .filter((item) => item.id !== result.deletedBinderId)
+          .map((item) => ({
+            ...item,
+            isActive: result.activeBinderId ? item.id === result.activeBinderId : item.isActive,
+          })),
+      );
+      setFeedbackMessage(`Leerer Binder „${binder.name}“ wurde gelöscht.`);
+    } catch (error) {
+      setFeedbackMessage(getApiErrorMessage(error, "Binder konnte nicht gelöscht werden."));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   return (
     <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
       <div className="app-background" />
@@ -714,8 +740,21 @@ export function CollectionBinderConsole({
                 <p className="font-semibold">Mehrere leere Binder erkannt</p>
                 <p className="mt-1 leading-6 text-[#cdb79c]">
                   {emptyBinders.length} von {binderOptions.length} Bindern enthalten noch keine Karten.
-                  Sie werden nicht automatisch gelöscht. Eine sichere Aufräumaktion folgt als nächster Schritt.
+                  Gefüllte und veröffentlichte Binder bleiben geschützt.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {emptyBinders.map((binder) => (
+                    <button
+                      key={binder.id}
+                      type="button"
+                      className="ui-button-neutral"
+                      disabled={Boolean(busyAction)}
+                      onClick={() => void handleDeleteEmptyBinder(binder)}
+                    >
+                      {binder.name} löschen
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
 

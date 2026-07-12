@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { updateCollectionBinderRequestSchema } from "@ygo/contracts";
 import { z } from "zod";
 import { toNextErrorResponse } from "@/lib/api-error-response";
+import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireViewerSession } from "@/lib/auth";
 import { binderCoverCatalog } from "@/lib/collection-showcase-config";
 import { getPrisma } from "@/lib/prisma";
-import { updateCollectionBinder } from "@/lib/collection-showcase";
+import { deleteEmptyCollectionBinder, updateCollectionBinder } from "@/lib/collection-showcase";
 
 function parseBinderCoverKey(coverKey: string) {
   const match = binderCoverCatalog.find((cover) => cover.key === coverKey);
@@ -50,5 +51,27 @@ export async function PATCH(
     return NextResponse.json({ binder });
   } catch (error) {
     return toNextErrorResponse(error, "Binder konnte nicht aktualisiert werden.");
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ binderId: string }> },
+) {
+  const { binderId } = await context.params;
+
+  if (shouldProxyToApiService()) {
+    return proxyApiRoute(request, `/api/v1/collection/binders/${binderId}`);
+  }
+
+  try {
+    requireSameOriginMutation(request, "Binder müssen aus der App heraus gelöscht werden.");
+    const prisma = getPrisma();
+    const session = await requireViewerSession(prisma);
+    return NextResponse.json(
+      await deleteEmptyCollectionBinder(prisma, session.userId, binderId),
+    );
+  } catch (error) {
+    return toNextErrorResponse(error, "Binder konnte nicht gelöscht werden.");
   }
 }

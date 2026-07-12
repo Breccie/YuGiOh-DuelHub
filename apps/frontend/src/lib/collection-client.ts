@@ -7,6 +7,7 @@ import type {
 } from "@ygo/contracts";
 import {
   apiGetJson,
+  apiDeleteJson,
   apiPost,
   apiPostJson,
   apiPatchJson,
@@ -43,6 +44,12 @@ export const collectionClient = {
     return apiPatchJson<BinderMutationResponse, UpdateCollectionBinderRequest>(
       `/api/collection/binders/${binderId}`,
       input,
+    );
+  },
+
+  deleteEmptyBinder(binderId: string) {
+    return apiDeleteJson<{ deletedBinderId: string; activeBinderId: string | null }>(
+      `/api/collection/binders/${binderId}`,
     );
   },
 
