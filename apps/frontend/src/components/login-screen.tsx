@@ -13,13 +13,15 @@ type RecentAccount = {
 
 export function LoginScreen({
   recentAccounts,
+  showDemoAccounts,
 }: {
   recentAccounts: RecentAccount[];
+  showDemoAccounts: boolean;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"LOGIN" | "REGISTER">("LOGIN");
   const [duelistId, setDuelistId] = useState(recentAccounts[0]?.duelistId ?? "");
-  const [password, setPassword] = useState("Yugi001");
+  const [password, setPassword] = useState(showDemoAccounts ? "Yugi001" : "");
   const [displayName, setDisplayName] = useState("");
   const [favoriteEra, setFavoriteEra] = useState("");
   const [rememberDevice, setRememberDevice] = useState(true);
@@ -105,7 +107,8 @@ export function LoginScreen({
               ))}
             </div>
 
-            <div className="mt-8 rounded-[24px] border border-[rgba(208,170,110,0.16)] bg-[rgba(255,255,255,0.03)] px-5 py-4">
+            {showDemoAccounts ? (
+              <div className="mt-8 rounded-[24px] border border-[rgba(208,170,110,0.16)] bg-[rgba(255,255,255,0.03)] px-5 py-4">
               <div className="flex items-center gap-3 text-[#f2dfc8]">
                 <AssetIcon name="users" className="h-5 w-5 text-[#d8bc91]" />
                 <p className="text-sm font-semibold uppercase tracking-[0.16em]">
@@ -133,7 +136,8 @@ export function LoginScreen({
                   </button>
                 ))}
               </div>
-            </div>
+              </div>
+            ) : null}
           </section>
 
           <section className="panel-surface rounded-[32px] px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
