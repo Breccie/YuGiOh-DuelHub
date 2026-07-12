@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: npm ci --include=dev && npm run db:generate
-    startCommand: node ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts
+    startCommand: npm run db:migrate && node ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts
     healthCheckPath: /health
     envVars:
       - key: APP_MODE
