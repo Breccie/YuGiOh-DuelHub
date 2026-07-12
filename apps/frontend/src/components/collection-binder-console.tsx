@@ -476,6 +476,9 @@ export function CollectionBinderConsole({
     : null;
   const activeBinder =
     binderOptions.find((binder) => binder.isActive) ?? binderOptions[0] ?? null;
+  const emptyBinders = binderOptions.filter((binder) =>
+    binder.pages.every((page) => page.filledSlots === 0),
+  );
   const collectionRarities = useMemo(
     () =>
       Array.from(
@@ -703,6 +706,16 @@ export function CollectionBinderConsole({
             {feedbackMessage ? (
               <div className="mt-5 rounded-[16px] border border-[rgba(214,164,92,0.2)] bg-[rgba(150,97,33,0.12)] px-4 py-3 text-sm text-[#f6e0bc]">
                 {feedbackMessage}
+              </div>
+            ) : null}
+
+            {binderOptions.length > 1 && emptyBinders.length > 1 ? (
+              <div className="mt-5 rounded-[16px] border border-[rgba(214,164,92,0.2)] bg-[rgba(150,97,33,0.1)] px-4 py-4 text-sm text-[#f6e0bc]">
+                <p className="font-semibold">Mehrere leere Binder erkannt</p>
+                <p className="mt-1 leading-6 text-[#cdb79c]">
+                  {emptyBinders.length} von {binderOptions.length} Bindern enthalten noch keine Karten.
+                  Sie werden nicht automatisch gelöscht. Eine sichere Aufräumaktion folgt als nächster Schritt.
+                </p>
               </div>
             ) : null}
 

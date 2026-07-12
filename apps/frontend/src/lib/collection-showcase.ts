@@ -328,16 +328,18 @@ async function ensureCollectionShowcaseDefaults(prisma: PrismaClient, userId: st
   ]);
 
   if (existingBinders === 0) {
-    await prisma.collectionBinder.createMany({
-      data: binderCoverCatalog.map((cover, index) => ({
+    const defaultCover = binderCoverCatalog[0];
+
+    await prisma.collectionBinder.create({
+      data: {
         userId,
         runId,
-        name: cover.name,
-        coverKey: cover.key,
-        description: cover.description,
-        accentColor: cover.accentColor,
-        isActive: index === 0,
-      })),
+        name: "Kampagnen-Binder",
+        coverKey: defaultCover.key,
+        description: "Dein Arbeits-Binder für diese Kampagne.",
+        accentColor: defaultCover.accentColor,
+        isActive: true,
+      },
     });
   }
 
