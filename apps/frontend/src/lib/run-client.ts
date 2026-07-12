@@ -6,6 +6,7 @@ import type {
   CreateRunRequest,
   GenerateRunProgressionRequest,
   GenerateRunProgressionResponse,
+  JoinRunRequest,
   RunMemberDto,
   RunListResponse,
   RunProgressionResponse,
@@ -26,6 +27,12 @@ export const runClient = {
   create(input: CreateRunRequest) {
     return apiPostJson<ActiveRunResponse, CreateRunRequest>(
       "/api/v1/runs",
+      input,
+    );
+  },
+  join(input: JoinRunRequest) {
+    return apiPostJson<ActiveRunResponse, JoinRunRequest>(
+      "/api/v1/runs/join",
       input,
     );
   },

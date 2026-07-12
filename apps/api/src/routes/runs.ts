@@ -13,6 +13,7 @@ import {
   generateRunProgressionRequestSchema,
   generateRunProgressionResponseSchema,
   historyEventSchema,
+  joinRunRequestSchema,
   openDisplayRequestSchema,
   openDisplayResponseSchema,
   openPackResponseSchema,
@@ -50,6 +51,7 @@ import {
   createRun,
   getActiveRun,
   getOrCreateWallet,
+  joinRunByInviteCode,
   listRuns,
   requireRunMembership,
   serializeLedgerEntry,
@@ -141,6 +143,31 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.post("/join", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const body = joinRunRequestSchema.parse(request.body ?? {});
+      const run = await joinRunByInviteCode(
+        getSharedPrisma(),
+        session.userId,
+        body.inviteCode,
+      );
+      const wallet = await getOrCreateWallet(getSharedPrisma(), {
+        runId: run.id,
+        userId: session.userId,
+      });
+
+      return reply.status(201).send(
+        activeRunResponseSchema.parse({
+          run: serializeRun(run, session.userId),
+          wallet: serializeWallet(wallet),
+        }),
+      );
+    } catch (error) {
+      return sendApiError(reply, error, "Kampagne konnte nicht beigetreten werden.");
+    }
+  });
+
   app.get("/active", async (request, reply) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
@@ -196,6 +223,9 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
         defaultPackPrice: body.defaultPackPrice,
         defaultDisplaySize: body.defaultDisplaySize,
         freePacksPerSetUnlock: body.freePacksPerSetUnlock,
+        initialSetUnlockCount: body.initialSetUnlockCount,
+        setsPerProgressionStep: body.setsPerProgressionStep,
+        separatePromoProgression: body.separatePromoProgression,
         tournamentWinnerCredits: body.tournamentWinnerCredits,
         tournamentRunnerUpCredits: body.tournamentRunnerUpCredits,
         tournamentParticipationCredits: body.tournamentParticipationCredits,

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ActiveRunResponse } from "@ygo/contracts";
 import { CampaignSettingsConsole } from "@/components/campaign-settings-console";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import {
   fetchApiServiceJson,
   shouldProxyToApiService,
@@ -8,14 +9,22 @@ import {
 import { getViewerSession } from "@/lib/auth";
 import { getOnlineViewerSession } from "@/lib/online-session";
 import { getPrisma } from "@/lib/prisma";
-import { getActiveRun } from "@/lib/run-service";
 
 export default async function CampaignSettingsPage() {
   if (shouldProxyToApiService()) {
-    const [session, activeRun] = await Promise.all([
-      getOnlineViewerSession(),
-      fetchApiServiceJson<ActiveRunResponse>("/api/v1/runs/active"),
-    ]);
+    let activeRun: ActiveRunResponse;
+
+    try {
+      activeRun = await fetchApiServiceJson<ActiveRunResponse>("/api/v1/runs/active");
+    } catch (error) {
+      if ((error as Error & { status?: number }).status === 409) {
+        redirect("/campaigns");
+      }
+
+      throw error;
+    }
+
+    const session = await getOnlineViewerSession();
 
     return <CampaignSettingsConsole session={session} activeRun={activeRun.run} />;
   }
@@ -27,7 +36,7 @@ export default async function CampaignSettingsPage() {
     redirect("/login");
   }
 
-  const activeRun = await getActiveRun(prisma, session.userId);
+  const activeRun = await requireActiveCampaign(prisma, session.userId);
 
   return (
     <CampaignSettingsConsole
@@ -36,12 +45,16 @@ export default async function CampaignSettingsPage() {
         id: activeRun.id,
         ownerId: activeRun.ownerId,
         name: activeRun.name,
+        inviteCode: activeRun.inviteCode,
         description: activeRun.description ?? null,
         status: activeRun.status,
         historyCursor: activeRun.historyCursor?.toISOString() ?? null,
         defaultPackPrice: activeRun.defaultPackPrice,
         defaultDisplaySize: activeRun.defaultDisplaySize,
         freePacksPerSetUnlock: activeRun.freePacksPerSetUnlock,
+        initialSetUnlockCount: activeRun.initialSetUnlockCount,
+        setsPerProgressionStep: activeRun.setsPerProgressionStep,
+        separatePromoProgression: activeRun.separatePromoProgression,
         tournamentWinnerCredits: activeRun.tournamentWinnerCredits,
         tournamentRunnerUpCredits: activeRun.tournamentRunnerUpCredits,
         tournamentParticipationCredits: activeRun.tournamentParticipationCredits,

@@ -3,11 +3,11 @@ import type { PackDetailResponse } from "@ygo/contracts";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { PackOpeningStation } from "@/components/pack-opening-station";
 import { SiteFrame } from "@/components/site-frame";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { buildPackDetailPayload } from "@/lib/packs-data";
 import { getPrisma } from "@/lib/prisma";
-import { getActiveRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +27,10 @@ async function getOnlinePackDetailPayload(setId: string) {
 
     if (status === 401) {
       redirect("/login");
+    }
+
+    if (status === 409) {
+      redirect("/campaigns");
     }
 
     if (status === 404) {
@@ -71,7 +75,7 @@ async function getLocalPackDetailPayload(setId: string) {
     redirect("/login");
   }
 
-  const activeRun = await getActiveRun(prisma, session.userId);
+  const activeRun = await requireActiveCampaign(prisma, session.userId);
   const payload = await buildPackDetailPayload(
     prisma,
     session.userId,

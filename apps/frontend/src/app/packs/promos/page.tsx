@@ -6,12 +6,12 @@ import type {
   ViewerSession,
 } from "@ygo/contracts";
 import { PromoCardsConsole } from "@/components/promo-cards-console";
+import { requireActiveCampaign } from "@/lib/active-campaign";
 import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { getViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 import { getRunProgression, getRunPromos } from "@/lib/progression-service";
-import { getActiveRun } from "@/lib/run-service";
 
 type RecentCollectionCard = {
   id: string;
@@ -86,8 +86,14 @@ async function getOnlinePayload() {
       recentCollectionCards: [],
     };
   } catch (error) {
-    if ((error as Error & { status?: number }).status === 401) {
+    const status = (error as Error & { status?: number }).status;
+
+    if (status === 401) {
       redirect("/login");
+    }
+
+    if (status === 409) {
+      redirect("/campaigns");
     }
 
     throw error;
@@ -106,7 +112,7 @@ export default async function PromoCardsPage() {
     redirect("/login");
   }
 
-  const activeRun = await getActiveRun(prisma, session.userId);
+  const activeRun = await requireActiveCampaign(prisma, session.userId);
   const [recentCollectionCards, promos, progression] = await Promise.all([
     getRecentCollectionCards(prisma, session.userId, activeRun.id),
     getRunPromos(prisma, session.userId, activeRun.id),

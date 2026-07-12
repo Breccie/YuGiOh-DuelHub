@@ -252,12 +252,16 @@ model PlayGroupRun {
   id                  String                 @id @default(cuid())
   ownerId             String
   name                String
+  inviteCode          String?                @unique
   description         String?
   status              RunStatus              @default(ACTIVE)
   historyCursor       DateTime?
   defaultPackPrice    Int                    @default(100)
   defaultDisplaySize  Int                    @default(24)
   freePacksPerSetUnlock Int                  @default(24)
+  initialSetUnlockCount Int                  @default(5)
+  setsPerProgressionStep Int                 @default(1)
+  separatePromoProgression Boolean           @default(true)
   tournamentWinnerCredits Int                @default(300)
   tournamentRunnerUpCredits Int              @default(150)
   tournamentParticipationCredits Int         @default(50)

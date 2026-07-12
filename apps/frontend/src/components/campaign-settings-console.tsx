@@ -44,6 +44,15 @@ export function CampaignSettingsConsole({
   const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState(
     String(activeRun.freePacksPerSetUnlock),
   );
+  const [initialSetUnlockCount, setInitialSetUnlockCount] = useState(
+    String(activeRun.initialSetUnlockCount),
+  );
+  const [setsPerProgressionStep, setSetsPerProgressionStep] = useState(
+    String(activeRun.setsPerProgressionStep),
+  );
+  const [separatePromoProgression, setSeparatePromoProgression] = useState(
+    activeRun.separatePromoProgression,
+  );
   const [tournamentWinnerCredits, setTournamentWinnerCredits] = useState(
     String(activeRun.tournamentWinnerCredits),
   );
@@ -110,6 +119,8 @@ export function CampaignSettingsConsole({
     const parsedPackPrice = parseInteger(defaultPackPrice);
     const parsedDisplaySize = parseInteger(defaultDisplaySize);
     const parsedFreePacks = parseInteger(freePacksPerSetUnlock);
+    const parsedInitialSets = parseInteger(initialSetUnlockCount);
+    const parsedSetsPerStep = parseInteger(setsPerProgressionStep);
     const parsedWinnerCredits = parseInteger(tournamentWinnerCredits);
     const parsedRunnerUpCredits = parseInteger(tournamentRunnerUpCredits);
     const parsedParticipationCredits = parseInteger(tournamentParticipationCredits);
@@ -118,6 +129,8 @@ export function CampaignSettingsConsole({
       parsedPackPrice === null ||
       parsedDisplaySize === null ||
       parsedFreePacks === null ||
+      parsedInitialSets === null ||
+      parsedSetsPerStep === null ||
       parsedWinnerCredits === null ||
       parsedRunnerUpCredits === null ||
       parsedParticipationCredits === null
@@ -132,6 +145,9 @@ export function CampaignSettingsConsole({
         defaultPackPrice: parsedPackPrice,
         defaultDisplaySize: parsedDisplaySize,
         freePacksPerSetUnlock: parsedFreePacks,
+        initialSetUnlockCount: parsedInitialSets,
+        setsPerProgressionStep: parsedSetsPerStep,
+        separatePromoProgression,
         tournamentWinnerCredits: parsedWinnerCredits,
         tournamentRunnerUpCredits: parsedRunnerUpCredits,
         tournamentParticipationCredits: parsedParticipationCredits,
@@ -140,6 +156,9 @@ export function CampaignSettingsConsole({
       setDefaultPackPrice(String(updatedRun.defaultPackPrice));
       setDefaultDisplaySize(String(updatedRun.defaultDisplaySize));
       setFreePacksPerSetUnlock(String(updatedRun.freePacksPerSetUnlock));
+      setInitialSetUnlockCount(String(updatedRun.initialSetUnlockCount));
+      setSetsPerProgressionStep(String(updatedRun.setsPerProgressionStep));
+      setSeparatePromoProgression(updatedRun.separatePromoProgression);
       setTournamentWinnerCredits(String(updatedRun.tournamentWinnerCredits));
       setTournamentRunnerUpCredits(String(updatedRun.tournamentRunnerUpCredits));
       setTournamentParticipationCredits(String(updatedRun.tournamentParticipationCredits));
@@ -201,8 +220,8 @@ export function CampaignSettingsConsole({
       if (!checkpoint) {
         const generated = await runClient.generateProgression(activeRun.id, {
           count: 1,
-          setsPerCheckpoint: 1,
-          includePromos: true,
+          setsPerCheckpoint: activeRun.setsPerProgressionStep,
+          includePromos: !activeRun.separatePromoProgression,
           includeTournamentPacks: true,
         });
         checkpoint = generated.generatedCheckpoints[0] ?? generated.progression.nextCheckpoint;
@@ -285,6 +304,26 @@ export function CampaignSettingsConsole({
               <StatPill label="Rolle" value={activeRun.viewerRole} tone="teal" />
               <StatPill label="Startcredits" value={String(activeRun.startingCredits)} tone="slate" />
             </div>
+            {activeRun.viewerRole === "OWNER" && activeRun.inviteCode ? (
+              <div className="rounded-[16px] border border-[rgba(208,170,110,0.18)] bg-[rgba(208,170,110,0.06)] px-4 py-3">
+                <p className="ui-kicker">Einladungscode</p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <code className="text-lg tracking-[0.16em] text-[#f3dfbf]">
+                    {activeRun.inviteCode}
+                  </code>
+                  <button
+                    type="button"
+                    className="ui-button-neutral"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(activeRun.inviteCode ?? "");
+                      setFeedback("Einladungscode kopiert.");
+                    }}
+                  >
+                    Code kopieren
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-3">
               <Link className="ui-button-neutral" href="/campaigns">
                 Kampagne wechseln
@@ -330,6 +369,20 @@ export function CampaignSettingsConsole({
             Beim Freischalten eines neuen Booster-Sets bekommen alle Kampagnenmitglieder
             diese Anzahl als kostenlose Reward-Packs. Standard ist ein Display.
           </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <label className="block">
+              <span className="text-sm font-semibold text-[#f0dfcc]">Sets zum Kampagnenstart</span>
+              <input className="ui-input mt-2" inputMode="numeric" value={initialSetUnlockCount} onChange={(event) => setInitialSetUnlockCount(event.target.value)} />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold text-[#f0dfcc]">Sets pro Fortschritt</span>
+              <input className="ui-input mt-2" inputMode="numeric" value={setsPerProgressionStep} onChange={(event) => setSetsPerProgressionStep(event.target.value)} />
+            </label>
+            <label className="flex items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] px-4 py-3">
+              <input type="checkbox" checked={separatePromoProgression} onChange={(event) => setSeparatePromoProgression(event.target.checked)} />
+              <span className="text-sm font-semibold text-[#f0dfcc]">Promos getrennt freischalten</span>
+            </label>
+          </div>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Credits Platz 1</span>
