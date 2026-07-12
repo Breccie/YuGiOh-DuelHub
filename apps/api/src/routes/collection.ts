@@ -16,6 +16,7 @@ import {
 import {
   createCollectionBinder,
   createCollectionBinderPage,
+  deleteEmptyCollectionBinder,
   createCollectionPreset,
   getCollectionBinderEditorSnapshot,
   getCollectionShowcaseSnapshot,
@@ -156,6 +157,18 @@ const collectionRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ binder });
     } catch (error) {
       return sendApiError(reply, error, "Binder konnte nicht aktualisiert werden.");
+    }
+  });
+
+  app.delete("/binders/:binderId", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { binderId } = request.params as { binderId: string };
+      return reply.send(
+        await deleteEmptyCollectionBinder(getSharedPrisma(), session.userId, binderId),
+      );
+    } catch (error) {
+      return sendApiError(reply, error, "Binder konnte nicht gelöscht werden.");
     }
   });
 

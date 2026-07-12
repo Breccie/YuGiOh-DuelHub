@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   collectionBinderSlotCount,
   createCollectionBinder,
+  deleteEmptyCollectionBinder,
   getCollectionShowcaseSnapshot,
   saveCollectionBinderPage,
   type SaveBinderPageSlotInput,
@@ -56,6 +57,17 @@ describe("collection binder saving", () => {
         }),
       );
       expect(snapshot.binders[0]?.pages).toHaveLength(1);
+
+      const extraBinder = await createCollectionBinder(prisma, user.id, {
+        name: "Leerer Test-Binder",
+        coverKey: "void-eye",
+      });
+      await expect(
+        deleteEmptyCollectionBinder(prisma, user.id, extraBinder.id),
+      ).resolves.toEqual(expect.objectContaining({ deletedBinderId: extraBinder.id }));
+      await expect(
+        deleteEmptyCollectionBinder(prisma, user.id, snapshot.binders[0]!.id),
+      ).rejects.toThrow("letzte Binder");
     } finally {
       await prisma.user.delete({ where: { id: user.id } });
     }

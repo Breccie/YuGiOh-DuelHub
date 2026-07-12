@@ -6,6 +6,7 @@ import {
   Prisma,
   PrismaClient,
 } from "@prisma/client";
+import { DomainError } from "@ygo/domain";
 import {
   binderCoverCatalog,
   getBinderCoverMeta,
@@ -887,6 +888,65 @@ export async function createCollectionBinder(
   });
 
   return mapBinder(binder);
+}
+
+export async function deleteEmptyCollectionBinder(
+  prisma: PrismaClient,
+  viewerId: string,
+  binderId: string,
+) {
+  const viewer = requireViewer(await loadViewer(prisma, viewerId));
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  const binder = await prisma.collectionBinder.findFirst({
+    where: { id: binderId, userId: viewer.id, runId: activeRun.id },
+    select: { id: true, isActive: true },
+  });
+
+  if (!binder) {
+    throw new DomainError({ code: "binder_not_found", message: "Binder wurde nicht gefunden.", status: 404 });
+  }
+
+  const [binderCount, filledSlotCount, showcaseCount] = await Promise.all([
+    prisma.collectionBinder.count({ where: { userId: viewer.id, runId: activeRun.id } }),
+    prisma.collectionBinderSlot.count({
+      where: {
+        page: { binderId },
+        OR: [
+          { collectionEntryId: { not: null } },
+          { entryReferenceId: { not: null } },
+          { snapshotCardId: { not: null } },
+        ],
+      },
+    }),
+    prisma.user.count({ where: { showcaseBinderId: binderId } }),
+  ]);
+
+  if (binderCount <= 1) {
+    throw new DomainError({ code: "last_binder", message: "Der letzte Binder einer Kampagne kann nicht gelöscht werden.", status: 409 });
+  }
+
+  if (filledSlotCount > 0) {
+    throw new DomainError({ code: "binder_not_empty", message: "Nur vollständig leere Binder können aufgeräumt werden.", status: 409 });
+  }
+
+  if (showcaseCount > 0) {
+    throw new DomainError({ code: "binder_is_showcase", message: "Ein veröffentlichter Showcase-Binder kann nicht gelöscht werden.", status: 409 });
+  }
+
+  const nextBinder = await prisma.collectionBinder.findFirst({
+    where: { userId: viewer.id, runId: activeRun.id, id: { not: binderId } },
+    orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
+    select: { id: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.collectionBinder.delete({ where: { id: binderId } });
+    if (binder.isActive && nextBinder) {
+      await tx.collectionBinder.update({ where: { id: nextBinder.id }, data: { isActive: true } });
+    }
+  });
+
+  return { deletedBinderId: binderId, activeBinderId: binder.isActive ? nextBinder?.id ?? null : null };
 }
 
 export async function updateCollectionBinder(
