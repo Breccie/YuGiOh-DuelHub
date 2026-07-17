@@ -129,6 +129,7 @@ export async function GET(request: Request) {
           sideCount: summary?.sideCount ?? 0,
           isLegal: summary?.isLegal ?? false,
           issueCount: summary?.issueCount ?? 0,
+          missingCardCount: summary?.missingCardCount ?? 0,
           banlistName: summary?.banlistName ?? null,
           previewImageUrl: getCardAssetUrl(
             deck.cards[0]?.card.externalCardId ?? null,

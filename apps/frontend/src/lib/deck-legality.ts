@@ -58,6 +58,16 @@ export type DeckCardResolution = {
   issues: DeckIssueType[];
 };
 
+export type MissingDeckCard = {
+  cardId: string;
+  cardName: string;
+  imageUrl: string | null;
+  requiredQuantity: number;
+  availableQuantity: number;
+  missingQuantity: number;
+  sections: DeckSection[];
+};
+
 export type DeckLegalitySnapshot = {
   viewer: {
     id: string;
@@ -77,6 +87,7 @@ export type DeckLegalitySnapshot = {
     banlistName: string | null;
     isLegal: boolean;
     issueCount: number;
+    missingCardCount: number;
   }>;
   activeDeck: null | {
     id: string;
@@ -96,6 +107,7 @@ export type DeckLegalitySnapshot = {
     extraCount: number;
     sideCount: number;
     issues: DeckIssueSummary[];
+    missingCards: MissingDeckCard[];
     cards: DeckCardResolution[];
   };
   editor: {
@@ -513,6 +525,30 @@ function evaluateDeck(
     });
   }
 
+  const missingCards: MissingDeckCard[] = [...plannedCopiesByCardId.entries()]
+    .map(([cardId, requiredQuantity]) => {
+      const ownership = ownershipByCardId.get(cardId);
+      const deckRows = deck.cards.filter((card) => card.cardId === cardId);
+      const card = deckRows[0]?.card;
+      const availableQuantity = ownership?.availableCopies ?? 0;
+
+      return {
+        cardId,
+        cardName: card?.name ?? ownership?.cardName ?? "Unbekannte Karte",
+        imageUrl:
+          ownership?.imageUrl ?? getCardAssetUrl(card?.externalCardId ?? null),
+        requiredQuantity,
+        availableQuantity,
+        missingQuantity: Math.max(0, requiredQuantity - availableQuantity),
+        sections: [...new Set(deckRows.map((row) => row.section))],
+      };
+    })
+    .filter((card) => card.missingQuantity > 0)
+    .sort((left, right) =>
+      right.missingQuantity - left.missingQuantity ||
+      left.cardName.localeCompare(right.cardName, "de"),
+    );
+
   return {
     snapshotDate,
     effectiveBanlist,
@@ -521,6 +557,7 @@ function evaluateDeck(
     pointTotal,
     counts,
     cards,
+    missingCards,
     issues: dedupeIssues(issues),
   };
 }
@@ -641,6 +678,10 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       banlistName: evaluation.effectiveBanlist?.name ?? null,
       isLegal: evaluation.issues.length === 0,
       issueCount: evaluation.issues.length,
+      missingCardCount: evaluation.missingCards.reduce(
+        (sum, card) => sum + card.missingQuantity,
+        0,
+      ),
     };
   });
 
@@ -795,8 +836,41 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       extraCount: activeEvaluation.counts.extraCount,
       sideCount: activeEvaluation.counts.sideCount,
       issues: activeEvaluation.issues,
+      missingCards: activeEvaluation.missingCards,
       cards: activeEvaluation.cards,
     },
     editor,
   };
+}
+
+export async function requirePlayableDeck(
+  prisma: PrismaClient,
+  viewerId: string,
+  deckId: string,
+) {
+  const snapshot = await getDeckLegalitySnapshot(
+    { viewerId, deckId },
+    prisma,
+  );
+
+  if (!snapshot.activeDeck || snapshot.activeDeck.id !== deckId) {
+    throw new Error("Deck wurde nicht gefunden.");
+  }
+
+  if (!snapshot.activeDeck.isLegal) {
+    const missing = snapshot.activeDeck.missingCards.reduce(
+      (sum, card) => sum + card.missingQuantity,
+      0,
+    );
+    const reason = missing > 0
+      ? `${missing} Karten fehlen noch.`
+      : snapshot.activeDeck.issues[0]?.message ?? "Das Deck ist nicht legal.";
+    const error = new Error(`Dieses Deck ist nur ein Entwurf. ${reason}`);
+    (error as Error & { status?: number; code?: string }).status = 409;
+    (error as Error & { status?: number; code?: string }).code =
+      "deck_not_playable";
+    throw error;
+  }
+
+  return snapshot.activeDeck;
 }

@@ -1,15 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import type { DeckSectionValue } from "@ygo/contracts";
+import type {
+  CardCatalogItem,
+  CardOwnershipFilter,
+  DeckSectionValue,
+} from "@ygo/contracts";
 import type { DragEvent, MouseEvent } from "react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
 import { Panel, StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { deckClient } from "@/lib/deck-client";
 import type { DeckIssueType, DeckLegalitySnapshot } from "@/lib/deck-legality";
+import { wishlistClient } from "@/lib/wishlist-client";
 
 type DeckEditorConsoleProps = {
   activeDeck: DeckLegalitySnapshot["activeDeck"];
@@ -18,11 +24,12 @@ type DeckEditorConsoleProps = {
 };
 
 type DeckCard = NonNullable<DeckLegalitySnapshot["activeDeck"]>["cards"][number];
-type CollectionCard = DeckLegalitySnapshot["editor"]["collectionCards"][number];
+type CollectionCard = CardCatalogItem;
 type BanlistOption = DeckLegalitySnapshot["editor"]["availableBanlists"][number];
 type DeckSection = DeckSectionValue;
 type KindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
 type LimitFilter = "ALL" | "LEGAL" | "FORBIDDEN" | "LIMITED" | "SEMI_LIMITED";
+type MobileEditorView = "CATALOG" | "DECK" | "DETAILS";
 type PreviewTarget =
   | { source: "collection"; cardId: string }
   | { source: "deck"; cardId: string; section: DeckSection };
@@ -267,7 +274,7 @@ function CollectionBrowserCard({
   onPreview: () => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
 }) {
-  const canAdd = card.availableCopies > card.deckCopies && card.legalLimit > card.deckCopies;
+  const canAdd = card.deckCopies < 3;
   const canRemove = card.deckCopies > 0;
 
   function handleClick() {
@@ -297,7 +304,9 @@ function CollectionBrowserCard({
       title="Linksklick: hinzufügen. Rechtsklick: entfernen. Ziehen: in eine Deckzone legen."
       className={classes(
         "rounded-[24px] border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
-        selected
+        !card.owned
+          ? "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.012)] opacity-75 hover:opacity-100"
+          : selected
           ? "border-[rgba(207,91,66,0.34)] bg-[rgba(255,255,255,0.05)] shadow-[0_18px_34px_rgba(0,0,0,0.22)]"
           : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(207,91,66,0.18)] hover:bg-[rgba(255,255,255,0.04)]",
       )}
@@ -319,7 +328,7 @@ function CollectionBrowserCard({
           </div>
         )}
         <span className="absolute left-2 top-2 rounded-full bg-[rgba(8,10,14,0.8)] px-2 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[#f1dfc8]">
-          {card.availableCopies} frei
+          {card.owned ? `${card.availableCopies} frei` : "Nicht im Besitz"}
         </span>
         <span
           className={classes(
@@ -522,7 +531,7 @@ function DeckZoneCompact({
                     <StatusPill tone="gold">{formatPointValue(card.pointValue)}</StatusPill>
                   ) : (
                     <StatusPill tone={getLimitTone(card.allowedCopies)}>
-                      {getLimitLabel(card.allowedCopies)}
+                      Limit {getLimitShortLabel(card.allowedCopies)}
                     </StatusPill>
                   )}
                   {card.issues.slice(0, 2).map((issue) => (
@@ -571,7 +580,18 @@ export function DeckEditorConsole({
 }: DeckEditorConsoleProps) {
   const router = useRouter();
   const [activeDeck, setActiveDeck] = useState(initialActiveDeck);
-  const [collectionCards, setCollectionCards] = useState(initialCollectionCards);
+  const [collectionCards, setCollectionCards] = useState<CardCatalogItem[]>(
+    initialCollectionCards.map((card) => ({
+      ...card,
+      slug: card.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      attribute: null,
+      levelRankLink: null,
+      atk: null,
+      def: null,
+      owned: card.totalCopies > 0,
+      setCodes: [],
+    })),
+  );
   const [createDeckName, setCreateDeckName] = useState("");
   const [activeDeckName, setActiveDeckName] = useState(activeDeck?.name ?? "");
   const [activeBanlistId, setActiveBanlistId] = useState(
@@ -584,12 +604,60 @@ export function DeckEditorConsole({
   const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
   const [limitFilter, setLimitFilter] = useState<LimitFilter>("ALL");
   const [rarityFilter, setRarityFilter] = useState("ALL");
+  const [ownershipFilter, setOwnershipFilter] =
+    useState<CardOwnershipFilter>("ALL");
+  const [catalogTotal, setCatalogTotal] = useState(initialCollectionCards.length);
+  const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogRevision, setCatalogRevision] = useState(0);
+  const [mobileEditorView, setMobileEditorView] = useState<MobileEditorView>("CATALOG");
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const deferredCardSearch = useDeferredValue(cardSearch);
-  const normalizedSearch = deferredCardSearch.trim().toLowerCase();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void cardCatalogClient
+      .search({
+        q: deferredCardSearch.trim(),
+        ownership: ownershipFilter,
+        kind: kindFilter === "ALL" ? undefined : kindFilter,
+        rarity: rarityFilter === "ALL" ? undefined : rarityFilter,
+        banlistId: activeBanlistId || undefined,
+        banlistStatus: limitFilter,
+        limit: 60,
+      })
+      .then((payload) => {
+        if (cancelled) return;
+        setCollectionCards(payload.items);
+        setCatalogTotal(payload.total);
+        setCatalogCursor(payload.nextCursor);
+        setError("");
+      })
+      .catch((catalogError) => {
+        if (!cancelled) {
+          setError(getApiErrorMessage(catalogError, "Kartenkatalog konnte nicht geladen werden."));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeBanlistId,
+    catalogRevision,
+    deferredCardSearch,
+    kindFilter,
+    limitFilter,
+    ownershipFilter,
+    rarityFilter,
+  ]);
 
   const mainCards = useMemo(
     () => activeDeck?.cards.filter((card) => card.section === "MAIN") ?? [],
@@ -616,30 +684,7 @@ export function DeckEditorConsole({
     [activeDeck?.usesPointLimit, selectedBanlist],
   );
 
-  const filteredCollectionCards = useMemo(
-    () =>
-      collectionCards.filter((card) => {
-        if (kindFilter !== "ALL" && card.kind !== kindFilter) {
-          return false;
-        }
-
-        if (rarityFilter !== "ALL" && !card.rarities.includes(rarityFilter)) {
-          return false;
-        }
-
-        if (limitFilter === "FORBIDDEN" && card.legalLimit !== 0) return false;
-        if (limitFilter === "LIMITED" && card.legalLimit !== 1) return false;
-        if (limitFilter === "SEMI_LIMITED" && card.legalLimit !== 2) return false;
-        if (limitFilter === "LEGAL" && card.legalLimit <= 0) return false;
-
-        if (!normalizedSearch) {
-          return true;
-        }
-
-        return `${card.name} ${card.kind}`.toLowerCase().includes(normalizedSearch);
-      }),
-    [collectionCards, kindFilter, limitFilter, normalizedSearch, rarityFilter],
-  );
+  const filteredCollectionCards = collectionCards;
 
   const rarityOptions = useMemo(
     () => Array.from(new Set(collectionCards.flatMap((card) => card.rarities))).sort(),
@@ -723,10 +768,37 @@ export function DeckEditorConsole({
     }
   }
 
+  async function handleLoadMoreCatalogCards() {
+    if (!catalogCursor || catalogLoading) return;
+    setCatalogLoading(true);
+    try {
+      const payload = await cardCatalogClient.search({
+        q: deferredCardSearch.trim(),
+        ownership: ownershipFilter,
+        kind: kindFilter === "ALL" ? undefined : kindFilter,
+        rarity: rarityFilter === "ALL" ? undefined : rarityFilter,
+        banlistId: activeBanlistId || undefined,
+        banlistStatus: limitFilter,
+        cursor: catalogCursor,
+        limit: 60,
+      });
+      setCollectionCards((current) => {
+        const known = new Set(current.map((card) => card.cardId));
+        return [...current, ...payload.items.filter((card) => !known.has(card.cardId))];
+      });
+      setCatalogCursor(payload.nextCursor);
+      setCatalogTotal(payload.total);
+    } catch (catalogError) {
+      setError(getApiErrorMessage(catalogError, "Weitere Karten konnten nicht geladen werden."));
+    } finally {
+      setCatalogLoading(false);
+    }
+  }
+
   async function refreshEditorSnapshot(deckId: string) {
     const payload = await deckClient.getEditorOverview(deckId);
     setActiveDeck(payload.activeDeck);
-    setCollectionCards(payload.collectionCards);
+    setCatalogRevision((revision) => revision + 1);
   }
 
   async function handleCreateDeck() {
@@ -893,9 +965,22 @@ export function DeckEditorConsole({
   }
 
   function canAddCollectionCard(card: CollectionCard) {
-    const maxCopies = Math.min(card.availableCopies, card.legalLimit);
+    return card.deckCopies < 3;
+  }
 
-    return maxCopies > card.deckCopies;
+  async function addMissingCardToWishlist(
+    cardId: string,
+    desiredQuantity: number,
+  ) {
+    await runMutation(async () => {
+      await wishlistClient.upsert({
+        cardId,
+        desiredQuantity,
+        priority: "NORMAL",
+        note: activeDeck ? `Fehlt für Deck „${activeDeck.name}“` : null,
+      });
+      setSuccess("Fehlende Karte wurde zur Kampagnen-Wunschliste hinzugefügt.");
+    });
   }
 
   function canIncreaseDeckCard(card: DeckCard) {
@@ -1049,14 +1134,36 @@ export function DeckEditorConsole({
         )}
       </Panel>
 
+      <nav className="grid grid-cols-3 gap-2 xl:hidden" aria-label="Editorbereich wählen">
+        {([
+          ["CATALOG", "Katalog"],
+          ["DECK", `Deck ${activeDeck?.cardCount ?? 0}`],
+          ["DETAILS", "Details"],
+        ] as const).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setMobileEditorView(value)}
+            className={classes(
+              "rounded-[8px] border px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em]",
+              mobileEditorView === value
+                ? "border-[rgba(207,91,66,0.36)] bg-[rgba(151,29,20,0.24)] text-[#ffe3ca]"
+                : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#baa58d]",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)] 2xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)_320px]">
         <Panel
           kicker="Sammlung"
           title="Kartenkatalog"
-          className="xl:min-h-[58rem]"
+          className={classes("xl:min-h-[58rem]", mobileEditorView !== "CATALOG" && "hidden xl:block")}
         >
           <div className="space-y-5">
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+            <div className="space-y-4">
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-[#f0dfcc]">Suche</span>
                 <div className="flex items-center gap-3 rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
@@ -1072,6 +1179,27 @@ export function DeckEditorConsole({
               </label>
 
               <div className="flex flex-wrap gap-2">
+                {(["ALL", "OWNED", "UNOWNED"] as CardOwnershipFilter[]).map(
+                  (filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setOwnershipFilter(filter)}
+                      className={classes(
+                        "rounded-full border px-4 py-2 text-sm font-semibold transition",
+                        ownershipFilter === filter
+                          ? "border-[rgba(88,163,169,0.32)] bg-[rgba(58,118,124,0.2)] text-[#d5f5f3]"
+                          : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#cbb79d] hover:text-[#f3dfc8]",
+                      )}
+                    >
+                      {filter === "ALL"
+                        ? "Alle Karten"
+                        : filter === "OWNED"
+                          ? "Im Besitz"
+                          : "Nicht im Besitz"}
+                    </button>
+                  ),
+                )}
                 {kindFilters.map((filter) => (
                   <button
                     key={filter.value}
@@ -1104,7 +1232,7 @@ export function DeckEditorConsole({
 
             <div className="flex flex-wrap gap-2">
               <StatusPill tone="slate">
-                {filteredCollectionCards.length} Karten
+                {catalogLoading ? "Lädt…" : `${catalogTotal} Treffer`}
               </StatusPill>
               <StatusPill tone="teal">
                 {filteredCollectionCards.reduce((sum, card) => sum + card.availableCopies, 0)} frei
@@ -1117,8 +1245,9 @@ export function DeckEditorConsole({
             </div>
 
             {filteredCollectionCards.length ? (
-              <div className="grid max-h-[44rem] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {filteredCollectionCards.map((card) => (
+              <>
+                <div className="grid max-h-[44rem] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {filteredCollectionCards.map((card) => (
                   <CollectionBrowserCard
                     key={card.cardId}
                     card={card}
@@ -1148,8 +1277,19 @@ export function DeckEditorConsole({
                       event.dataTransfer.effectAllowed = "copy";
                     }}
                   />
-                ))}
-              </div>
+                  ))}
+                </div>
+                {catalogCursor ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleLoadMoreCatalogCards()}
+                    disabled={catalogLoading}
+                    className="ui-button-secondary w-full disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {catalogLoading ? "Lädt…" : "Weitere Karten laden"}
+                  </button>
+                ) : null}
+              </>
             ) : (
               <div className="ui-empty rounded-[24px] p-5 text-sm leading-7">
                 Keine Treffer.
@@ -1161,7 +1301,7 @@ export function DeckEditorConsole({
         <Panel
           kicker="Deckansicht"
           title="Deck"
-          className="xl:min-h-[58rem]"
+          className={classes("xl:min-h-[58rem]", mobileEditorView !== "DECK" && "hidden xl:block")}
         >
           {activeDeck ? (
             <div className="space-y-5">
@@ -1200,6 +1340,42 @@ export function DeckEditorConsole({
                       >
                         {getIssueLabel(issue.type)}: {issue.message}
                       </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {activeDeck.missingCards.length ? (
+                <div className="rounded-[20px] border border-[rgba(208,170,110,0.24)] bg-[rgba(104,76,35,0.12)] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#f4d6a5]">Noch benötigte Karten</p>
+                      <p className="mt-1 text-xs text-[#bfae9a]">
+                        Dieses Deck bleibt bis dahin ein nicht spielbarer Entwurf.
+                      </p>
+                    </div>
+                    <StatusPill tone="gold">
+                      {activeDeck.missingCards.reduce((sum, card) => sum + card.missingQuantity, 0)} fehlen
+                    </StatusPill>
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    {activeDeck.missingCards.map((card) => (
+                      <div key={card.cardId} className="flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(255,255,255,0.06)] px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[#f5ead9]">{card.cardName}</p>
+                          <p className="text-xs text-[#bfae9a]">
+                            {card.availableQuantity}/{card.requiredQuantity} vorhanden · {card.sections.join(", ")}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="ui-button-neutral shrink-0"
+                          disabled={isSubmitting}
+                          onClick={() => void addMissingCardToWishlist(card.cardId, card.requiredQuantity)}
+                        >
+                          Wunschliste
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1263,7 +1439,7 @@ export function DeckEditorConsole({
         <Panel
           kicker="Details"
           title="Karte"
-          className="xl:col-span-2 2xl:col-span-1"
+          className={classes("xl:col-span-2 2xl:col-span-1", mobileEditorView !== "DETAILS" && "hidden xl:block")}
         >
           {resolvedPreview ? (
             <div className="space-y-5">

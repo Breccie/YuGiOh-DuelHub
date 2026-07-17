@@ -194,8 +194,8 @@ export async function upsertDeckCard(
     throw new Error("Keine Karte ausgewählt.");
   }
 
-  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 60) {
-    throw new Error("Die Menge muss zwischen 1 und 60 liegen.");
+  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 3) {
+    throw new Error("Die Menge muss zwischen 1 und 3 liegen.");
   }
 
   const card = await prisma.card.findUnique({
@@ -206,6 +206,21 @@ export async function upsertDeckCard(
 
   if (!card) {
     throw new Error("Die ausgewählte Karte wurde nicht gefunden.");
+  }
+
+  const copiesInOtherSections = await prisma.deckCard.aggregate({
+    where: {
+      deckId,
+      cardId: input.cardId,
+      section: { not: input.section },
+    },
+    _sum: { quantity: true },
+  });
+
+  if ((copiesInOtherSections._sum.quantity ?? 0) + input.quantity > 3) {
+    throw new Error(
+      "Von einer Kartenidentität sind höchstens drei Kopien über Main, Extra und Side erlaubt.",
+    );
   }
 
   return prisma.deckCard.upsert({

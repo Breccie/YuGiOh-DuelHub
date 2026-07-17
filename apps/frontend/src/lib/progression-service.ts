@@ -6,6 +6,7 @@ import {
 } from "@ygo/domain";
 import { DomainError } from "@ygo/domain";
 import { getCardAssetUrl } from "@/lib/asset-urls";
+import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
 import {
   isStandardProgressionPack,
   isTournamentRewardPack,
@@ -434,6 +435,7 @@ export async function generateRunProgression(
   }
 
   const createdCheckpoints = await prisma.$transaction(async (tx) => {
+    const ruleVersionId = await getActiveCampaignRuleVersionId(tx, runId);
     const created: CheckpointWithUnlocks[] = [];
     let sequence = maxCheckpoint?.sequence ?? 0;
     let lastTournamentPackId: string | null = null;
@@ -453,6 +455,7 @@ export async function generateRunProgression(
           description: `Automatisch generierter Checkpoint für ${boosterNames}.`,
           unlockDate,
           status: "LOCKED",
+          ruleVersionId,
         },
       });
 
@@ -614,6 +617,8 @@ export async function applyProgressionCheckpoint(
     applyState === "already_applied"
       ? checkpoint
       : await prisma.$transaction(async (tx) => {
+          const ruleVersionId = checkpoint.ruleVersionId
+            ?? await getActiveCampaignRuleVersionId(tx, runId);
           const [run, memberships] = await Promise.all([
             tx.playGroupRun.findUniqueOrThrow({
               where: {
@@ -686,6 +691,7 @@ export async function applyProgressionCheckpoint(
                       packQuantity: run.freePacksPerSetUnlock,
                       reason,
                       status: "PENDING",
+                      ruleVersionId,
                     })),
                   });
                 }

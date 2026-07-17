@@ -61,7 +61,7 @@ export const removeDeckCardRequestSchema = z.object({
 export type RemoveDeckCardRequest = z.infer<typeof removeDeckCardRequestSchema>;
 
 export const upsertDeckCardRequestSchema = removeDeckCardRequestSchema.extend({
-  quantity: z.number().int().min(1).max(60),
+  quantity: z.number().int().min(1).max(3),
 });
 export type UpsertDeckCardRequest = z.infer<typeof upsertDeckCardRequestSchema>;
 
@@ -72,6 +72,117 @@ export const deckExportRequestSchema = z.object({
   linkedTournamentMatchId: z.string().trim().min(1).nullable().optional(),
 });
 export type DeckExportRequest = z.infer<typeof deckExportRequestSchema>;
+
+export const cardOwnershipFilterSchema = z.enum(["ALL", "OWNED", "UNOWNED"]);
+export type CardOwnershipFilter = z.infer<typeof cardOwnershipFilterSchema>;
+
+export const cardBanlistStatusSchema = z.enum([
+  "ALL",
+  "LEGAL",
+  "FORBIDDEN",
+  "LIMITED",
+  "SEMI_LIMITED",
+]);
+export type CardBanlistStatus = z.infer<typeof cardBanlistStatusSchema>;
+
+export const cardCatalogSortSchema = z.enum([
+  "NAME_ASC",
+  "NAME_DESC",
+  "OWNED_DESC",
+  "ATK_DESC",
+  "NEWEST_SET",
+]);
+export type CardCatalogSort = z.infer<typeof cardCatalogSortSchema>;
+
+export const cardCatalogQuerySchema = z.object({
+  q: z.string().trim().max(120).default(""),
+  ownership: cardOwnershipFilterSchema.default("ALL"),
+  kind: z.enum(["MONSTER", "SPELL", "TRAP", "TOKEN"]).optional(),
+  monsterType: z.string().trim().max(80).optional(),
+  attribute: z.string().trim().max(40).optional(),
+  levelRankLink: z.coerce.number().int().min(0).max(13).optional(),
+  atkMin: z.coerce.number().int().min(-1).max(99999).optional(),
+  atkMax: z.coerce.number().int().min(-1).max(99999).optional(),
+  defMin: z.coerce.number().int().min(-1).max(99999).optional(),
+  defMax: z.coerce.number().int().min(-1).max(99999).optional(),
+  rarity: z.string().trim().max(60).optional(),
+  setCode: z.string().trim().max(40).optional(),
+  banlistId: z.string().trim().min(1).optional(),
+  banlistStatus: cardBanlistStatusSchema.default("ALL"),
+  hasPoints: z.enum(["true", "false"]).optional(),
+  sort: cardCatalogSortSchema.default("NAME_ASC"),
+  cursor: z.string().trim().min(1).optional(),
+  limit: z.coerce.number().int().min(12).max(100).default(48),
+});
+export type CardCatalogQuery = z.infer<typeof cardCatalogQuerySchema>;
+
+export const cardCatalogItemSchema = z.object({
+  cardId: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  imageUrl: z.string().nullable(),
+  kind: z.enum(["MONSTER", "SPELL", "TRAP", "TOKEN"]),
+  attribute: z.string().nullable(),
+  monsterType: z.string().nullable(),
+  levelRankLink: z.number().int().nullable(),
+  atk: z.number().int().nullable(),
+  def: z.number().int().nullable(),
+  oracleText: z.string().nullable(),
+  totalCopies: z.number().int(),
+  availableCopies: z.number().int(),
+  reservedCopies: z.number().int(),
+  tradedCopies: z.number().int(),
+  deckCopies: z.number().int(),
+  mainCopies: z.number().int(),
+  extraCopies: z.number().int(),
+  sideCopies: z.number().int(),
+  owned: z.boolean(),
+  rarities: z.array(z.string()),
+  setCodes: z.array(z.string()),
+  legalLimit: z.number().int().min(0).max(3),
+  pointValue: z.number().int(),
+  errataCutoff: z.string().nullable(),
+});
+export type CardCatalogItem = z.infer<typeof cardCatalogItemSchema>;
+
+export const cardCatalogResponseSchema = z.object({
+  items: z.array(cardCatalogItemSchema),
+  nextCursor: z.string().nullable(),
+  total: z.number().int(),
+  ownership: z.object({
+    uniqueOwned: z.number().int(),
+    totalCards: z.number().int(),
+  }),
+});
+export type CardCatalogResponse = z.infer<typeof cardCatalogResponseSchema>;
+
+export const wishlistPrioritySchema = z.enum(["LOW", "NORMAL", "HIGH"]);
+export type WishlistPriority = z.infer<typeof wishlistPrioritySchema>;
+
+export const upsertWishlistItemRequestSchema = z.object({
+  cardId: z.string().trim().min(1),
+  desiredQuantity: z.number().int().min(1).max(99).default(1),
+  priority: wishlistPrioritySchema.default("NORMAL"),
+  note: z.string().trim().max(240).nullable().optional(),
+});
+export type UpsertWishlistItemRequest = z.infer<
+  typeof upsertWishlistItemRequestSchema
+>;
+
+export const wishlistItemSchema = z.object({
+  id: z.string(),
+  cardId: z.string(),
+  name: z.string(),
+  imageUrl: z.string().nullable(),
+  desiredQuantity: z.number().int(),
+  ownedQuantity: z.number().int(),
+  missingQuantity: z.number().int(),
+  priority: wishlistPrioritySchema,
+  note: z.string().nullable(),
+  completed: z.boolean(),
+  updatedAt: z.string(),
+});
+export type WishlistItem = z.infer<typeof wishlistItemSchema>;
 
 export const createDuelRequestSchema = z.object({
   opponentDuelistId: z.string().trim().min(1),
@@ -1277,3 +1388,125 @@ export const syncChangesResponseSchema = z.object({
   }),
 });
 export type SyncChangesResponse = z.infer<typeof syncChangesResponseSchema>;
+
+export const campaignRulePresetSchema = z.enum([
+  "CLASSIC_PROGRESSION",
+  "SEALED_LEAGUE",
+  "DRAFT_CUBE",
+  "TOURNAMENT_LADDER",
+  "CUSTOM",
+]);
+export type CampaignRulePreset = z.infer<typeof campaignRulePresetSchema>;
+
+export const campaignRuleVersionStatusSchema = z.enum([
+  "DRAFT",
+  "SCHEDULED",
+  "ACTIVE",
+  "SUPERSEDED",
+]);
+
+export const campaignRuleConfigSchema = z.object({
+  economy: z.object({
+    startingCredits: z.number().int().min(0),
+    creditLimit: z.number().int().min(0).nullable().default(null),
+    packPrice: z.number().int().min(0),
+    displaySize: z.number().int().min(1).max(100),
+  }),
+  progression: z.object({
+    initialSetUnlockCount: z.number().int().min(0).max(100),
+    setsPerStep: z.number().int().min(1).max(25),
+    freePacksPerSetUnlock: z.number().int().min(0).max(1000),
+    separatePromoProgression: z.boolean(),
+    catchUpMode: z.enum(["NONE", "MATCH_CURRENT", "HOST_GRANT"]).default("NONE"),
+  }),
+  collection: z.object({
+    duplicateRule: z.enum(["KEEP_ALL", "CAP_COPIES", "CONVERT_CREDITS"]).default("KEEP_ALL"),
+    printingSpecificBinders: z.boolean().default(true),
+    physicalCopyReservation: z.boolean().default(true),
+  }),
+  decks: z.object({
+    allowProxies: z.boolean().default(false),
+    minMainDeck: z.number().int().min(1).max(100).default(40),
+    maxMainDeck: z.number().int().min(1).max(100).default(60),
+    maxExtraDeck: z.number().int().min(0).max(30).default(15),
+    maxSideDeck: z.number().int().min(0).max(30).default(15),
+    tournamentDeckLock: z.boolean().default(true),
+  }),
+  trades: z.object({
+    enabled: z.boolean().default(true),
+    allowCredits: z.boolean().default(false),
+    reservationMinutes: z.number().int().min(1).max(10080).default(1440),
+  }),
+  tournaments: z.object({
+    matchMode: z.enum(["SINGLE", "BEST_OF_THREE"]).default("BEST_OF_THREE"),
+    requireResultConfirmation: z.boolean().default(true),
+    winnerCredits: z.number().int().min(0),
+    runnerUpCredits: z.number().int().min(0),
+    participationCredits: z.number().int().min(0),
+  }),
+  audit: z.object({
+    requireReasonForChanges: z.boolean().default(true),
+    activationMode: z.enum(["IMMEDIATE", "AT_DATE", "NEXT_PROGRESSION_STEP"]).default("IMMEDIATE"),
+  }),
+});
+export type CampaignRuleConfig = z.infer<typeof campaignRuleConfigSchema>;
+
+export const createCampaignRuleVersionRequestSchema = z.object({
+  preset: campaignRulePresetSchema.default("CUSTOM"),
+  config: campaignRuleConfigSchema,
+  effectiveAt: z.string().datetime().nullable().optional(),
+  effectiveCheckpointId: z.string().trim().min(1).nullable().optional(),
+  activateImmediately: z.boolean().default(false),
+});
+export type CreateCampaignRuleVersionRequest = z.infer<typeof createCampaignRuleVersionRequestSchema>;
+
+export const campaignRuleVersionSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  version: z.number().int(),
+  status: campaignRuleVersionStatusSchema,
+  preset: campaignRulePresetSchema.nullable(),
+  config: campaignRuleConfigSchema,
+  effectiveAt: z.string().nullable(),
+  effectiveCheckpointId: z.string().nullable(),
+  createdById: z.string(),
+  createdAt: z.string(),
+  activatedAt: z.string().nullable(),
+});
+export type CampaignRuleVersionDto = z.infer<typeof campaignRuleVersionSchema>;
+
+export const customPackEraSchema = z.enum(["EARLY_TCG", "GX_5DS", "MODERN_CORE", "PROMO_CUSTOM"]);
+export type CustomPackEra = z.infer<typeof customPackEraSchema>;
+export const customPackStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);
+export const customPackPoolEntryInputSchema = z.object({
+  cardId: z.string().trim().min(1),
+  setCardId: z.string().trim().min(1).nullable().optional(),
+  rarity: z.string().trim().min(1).max(40),
+  weight: z.number().int().min(1).max(1_000_000).default(1),
+});
+export const customPackSlotInputSchema = z.object({
+  slotIndex: z.number().int().min(0).max(99),
+  count: z.number().int().min(1).max(100).default(1),
+  allowedRarities: z.array(z.string().trim().min(1)).min(1),
+  weight: z.number().int().min(1).max(1_000_000).default(1),
+});
+export const createCustomPackRequestSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  code: z.string().trim().min(1).max(30).regex(/^[A-Za-z0-9_-]+$/),
+  description: z.string().trim().max(1000).nullable().optional(),
+  era: customPackEraSchema,
+  packSize: z.number().int().min(1).max(100).default(9),
+  displaySize: z.number().int().min(1).max(100).default(24),
+  price: z.number().int().min(0).default(100),
+});
+export type CreateCustomPackRequest = z.infer<typeof createCustomPackRequestSchema>;
+export const updateCustomPackDraftRequestSchema = z.object({
+  poolEntries: z.array(customPackPoolEntryInputSchema),
+  slots: z.array(customPackSlotInputSchema).min(1),
+});
+export type UpdateCustomPackDraftRequest = z.infer<typeof updateCustomPackDraftRequestSchema>;
+export const simulateCustomPackRequestSchema = z.object({
+  iterations: z.number().int().min(1).max(100_000).default(10_000),
+  seed: z.string().trim().min(1).max(200).default("duel-hub-simulation"),
+});
+export type SimulateCustomPackRequest = z.infer<typeof simulateCustomPackRequestSchema>;

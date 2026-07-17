@@ -1,6 +1,6 @@
 # Yu-Gi-Oh Duel Hub – Produktvision und Sandbox-Zielbild
 
-Stand: 2026-07-12
+Stand: 2026-07-17
 
 Der aktuelle visuelle Befund zu Kampagnen, Bindern und Decks ist in
 [ux-audit-campaign-binders-decks.md](ux-audit-campaign-binders-decks.md) dokumentiert.
@@ -54,7 +54,7 @@ Direkte Links auf kampagnengebundene Seiten müssen ohne aktive Mitgliedschaft s
 
 ## Rollen und Beitritt
 
-- **Owner:** besitzt die Kampagne, verwaltet Regeln, Rollen und Archivierung.
+- **Owner:** besitzt die Kampagne und verwaltet Regeln sowie Rollen. Kampagnen bleiben dauerhaft aktiv; Löschen und Archivieren sind nicht Teil dieses Ausbaus.
 - **Organizer:** verwaltet Progression, Turniere, Rewards und Mitglieder im erlaubten Umfang.
 - **Player:** spielt, öffnet Packs, baut Decks und handelt.
 - **Spectator (optional):** darf öffentliche Kampagnenstände sehen, besitzt aber keine Sammlung.
@@ -187,7 +187,7 @@ Custom Packs gehören einer Kampagne oder einer wiederverwendbaren privaten Vorl
 - Region und Produkttyp
 - Packgröße und optionale Displaygröße
 - Preis, Verfügbarkeit und Reward-only-Status
-- aktiv, Entwurf oder archiviert
+- Entwurf oder veröffentlichte, unveränderliche Version
 
 ### Kartenpool
 
@@ -344,11 +344,11 @@ sich an den etablierten Bedienmustern von **EDOPro** und **Yu-Gi-Oh! Master Duel
 - Deckübersicht und Editor machen Status, Besitz und Legalität ohne Rätsel verständlich.
 - Regeln, Pack-Versionen, Öffnungen, Trades und Rewards sind historisch auditierbar.
 
-## Offene Produktentscheidungen
+## Verbindliche Produktentscheidungen
 
-- Dürfen Spieler in mehreren Kampagnen gleichzeitig aktiv sein oder ist immer genau eine Kampagne aktiv?
-- Bleibt ein veröffentlichter Showcase nach Kampagnenaustritt sichtbar?
-- Sollen Custom Packs zwischen Kampagnen kopierbar oder nur innerhalb einer Kampagne nutzbar sein?
-- Welche Era-/Kollationsvorlagen werden für Version 1 verbindlich unterstützt?
-- Darf ein Owner laufende Wirtschaftsregeln ändern, und ab welchem Zeitpunkt gelten Änderungen?
-- Gibt es Kampagnenlöschung oder nur Archivierung?
+- Ein Spieler kann mehreren Kampagnen angehören, aber genau eine Kampagne ist für kampagnengebundene Aktionen aktiv.
+- Veröffentlichte Profil-Showcases bleiben technisch von Arbeits-Bindern getrennt.
+- Custom Packs gehören zunächst einer Kampagne und können als private Vorlage in eine andere Kampagne kopiert werden.
+- Version 1 enthält frühes TCG, GX/5D's, modernes Core-Set und Promo/freie Slots.
+- Regeländerungen gelten sofort, ab Datum oder ab nächstem Progressionsschritt; historische Aktionen bleiben unverändert.
+- Kampagnen bleiben dauerhaft aktiv. Es gibt in diesem Ausbau weder Löschen noch Archivieren.

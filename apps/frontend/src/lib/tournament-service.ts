@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { pairSwissRound } from "@ygo/domain";
 import type { TournamentOverviewDto, TournamentStandingsDto } from "@/lib/app-dtos";
+import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
 import { markTournamentProgressionReady } from "@/lib/progression-service";
 import { creditWallet, getActiveRun, requireRunMembership } from "@/lib/run-service";
 
@@ -374,6 +375,8 @@ async function grantTournamentRewards(
     return;
   }
 
+  const ruleVersionId = tournament.ruleVersionId
+    ?? await getActiveCampaignRuleVersionId(prisma, tournament.runId);
   const standings = computeStandings(tournament).standings;
 
   for (const unlock of rewardUnlocks) {
@@ -421,6 +424,7 @@ async function grantTournamentRewards(
             reason,
             status: packQuantity > 0 ? "PENDING" : "CLAIMED",
             claimedAt: packQuantity > 0 ? null : new Date(),
+            ruleVersionId,
           },
         });
 
@@ -714,6 +718,7 @@ export async function createTournament(
   },
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const ruleVersionId = await getActiveCampaignRuleVersionId(prisma, activeRun.id);
   const tournament = await prisma.tournament.create({
     data: {
       runId: activeRun.id,
@@ -723,6 +728,7 @@ export async function createTournament(
       formatLabel: input.formatLabel?.trim() || null,
       scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
       status: "DRAFT",
+      ruleVersionId,
       participants: {
         create: {
           userId: viewerId,
