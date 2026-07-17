@@ -35,6 +35,7 @@ type DeckOverviewConsoleProps = {
     sideCount: number;
     isLegal: boolean;
     issueCount: number;
+    missingCardCount: number;
     banlistName: string | null;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -504,10 +505,16 @@ export function DeckOverviewConsole({
                     <button
                       type="button"
                       onClick={handleExportDeck}
-                      disabled={!activeDeck || isExporting}
+                      disabled={!activeDeck || !activeDeck.isLegal || isExporting}
                       className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(88,163,169,0.26)] bg-[rgba(58,118,124,0.14)] px-5 text-sm uppercase tracking-[0.18em] text-[#c5eef0] transition hover:bg-[rgba(58,118,124,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <span>{isExporting ? "Exportiert..." : "Als .ydk exportieren"}</span>
+                      <span>
+                        {isExporting
+                          ? "Exportiert..."
+                          : activeDeck?.isLegal
+                            ? "Als .ydk exportieren"
+                            : "Entwurf nicht exportierbar"}
+                      </span>
                       <AssetIcon name="copy" className="h-4 w-4 text-current" />
                     </button>
 
@@ -614,7 +621,11 @@ export function DeckOverviewConsole({
                               : "border-[rgba(207,91,66,0.28)] bg-[rgba(126,23,15,0.18)] text-[#ffd7c9]",
                           )}
                         >
-                          {deck.isLegal ? "Legal" : `${deck.issueCount} Fehler`}
+                          {deck.isLegal
+                            ? "Spielbereit"
+                            : deck.missingCardCount > 0
+                              ? `Entwurf · ${deck.missingCardCount} fehlen`
+                              : `Entwurf · ${deck.issueCount} Fehler`}
                         </span>
 
                         {selected ? (

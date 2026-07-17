@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import type { DeckExportResult } from "@/lib/app-dtos";
+import { requirePlayableDeck } from "@/lib/deck-legality";
 import { getActiveRun } from "@/lib/run-service";
 
 function sanitizeFileStem(value: string) {
@@ -36,6 +37,7 @@ export async function createDeckExport(
   },
 ): Promise<DeckExportResult> {
   const activeRun = await getActiveRun(prisma, viewerId);
+  await requirePlayableDeck(prisma, viewerId, deckId);
   const deck = await prisma.deck.findFirst({
     where: {
       id: deckId,

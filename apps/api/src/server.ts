@@ -4,7 +4,10 @@ import Fastify from "fastify";
 import { getPrisma } from "./lib/prisma";
 import { getAllowedCorsOrigins, getCookieSecret } from "./lib/runtime-config";
 import authRoutes from "./routes/auth";
+import cardRoutes from "./routes/cards";
+import campaignRulesRoutes from "./routes/campaign-rules";
 import collectionRoutes from "./routes/collection";
+import customPacksRoutes from "./routes/custom-packs";
 import dashboardRoutes from "./routes/dashboard";
 import deckRoutes from "./routes/decks";
 import duelRoutes from "./routes/duels";
@@ -16,6 +19,7 @@ import runsRoutes from "./routes/runs";
 import syncRoutes from "./routes/sync";
 import tournamentRoutes from "./routes/tournaments";
 import tradeRoutes from "./routes/trades";
+import wishlistRoutes from "./routes/wishlist";
 
 export function createServer() {
   const allowedOrigins = getAllowedCorsOrigins();
@@ -72,7 +76,10 @@ export function createServer() {
   });
 
   app.register(authRoutes, { prefix: "/api/v1/auth" });
+  app.register(cardRoutes, { prefix: "/api/v1/cards" });
+  app.register(campaignRulesRoutes, { prefix: "/api/v1/runs" });
   app.register(collectionRoutes, { prefix: "/api/v1/collection" });
+  app.register(customPacksRoutes, { prefix: "/api/v1/runs" });
   app.register(dashboardRoutes, { prefix: "/api/v1/dashboard" });
   app.register(deckRoutes, { prefix: "/api/v1/decks" });
   app.register(duelRoutes, { prefix: "/api/v1/duels" });
@@ -84,6 +91,7 @@ export function createServer() {
   app.register(syncRoutes, { prefix: "/api/v1/sync" });
   app.register(tournamentRoutes, { prefix: "/api/v1/tournaments" });
   app.register(tradeRoutes, { prefix: "/api/v1/trades" });
+  app.register(wishlistRoutes, { prefix: "/api/v1/wishlist" });
 
   return app;
 }
