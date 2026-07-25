@@ -1,6 +1,6 @@
 # Design-QA: Master-Duel-inspirierter Editor und Sandbox
 
-Stand: 2026-07-17
+Stand: 2026-07-18
 
 ## Geprüfter Umfang
 
@@ -16,16 +16,20 @@ Die Referenzen `referenzen/ui/decks-seite-referenz-03-offen-kanonisch.png` und `
 
 ## Playwright-Nachweise
 
-- `screenshots/editor-qa/deck-library-desktop.png`
-- `screenshots/editor-qa/deck-editor-unowned-desktop.png`
-- `screenshots/editor-qa/binder-library-desktop.png`
-- `screenshots/editor-qa/binder-editor-unowned-desktop.png`
-- `screenshots/editor-qa/deck-library-mobile.png`
-- `screenshots/editor-qa/deck-editor-mobile.png`
-- `screenshots/editor-qa/campaign-rules-desktop.png`
-- `screenshots/editor-qa/custom-pack-simulation-desktop.png`
+Die aktuelle Abnahme liegt unter `output/playwright/final-audit/`, unter anderem:
 
-Der Chromium-Lauf hat folgende echten Aktionen erfolgreich ausgeführt: Login, Besitzfilter, Öffnen beider Editoren, Custom Pack erstellen, vier Rarity-Pools füllen, Entwurf speichern, 10.000 Packs simulieren, Version veröffentlichen und ein Pack mit Wallet-, Audit- und Sammlungsbuchung öffnen. `browser-errors.json` ist leer.
+- `deck-editor-reference-viewport.png` (1626 × 967),
+- `binder-editor-reference-viewport.png` (1536 × 1024),
+- `deck-editor-mobile-viewport.png` (390 × 844),
+- `binder-editor-mobile-viewport.png` (390 × 844),
+- `campaign-settings-desktop.png`,
+- `custom-pack-desktop.png`.
+
+Der Chromium-Lauf hat Login, Besitzfilter, Öffnen und Schließen beider Editoren,
+Escape-/Fokuswiederherstellung sowie die Auswahl einer nicht besessenen Binderkarte
+bis zur sichtbaren Wunschlistenaktion geprüft. Es wurden bewusst keine weiteren
+QA-Binder, Wunschlisteneinträge oder Packöffnungen erzeugt. Die Browserkonsolen der
+Desktop- und Mobile-Läufe enthielten keine Fehler.
 
 ## Sichtprüfung
 
@@ -33,6 +37,8 @@ Der Chromium-Lauf hat folgende echten Aktionen erfolgreich ausgeführt: Login, B
 - Desktop-Editor besitzt drei klar getrennte Arbeitsbereiche.
 - Mobile Deckansicht verwendet Katalog/Deck/Details statt gequetschter Spalten.
 - Nicht besessene Karten und fehlender Bedarf sind klar erkennbar.
+- Nicht besessene Binderkarten sind für Maus, Tastatur und Screenreader auswählbar,
+  ohne fälschlich als deaktivierte Buttons angekündigt zu werden.
 - Regeloberfläche und Custom-Pack-Studio verwenden vorhandene Komponenten, Abstände und Assets.
 
 final result: passed

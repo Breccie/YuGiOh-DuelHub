@@ -255,6 +255,12 @@ export function TradeDetailConsole({
                     ? `Deine Bestätigung liegt seit ${new Date(viewerConfirmedAt).toLocaleString("de-DE")} vor.`
                     : "Deine Abschlussbestätigung fehlt noch."}
                 </p>
+                {trade.reservationExpiresAt ? (
+                  <p className="mt-2 text-xs text-[#a8cfd1]">
+                    Reserviert bis{" "}
+                    {new Date(trade.reservationExpiresAt).toLocaleString("de-DE")}.
+                  </p>
+                ) : null}
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3 py-3">
                     <p className="text-[0.68rem] uppercase tracking-[0.18em] text-[#a8cfd1]">

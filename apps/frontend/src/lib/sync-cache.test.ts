@@ -3,6 +3,7 @@ import type { SyncBootstrapResponse, SyncChangesResponse } from "@ygo/contracts"
 import {
   applySyncBootstrap,
   applySyncChanges,
+  clearLocalSyncCache,
   readLocalSyncCache,
   writeLocalSyncCache,
 } from "@/lib/sync-cache";
@@ -148,9 +149,35 @@ describe("sync cache", () => {
 
   it("falls back to an empty cache when storage is unavailable or invalid", () => {
     const storage = createStorage();
-    storage.setItem("ygo:sync-cache:v1", "{");
+    storage.setItem("ygo:sync-cache:v2", "{");
 
-    expect(readLocalSyncCache(null).version).toBe(1);
+    expect(readLocalSyncCache(null).version).toBe(2);
     expect(readLocalSyncCache(storage).collectionEntries).toEqual([]);
+  });
+
+  it("drops campaign data when the viewer or active campaign changes", () => {
+    const first = applySyncChanges(createChanges("Dark Magician"), applySyncBootstrap(bootstrap));
+    const switched = applySyncBootstrap(
+      {
+        ...bootstrap,
+        activeRunId: "run-2",
+        run: { id: "run-2" },
+      },
+      first,
+    );
+
+    expect(switched.collectionEntries).toEqual([]);
+    expect(switched.packOpenings).toEqual([]);
+    expect(switched.bootstrap?.activeRunId).toBe("run-2");
+  });
+
+  it("clears both current and legacy cache records", () => {
+    const storage = createStorage();
+    storage.setItem("ygo:sync-cache:v2", "{}");
+    storage.setItem("ygo:sync-cache:v1", "{}");
+
+    clearLocalSyncCache(storage);
+
+    expect(storage.length).toBe(0);
   });
 });

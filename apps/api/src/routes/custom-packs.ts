@@ -1,6 +1,7 @@
 import type { PrismaClient as FrontendPrismaClient } from "@prisma/client";
 import {
   createCustomPackRequestSchema,
+  openCustomPackRequestSchema,
   simulateCustomPackRequestSchema,
   updateCustomPackDraftRequestSchema,
 } from "@ygo/contracts";
@@ -31,7 +32,6 @@ const templateCopySchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   code: z.string().trim().min(2).max(24).optional(),
 });
-const openPackSchema = z.object({ seed: z.string().trim().min(1).max(200).optional() });
 
 function sharedPrisma() {
   return getPrisma() as unknown as FrontendPrismaClient;
@@ -104,8 +104,8 @@ const customPacksRoutes: FastifyPluginAsync = async (app) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
       const { runId, versionId } = versionParamsSchema.parse(request.params);
-      const body = openPackSchema.parse(request.body ?? {});
-      return reply.status(201).send(await openCustomPackVersion(sharedPrisma(), session.userId, runId, versionId, body.seed));
+      const body = openCustomPackRequestSchema.parse(request.body ?? {});
+      return reply.status(201).send(await openCustomPackVersion(sharedPrisma(), session.userId, runId, versionId, body));
     } catch (error) {
       return sendApiError(reply, error, "Custom Pack konnte nicht geöffnet werden.");
     }

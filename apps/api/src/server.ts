@@ -1,5 +1,6 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { getPrisma } from "./lib/prisma";
 import { getAllowedCorsOrigins, getCookieSecret } from "./lib/runtime-config";
@@ -21,10 +22,14 @@ import tournamentRoutes from "./routes/tournaments";
 import tradeRoutes from "./routes/trades";
 import wishlistRoutes from "./routes/wishlist";
 
+const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 export function createServer() {
   const allowedOrigins = getAllowedCorsOrigins();
   const app = Fastify({
     logger: process.env.NODE_ENV !== "test",
+    bodyLimit: 1024 * 1024,
+    trustProxy: process.env.NODE_ENV === "production",
   });
 
   app.register(cookie, {
@@ -41,11 +46,31 @@ export function createServer() {
     },
     credentials: true,
   });
-  app.addHook("onRequest", async (_request, reply) => {
+  app.register(rateLimit, {
+    global: false,
+  });
+  app.addHook("onRequest", async (request, reply) => {
     reply.header("X-Content-Type-Options", "nosniff");
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("Cross-Origin-Resource-Policy", "same-site");
+
+    const origin = request.headers.origin;
+
+    if (
+      MUTATION_METHODS.has(request.method) &&
+      origin &&
+      !allowedOrigins.includes(origin)
+    ) {
+      return reply.status(403).send({
+        error: "Mutationen müssen aus der App heraus erfolgen.",
+        errorDetail: {
+          code: "invalid_origin",
+          message: "Mutationen müssen aus der App heraus erfolgen.",
+          status: 403,
+        },
+      });
+    }
   });
 
   app.get("/health", async () => {

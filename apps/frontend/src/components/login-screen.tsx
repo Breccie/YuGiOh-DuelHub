@@ -3,6 +3,7 @@
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
+import { clearAccountCaches } from "@/lib/account-cache";
 
 type RecentAccount = {
   id: string;
@@ -64,6 +65,7 @@ export function LoginScreen({
         throw new Error(data?.error ?? "Anmeldung fehlgeschlagen.");
       }
 
+      clearAccountCaches();
       startTransition(() => {
         router.replace("/campaigns");
         router.refresh();
@@ -211,7 +213,13 @@ export function LoginScreen({
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Passwort"
                   autoComplete={mode === "LOGIN" ? "current-password" : "new-password"}
+                  minLength={mode === "REGISTER" ? 10 : 1}
                 />
+                {mode === "REGISTER" ? (
+                  <span className="mt-2 block text-xs text-[#9f9a91]">
+                    Mindestens 10 Zeichen
+                  </span>
+                ) : null}
               </label>
 
               {mode === "LOGIN" ? (

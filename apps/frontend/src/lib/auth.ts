@@ -168,8 +168,8 @@ export async function registerUser(
     throw new AuthError("Bitte einen Anzeigenamen angeben.", 400);
   }
 
-  if (input.password.trim().length < 6) {
-    throw new AuthError("Das Passwort muss mindestens 6 Zeichen haben.", 400);
+  if (input.password.trim().length < 10) {
+    throw new AuthError("Das Passwort muss mindestens 10 Zeichen haben.", 400);
   }
 
   const existingUser = await prisma.user.findUnique({

@@ -14,7 +14,7 @@ describe("custom pack publishing and opening", () => {
     await prisma.$disconnect();
   });
 
-  it("freezes published versions and reproduces pulls for the same seed", async () => {
+  it("freezes published versions and makes paid openings idempotent", async () => {
     const tag = `vitest-custom-pack-${Date.now()}`;
     const cardIds: string[] = [];
     let runId: string | undefined;
@@ -85,18 +85,37 @@ describe("custom pack publishing and opening", () => {
       await expect(updateCustomPackDraft(prisma, user.id, run.id, version.id, draft))
         .rejects.toThrow(/unveränderlich/i);
 
-      const first = await openCustomPackVersion(prisma, user.id, run.id, version.id, "stable-seed");
-      const second = await openCustomPackVersion(prisma, user.id, run.id, version.id, "stable-seed");
-      expect(first.pulls.map((pull) => pull.cardId)).toEqual(second.pulls.map((pull) => pull.cardId));
-      expect(first.auditHash).toBe(second.auditHash);
+      await expect(openCustomPackVersion(prisma, user.id, run.id, version.id, {
+        idempotencyKey: "   ",
+      })).rejects.toMatchObject({ code: "idempotency_key_required", status: 400 });
 
-      const [opening, ownedCards] = await Promise.all([
+      const first = await openCustomPackVersion(prisma, user.id, run.id, version.id, {
+        idempotencyKey: "stable-purchase-intent",
+      });
+      const retry = await openCustomPackVersion(prisma, user.id, run.id, version.id, {
+        idempotencyKey: "stable-purchase-intent",
+      });
+      expect(retry.id).toBe(first.id);
+      expect(retry.pulls.map((pull) => pull.cardId)).toEqual(first.pulls.map((pull) => pull.cardId));
+      expect(retry.auditHash).toBe(first.auditHash);
+
+      const second = await openCustomPackVersion(prisma, user.id, run.id, version.id, {
+        idempotencyKey: "second-purchase-intent",
+      });
+      expect(second.id).not.toBe(first.id);
+      expect(second.seed).not.toBe(first.seed);
+
+      const [opening, ownedCards, wallet, purchases] = await Promise.all([
         prisma.packOpening.findUniqueOrThrow({ where: { id: first.id } }),
         prisma.collectionEntry.count({ where: { runId: run.id, userId: user.id } }),
+        prisma.creditWallet.findUniqueOrThrow({ where: { runId_userId: { runId: run.id, userId: user.id } } }),
+        prisma.creditLedgerEntry.count({ where: { runId: run.id, userId: user.id, source: "PACK_PURCHASE" } }),
       ]);
       expect(opening.customPackVersionId).toBe(version.id);
       expect(opening.ruleVersionId).toBeTruthy();
       expect(ownedCards).toBe(18);
+      expect(wallet.balance).toBe(800);
+      expect(purchases).toBe(2);
     } finally {
       if (runId) await prisma.playGroupRun.deleteMany({ where: { id: runId } });
       if (generatedSetId) await prisma.cardSet.deleteMany({ where: { id: generatedSetId } });

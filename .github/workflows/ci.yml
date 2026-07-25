@@ -10,6 +10,20 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: yugioh_duel_hub
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d yugioh_duel_hub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       APP_MODE: desktop-demo
       DATABASE_URL: file:./demo.db
@@ -41,6 +55,9 @@ jobs:
       - name: Prepare test database
         run: npx prisma db push --schema prisma/schema.prisma --skip-generate
 
+      - name: Apply PostgreSQL migrations
+        run: npm run db:migrate
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -49,6 +66,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Test Fastify API against PostgreSQL
+        run: npm run test:api:integration
 
       - name: Build
         run: npm run build

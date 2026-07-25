@@ -7,7 +7,7 @@ import type {
   DeckSectionValue,
 } from "@ygo/contracts";
 import type { DragEvent, MouseEvent } from "react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
 import { Panel, StatusPill } from "@/components/panel";
@@ -613,12 +613,21 @@ export function DeckEditorConsole({
   const [mobileEditorView, setMobileEditorView] = useState<MobileEditorView>("CATALOG");
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
   const [error, setError] = useState("");
+  const [catalogError, setCatalogError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const catalogRequestRef = useRef(0);
   const deferredCardSearch = useDeferredValue(cardSearch);
 
   useEffect(() => {
-    let cancelled = false;
+    const requestId = catalogRequestRef.current + 1;
+    catalogRequestRef.current = requestId;
+    queueMicrotask(() => {
+      if (catalogRequestRef.current !== requestId) return;
+      setCatalogLoading(true);
+      setCatalogError("");
+    });
 
     void cardCatalogClient
       .search({
@@ -631,23 +640,22 @@ export function DeckEditorConsole({
         limit: 60,
       })
       .then((payload) => {
-        if (cancelled) return;
+        if (catalogRequestRef.current !== requestId) return;
         setCollectionCards(payload.items);
         setCatalogTotal(payload.total);
         setCatalogCursor(payload.nextCursor);
-        setError("");
       })
       .catch((catalogError) => {
-        if (!cancelled) {
-          setError(getApiErrorMessage(catalogError, "Kartenkatalog konnte nicht geladen werden."));
+        if (catalogRequestRef.current === requestId) {
+          setCatalogError(getApiErrorMessage(catalogError, "Kartenkatalog konnte nicht geladen werden."));
         }
       })
       .finally(() => {
-        if (!cancelled) setCatalogLoading(false);
+        if (catalogRequestRef.current === requestId) setCatalogLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      if (catalogRequestRef.current === requestId) catalogRequestRef.current += 1;
     };
   }, [
     activeBanlistId,
@@ -770,7 +778,9 @@ export function DeckEditorConsole({
 
   async function handleLoadMoreCatalogCards() {
     if (!catalogCursor || catalogLoading) return;
+    const requestId = catalogRequestRef.current;
     setCatalogLoading(true);
+    setCatalogError("");
     try {
       const payload = await cardCatalogClient.search({
         q: deferredCardSearch.trim(),
@@ -782,6 +792,7 @@ export function DeckEditorConsole({
         cursor: catalogCursor,
         limit: 60,
       });
+      if (catalogRequestRef.current !== requestId) return;
       setCollectionCards((current) => {
         const known = new Set(current.map((card) => card.cardId));
         return [...current, ...payload.items.filter((card) => !known.has(card.cardId))];
@@ -789,9 +800,11 @@ export function DeckEditorConsole({
       setCatalogCursor(payload.nextCursor);
       setCatalogTotal(payload.total);
     } catch (catalogError) {
-      setError(getApiErrorMessage(catalogError, "Weitere Karten konnten nicht geladen werden."));
+      if (catalogRequestRef.current === requestId) {
+        setCatalogError(getApiErrorMessage(catalogError, "Weitere Karten konnten nicht geladen werden."));
+      }
     } finally {
-      setCatalogLoading(false);
+      if (catalogRequestRef.current === requestId) setCatalogLoading(false);
     }
   }
 
@@ -984,13 +997,10 @@ export function DeckEditorConsole({
   }
 
   function canIncreaseDeckCard(card: DeckCard) {
-    const collectionCard = collectionCards.find((entry) => entry.cardId === card.cardId);
-
-    if (!collectionCard) {
-      return false;
-    }
-
-    return canAddCollectionCard(collectionCard);
+    const plannedCopies = allDeckCards
+      .filter((entry) => entry.cardId === card.cardId)
+      .reduce((sum, entry) => sum + entry.quantity, 0);
+    return plannedCopies < 3;
   }
 
   const kindFilters: Array<{ value: KindFilter; label: string }> = [
@@ -1003,11 +1013,19 @@ export function DeckEditorConsole({
 
   return (
     <div className="space-y-6">
-      {(error || success) && (
+      {(error || catalogError || success) && (
         <div className="grid gap-3">
           {error ? (
             <div className="rounded-[22px] border border-[rgba(204,97,78,0.28)] bg-[rgba(141,61,48,0.14)] px-5 py-4 text-sm leading-7 text-[#f2c1b7]">
               {error}
+            </div>
+          ) : null}
+          {catalogError ? (
+            <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-[rgba(204,97,78,0.28)] bg-[rgba(141,61,48,0.14)] px-5 py-4 text-sm leading-7 text-[#f2c1b7]">
+              <span>{catalogError}</span>
+              <button type="button" className="ui-button-neutral" onClick={() => setCatalogRevision((revision) => revision + 1)}>
+                Erneut laden
+              </button>
             </div>
           ) : null}
           {success ? (
@@ -1069,15 +1087,24 @@ export function DeckEditorConsole({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  void handleDeleteDeck();
-                }}
+                onClick={() => setDeleteConfirmationOpen(true)}
                 disabled={isSubmitting}
                 className="ui-button-danger disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Löschen
               </button>
             </div>
+
+            {deleteConfirmationOpen ? (
+              <div role="alertdialog" aria-labelledby="delete-deck-title" aria-describedby="delete-deck-description" className="xl:col-span-4 rounded-[18px] border border-[rgba(204,97,78,0.32)] bg-[rgba(141,61,48,0.14)] px-4 py-4">
+                <p id="delete-deck-title" className="font-semibold text-[#ffe3ca]">Deck „{activeDeck.name}“ wirklich löschen?</p>
+                <p id="delete-deck-description" className="mt-1 text-sm text-[#d8b8ac]">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" className="ui-button-neutral" onClick={() => setDeleteConfirmationOpen(false)} disabled={isSubmitting}>Abbrechen</button>
+                  <button type="button" className="ui-button-danger" onClick={() => void handleDeleteDeck()} disabled={isSubmitting}>Deck endgültig löschen</button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="xl:col-span-4">
               <div className="flex flex-wrap gap-2">
@@ -1143,6 +1170,7 @@ export function DeckEditorConsole({
           <button
             key={value}
             type="button"
+            aria-pressed={mobileEditorView === value}
             onClick={() => setMobileEditorView(value)}
             className={classes(
               "rounded-[8px] border px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em]",
@@ -1184,6 +1212,7 @@ export function DeckEditorConsole({
                     <button
                       key={filter}
                       type="button"
+                      aria-pressed={ownershipFilter === filter}
                       onClick={() => setOwnershipFilter(filter)}
                       className={classes(
                         "rounded-full border px-4 py-2 text-sm font-semibold transition",
@@ -1204,6 +1233,7 @@ export function DeckEditorConsole({
                   <button
                     key={filter.value}
                     type="button"
+                    aria-pressed={kindFilter === filter.value}
                     onClick={() => setKindFilter(filter.value)}
                     disabled={isSubmitting}
                     className={classes(

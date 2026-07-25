@@ -8,7 +8,7 @@ import {
 
 function createCache(): LocalSyncCache {
   return {
-    version: 1,
+    version: 2,
     updatedAt: "2026-07-09T12:00:00.000Z",
     cursor: "2026-07-09T12:00:00.000Z",
     bootstrap: {

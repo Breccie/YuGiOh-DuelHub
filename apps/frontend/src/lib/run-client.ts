@@ -19,6 +19,8 @@ import {
   apiPostJson,
   apiPutJson,
 } from "@/lib/api-client";
+import { clearAccountCaches } from "@/lib/account-cache";
+import { refreshLocalSyncCacheSoon } from "@/lib/sync-cache-refresh";
 
 export const runClient = {
   list() {
@@ -36,11 +38,14 @@ export const runClient = {
       input,
     );
   },
-  setActive(runId: string) {
-    return apiPutJson<ActiveRunResponse, UpdateActiveRunRequest>(
+  async setActive(runId: string) {
+    const payload = await apiPutJson<ActiveRunResponse, UpdateActiveRunRequest>(
       "/api/v1/runs/active",
       { runId },
     );
+    clearAccountCaches();
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return payload;
   },
   updateSettings(runId: string, input: UpdateRunSettingsRequest) {
     return apiPatchJson<ActiveRunResponse["run"], UpdateRunSettingsRequest>(

@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient, RunRole } from "@prisma/client";
 import { randomBytes } from "node:crypto";
-import { DomainError, applyLedgerAmount } from "@ygo/domain";
+import { campaignRuleConfigSchema } from "@ygo/contracts";
+import { DomainError, applyLedgerAmount, normalizeDuelistId } from "@ygo/domain";
 import { isStandardProgressionPack } from "@/lib/pack-product-classification";
 
 const DEFAULT_RUN_NAME = "DM Progression 2002";
@@ -11,6 +12,33 @@ const DEBUG_CREDIT_DUELIST_IDS = new Set(["YUGI-001", "YUGIMOTO", "YUGI001"]);
 const INITIAL_UNLOCK_COUNT = 5;
 
 type PrismaLike = PrismaClient | Prisma.TransactionClient;
+
+function parseStoredCampaignRules(config: Prisma.JsonValue | null | undefined) {
+  const parsed = campaignRuleConfigSchema.safeParse(config);
+  return parsed.success ? parsed.data : null;
+}
+
+export function applyCreditLimit(options: {
+  balance: number;
+  amount: number;
+  creditLimit: number | null;
+}) {
+  const nextBalance = applyLedgerAmount({
+    balance: options.balance,
+    amount: options.amount,
+  });
+  if (options.amount <= 0 || options.creditLimit === null) {
+    return {
+      appliedAmount: options.amount,
+      balanceAfter: nextBalance,
+    };
+  }
+  const balanceAfter = Math.min(nextBalance, options.creditLimit);
+  return {
+    appliedAmount: Math.max(0, balanceAfter - options.balance),
+    balanceAfter,
+  };
+}
 
 function createInviteCode() {
   return randomBytes(5).toString("hex").toUpperCase();
@@ -539,6 +567,7 @@ export async function requireRunMembership(
     runId: string;
     userId: string;
     organizerOnly?: boolean;
+    ownerOnly?: boolean;
   },
 ) {
   const membership = await prisma.runMembership.findUnique({
@@ -570,7 +599,141 @@ export async function requireRunMembership(
     });
   }
 
+  if (options.ownerOnly && membership.role !== "OWNER") {
+    throw new DomainError({
+      code: "not_run_owner",
+      message: "Nur der Owner kann diese Aktion ausführen.",
+      status: 403,
+    });
+  }
+
   return membership;
+}
+
+export function assertCanAssignRunRole(options: {
+  actorRole: RunRole;
+  requestedRole: Exclude<RunRole, "OWNER">;
+  existingRole?: RunRole | null;
+  targetIsOwner: boolean;
+}) {
+  if (options.targetIsOwner || options.existingRole === "OWNER") {
+    throw new DomainError({
+      code: "run_owner_role_immutable",
+      message: "Die Owner-Rolle einer Kampagne kann nicht über die Mitgliederverwaltung geändert werden.",
+      status: 403,
+    });
+  }
+
+  if (options.actorRole === "PLAYER") {
+    throw new DomainError({
+      code: "not_run_organizer",
+      message: "Nur Owner oder Organizer können Mitglieder hinzufügen.",
+      status: 403,
+    });
+  }
+
+  if (
+    options.actorRole === "ORGANIZER"
+    && (
+      options.requestedRole !== "PLAYER"
+      || (options.existingRole !== undefined
+        && options.existingRole !== null
+        && options.existingRole !== "PLAYER")
+    )
+  ) {
+    throw new DomainError({
+      code: "run_role_assignment_forbidden",
+      message: "Organizer dürfen nur Spieler hinzufügen und keine privilegierten Rollen verändern.",
+      status: 403,
+    });
+  }
+}
+
+export async function addRunMember(
+  prisma: PrismaClient,
+  options: {
+    runId: string;
+    actorId: string;
+    duelistId: string;
+    role?: Exclude<RunRole, "OWNER">;
+  },
+) {
+  const [actorMembership, run, user] = await Promise.all([
+    requireRunMembership(prisma, {
+      runId: options.runId,
+      userId: options.actorId,
+      organizerOnly: true,
+    }),
+    prisma.playGroupRun.findUnique({
+      where: { id: options.runId },
+      select: { ownerId: true },
+    }),
+    prisma.user.findUnique({
+      where: { duelistId: normalizeDuelistId(options.duelistId) },
+      select: { id: true, duelistId: true, displayName: true },
+    }),
+  ]);
+
+  if (!run) {
+    throw new DomainError({
+      code: "run_not_found",
+      message: "Kampagne wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+  if (!user) {
+    throw new DomainError({
+      code: "member_not_found",
+      message: "Dieser Duelist wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+
+  const existingMembership = await prisma.runMembership.findUnique({
+    where: {
+      runId_userId: {
+        runId: options.runId,
+        userId: user.id,
+      },
+    },
+  });
+  const requestedRole = options.role ?? "PLAYER";
+
+  assertCanAssignRunRole({
+    actorRole: actorMembership.role,
+    requestedRole,
+    existingRole: existingMembership?.role,
+    targetIsOwner: user.id === run.ownerId,
+  });
+
+  const member = await prisma.runMembership.upsert({
+    where: {
+      runId_userId: {
+        runId: options.runId,
+        userId: user.id,
+      },
+    },
+    create: {
+      runId: options.runId,
+      userId: user.id,
+      role: requestedRole,
+    },
+    update: actorMembership.role === "OWNER" ? { role: requestedRole } : {},
+    include: {
+      user: {
+        select: {
+          duelistId: true,
+          displayName: true,
+        },
+      },
+    },
+  });
+  await getOrCreateWallet(prisma, {
+    runId: options.runId,
+    userId: user.id,
+  });
+
+  return member;
 }
 
 export async function createRun(
@@ -779,7 +942,13 @@ export async function getOrCreateWallet(
       },
     },
     include: {
-      run: true,
+      run: {
+        include: {
+          activeRuleVersion: {
+            select: { config: true },
+          },
+        },
+      },
     },
   });
 
@@ -791,22 +960,43 @@ export async function getOrCreateWallet(
     });
   }
 
+  const campaignRules = parseStoredCampaignRules(
+    membership.run.activeRuleVersion?.config,
+  );
+  let initialBalance = membership.run.startingCredits;
+  if (membership.role !== "OWNER" && campaignRules?.progression.catchUpMode === "HOST_GRANT") {
+    initialBalance = 0;
+  } else if (
+    membership.role !== "OWNER"
+    && campaignRules?.progression.catchUpMode === "MATCH_CURRENT"
+  ) {
+    const richestWallet = await prisma.creditWallet.findFirst({
+      where: { runId: options.runId, userId: { not: options.userId } },
+      orderBy: { balance: "desc" },
+      select: { balance: true },
+    });
+    initialBalance = Math.max(initialBalance, richestWallet?.balance ?? 0);
+  }
+  if (campaignRules?.economy.creditLimit !== null && campaignRules?.economy.creditLimit !== undefined) {
+    initialBalance = Math.min(initialBalance, campaignRules.economy.creditLimit);
+  }
+
   const wallet = await prisma.creditWallet.create({
     data: {
       runId: options.runId,
       userId: options.userId,
-      balance: membership.run.startingCredits,
+      balance: initialBalance,
     },
   });
 
-  if (membership.run.startingCredits > 0) {
+  if (initialBalance > 0) {
     await prisma.creditLedgerEntry.create({
       data: {
         runId: options.runId,
         walletId: wallet.id,
         userId: options.userId,
-        amount: membership.run.startingCredits,
-        balanceAfter: membership.run.startingCredits,
+        amount: initialBalance,
+        balanceAfter: initialBalance,
         source: "STARTING_BALANCE",
         note: "Startguthaben für die Runde.",
       },
@@ -833,10 +1023,21 @@ export async function creditWallet(
   },
 ) {
   const wallet = await getOrCreateWallet(prisma, options);
-  const balanceAfter = applyLedgerAmount({
+  const run = await prisma.playGroupRun.findUnique({
+    where: { id: options.runId },
+    select: {
+      activeRuleVersion: {
+        select: { config: true },
+      },
+    },
+  });
+  const rules = parseStoredCampaignRules(run?.activeRuleVersion?.config);
+  const { appliedAmount, balanceAfter } = applyCreditLimit({
     balance: wallet.balance,
     amount: options.amount,
+    creditLimit: rules?.economy.creditLimit ?? null,
   });
+  if (appliedAmount === 0) return wallet;
 
   const updatedWallet = await prisma.creditWallet.update({
     where: {
@@ -852,12 +1053,15 @@ export async function creditWallet(
       runId: options.runId,
       walletId: wallet.id,
       userId: options.userId,
-      amount: options.amount,
+      amount: appliedAmount,
       balanceAfter,
       source: options.source,
       referenceType: options.referenceType ?? null,
       referenceId: options.referenceId ?? null,
-      note: options.note?.trim() || null,
+      note:
+        appliedAmount === options.amount
+          ? options.note?.trim() || null
+          : `${options.note?.trim() || "Credit-Gutschrift"} (durch Credit-Limit gekürzt)`,
     },
   });
 

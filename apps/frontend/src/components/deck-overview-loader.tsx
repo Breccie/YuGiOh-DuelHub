@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DeckOverviewConsole } from "@/components/deck-overview-console";
-import { ApiClientError, isActiveRunRequiredError } from "@/lib/api-client";
+import { ApiClientError, getApiErrorMessage, isActiveRunRequiredError } from "@/lib/api-client";
 import { readLocalSyncCache } from "@/lib/sync-cache";
 import { refreshLocalSyncCache } from "@/lib/sync-cache-refresh";
 import {
@@ -41,11 +41,14 @@ export function DeckOverviewLoader() {
       createFallbackDeckOverview()
     );
   });
+  const [loadError, setLoadError] = useState("");
+  const [retryRevision, setRetryRevision] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
 
     async function refresh() {
+      setLoadError("");
       await refreshLocalSyncCache({
         shouldContinue: () => isMounted,
       }).catch(() => null);
@@ -79,13 +82,30 @@ export function DeckOverviewLoader() {
 
       if (isActiveRunRequiredError(error)) {
         router.replace("/campaigns");
+        return;
+      }
+
+      if (isMounted) {
+        setLoadError(getApiErrorMessage(error, "Deckdaten konnten nicht aktualisiert werden."));
       }
     });
 
     return () => {
       isMounted = false;
     };
-  }, [router, selectedDeckId]);
+  }, [retryRevision, router, selectedDeckId]);
 
-  return <DeckOverviewConsole {...payload} />;
+  return (
+    <>
+      {loadError ? (
+        <div role="alert" className="fixed left-1/2 top-4 z-[70] flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-[16px] border border-[rgba(204,97,78,0.34)] bg-[#21100f] px-4 py-3 text-sm text-[#ffe3ca] shadow-2xl">
+          <span>{loadError} Eventuell werden lokale Zwischendaten angezeigt.</span>
+          <button type="button" className="ui-button-neutral" onClick={() => setRetryRevision((revision) => revision + 1)}>
+            Erneut versuchen
+          </button>
+        </div>
+      ) : null}
+      <DeckOverviewConsole {...payload} />
+    </>
+  );
 }

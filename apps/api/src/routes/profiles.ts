@@ -7,6 +7,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getPublicProfileByDuelistId } from "@/lib/profile-service";
+import { updateViewerProfile } from "@/lib/profile-settings-service";
 import { getViewerSession, requireViewerSession } from "../lib/auth";
 import { sendApiError } from "../lib/errors";
 import { getPrisma } from "../lib/prisma";
@@ -25,33 +26,11 @@ const profileRoutes: FastifyPluginAsync = async (app) => {
       const prisma = getPrisma();
       const session = await requireViewerSession(request, prisma);
       const body = updateProfileRequestSchema.parse(request.body ?? {});
-      const updated = await prisma.user.update({
-        where: {
-          id: session.userId,
-        },
-        data: {
-          displayName: body.displayName,
-          bio: body.bio === undefined ? undefined : body.bio?.trim() || null,
-          favoriteEra:
-            body.favoriteEra === undefined ? undefined : body.favoriteEra?.trim() || null,
-          avatarKey: body.avatarKey,
-          isPublic: body.isPublic,
-          showcaseBinderId:
-            body.showcaseBinderId === undefined
-              ? undefined
-              : body.showcaseBinderId?.trim() || null,
-        },
-        select: {
-          id: true,
-          duelistId: true,
-          displayName: true,
-          bio: true,
-          favoriteEra: true,
-          avatarKey: true,
-          isPublic: true,
-          showcaseBinderId: true,
-        },
-      });
+      const updated = await updateViewerProfile(
+        prisma as unknown as FrontendPrismaClient,
+        session.userId,
+        body,
+      );
 
       return reply.send(updateProfileResponseSchema.parse({ profile: updated }));
     } catch (error) {

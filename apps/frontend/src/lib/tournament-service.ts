@@ -1,7 +1,10 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { pairSwissRound } from "@ygo/domain";
 import type { TournamentOverviewDto, TournamentStandingsDto } from "@/lib/app-dtos";
-import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
+import {
+  getActiveCampaignRuleConfig,
+  getActiveCampaignRuleVersionId,
+} from "@/lib/campaign-rule-service";
 import { markTournamentProgressionReady } from "@/lib/progression-service";
 import { creditWallet, getActiveRun, requireRunMembership } from "@/lib/run-service";
 
@@ -806,6 +809,7 @@ export async function createSwissRound(
   tournamentId: string,
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const ruleConfig = await getActiveCampaignRuleConfig(prisma, activeRun.id);
   const tournament = await loadTournament(prisma, tournamentId);
 
   if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
@@ -860,7 +864,12 @@ export async function createSwissRound(
           playerTwoId: pair.playerTwoId,
           status: pair.playerTwoId ? "PENDING" : "BYE",
           winnerId: pair.playerTwoId ? null : pair.playerOneId,
-          playerOneScore: pair.playerTwoId ? 0 : 2,
+          playerOneScore:
+            pair.playerTwoId
+              ? 0
+              : ruleConfig.tournaments.matchMode === "SINGLE"
+                ? 1
+                : 2,
           playerTwoScore: 0,
           notes: pair.playerTwoId ? null : "Automatisches Bye",
         },
@@ -893,6 +902,7 @@ export async function recordTournamentMatchResult(
   },
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const ruleConfig = await getActiveCampaignRuleConfig(prisma, activeRun.id);
   const viewerMembership = activeRun.memberships.find(
     (membership) => membership.userId === viewerId,
   );
@@ -929,6 +939,9 @@ export async function recordTournamentMatchResult(
   }
 
   if (action === "confirm") {
+    if (!ruleConfig.tournaments.requireResultConfirmation) {
+      throw new Error("Diese Kampagne benötigt keine separate Ergebnisbestätigung.");
+    }
     if (match.status !== "REPORTED" || !match.reportedById) {
       throw new Error("Für dieses Match liegt noch kein Ergebnis zur Bestätigung vor.");
     }
@@ -971,6 +984,15 @@ export async function recordTournamentMatchResult(
   if (playerOneScore === undefined || playerTwoScore === undefined) {
     throw new Error("Bitte beide Scores eintragen.");
   }
+  const maximumScore =
+    ruleConfig.tournaments.matchMode === "SINGLE" ? 1 : 2;
+  if (playerOneScore > maximumScore || playerTwoScore > maximumScore) {
+    throw new Error(
+      ruleConfig.tournaments.matchMode === "SINGLE"
+        ? "Im Best-of-1 darf ein Spieler höchstens einen Sieg melden."
+        : "Im Best-of-3 darf ein Spieler höchstens zwei Siege melden.",
+    );
+  }
 
   const winnerId =
     playerOneScore === playerTwoScore
@@ -989,7 +1011,10 @@ export async function recordTournamentMatchResult(
       id: matchId,
     },
     data: {
-      status: action === "adminConfirm" ? "COMPLETED" : "REPORTED",
+      status:
+        action === "adminConfirm" || !ruleConfig.tournaments.requireResultConfirmation
+          ? "COMPLETED"
+          : "REPORTED",
       playerOneScore,
       playerTwoScore,
       winnerId: winnerId || null,
@@ -997,7 +1022,10 @@ export async function recordTournamentMatchResult(
       reportedById: action === "adminConfirm" ? match.reportedById : viewerId,
       reportedAt: action === "adminConfirm" ? (match.reportedAt ?? now) : now,
       confirmedById: action === "adminConfirm" ? viewerId : null,
-      confirmedAt: action === "adminConfirm" ? now : null,
+      confirmedAt:
+        action === "adminConfirm" || !ruleConfig.tournaments.requireResultConfirmation
+          ? now
+          : null,
     },
   });
 

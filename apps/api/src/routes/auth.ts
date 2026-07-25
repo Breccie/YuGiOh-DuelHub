@@ -26,40 +26,62 @@ const authRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/login", async (request, reply) => {
-    try {
-      const prisma = getPrisma();
-      const body = loginRequestSchema.parse(request.body ?? {});
-      const user = await authenticateUser(prisma, body.duelistId, body.password);
-      const session = await createSessionForUser(prisma, user.id, {
-        rememberDevice: body.rememberDevice,
-        deviceLabel: body.deviceLabel ?? null,
-        userAgent: request.headers["user-agent"] ?? null,
-      });
+  app.post(
+    "/login",
+    {
+      config: {
+        rateLimit: {
+          max: 10,
+          timeWindow: "1 minute",
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const prisma = getPrisma();
+        const body = loginRequestSchema.parse(request.body ?? {});
+        const user = await authenticateUser(prisma, body.duelistId, body.password);
+        const session = await createSessionForUser(prisma, user.id, {
+          rememberDevice: body.rememberDevice,
+          deviceLabel: body.deviceLabel ?? null,
+          userAgent: request.headers["user-agent"] ?? null,
+        });
 
-      applySessionCookie(reply, session.sessionToken, session.expiresAt);
-      return reply.send({ session: session.viewerSession });
-    } catch (error) {
-      return sendApiError(reply, error, "Login fehlgeschlagen.");
-    }
-  });
+        applySessionCookie(reply, session.sessionToken, session.expiresAt);
+        return reply.send({ session: session.viewerSession });
+      } catch (error) {
+        return sendApiError(reply, error, "Login fehlgeschlagen.");
+      }
+    },
+  );
 
-  app.post("/register", async (request, reply) => {
-    try {
-      const prisma = getPrisma();
-      const body = registerRequestSchema.parse(request.body ?? {});
-      const user = await registerUser(prisma, body);
-      const session = await createSessionForUser(prisma, user.id, {
-        rememberDevice: true,
-        userAgent: request.headers["user-agent"] ?? null,
-      });
+  app.post(
+    "/register",
+    {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 hour",
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const prisma = getPrisma();
+        const body = registerRequestSchema.parse(request.body ?? {});
+        const user = await registerUser(prisma, body);
+        const session = await createSessionForUser(prisma, user.id, {
+          rememberDevice: true,
+          userAgent: request.headers["user-agent"] ?? null,
+        });
 
-      applySessionCookie(reply, session.sessionToken, session.expiresAt);
-      return reply.status(201).send({ session: session.viewerSession });
-    } catch (error) {
-      return sendApiError(reply, error, "Registrierung fehlgeschlagen.");
-    }
-  });
+        applySessionCookie(reply, session.sessionToken, session.expiresAt);
+        return reply.status(201).send({ session: session.viewerSession });
+      } catch (error) {
+        return sendApiError(reply, error, "Registrierung fehlgeschlagen.");
+      }
+    },
+  );
 
   app.post("/logout", async (request, reply) => {
     try {

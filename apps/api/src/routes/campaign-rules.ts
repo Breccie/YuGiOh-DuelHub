@@ -47,6 +47,7 @@ const campaignRulesRoutes: FastifyPluginAsync = async (app) => {
         viewerId: session.userId,
         preset: body.preset,
         config: body.config,
+        reason: body.reason,
         effectiveAt: body.effectiveAt,
         effectiveCheckpointId: body.effectiveCheckpointId,
         activateImmediately: body.activateImmediately,

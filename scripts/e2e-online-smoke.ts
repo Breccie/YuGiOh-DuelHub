@@ -943,17 +943,52 @@ async function smokeTournament(primary: SmokeActor, secondary: SmokeActor) {
 async function cleanupApiSmokeUsers(duelistIds: string[]) {
   try {
     await withApiPrisma(async (prisma) => {
-      await prisma.user.deleteMany({
+      const smokeUsers = await prisma.user.findMany({
         where: {
           duelistId: {
             in: duelistIds,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+      const userIds = smokeUsers.map((user) => user.id);
+
+      if (userIds.length === 0) {
+        return;
+      }
+
+      // Rule versions and private pack definitions intentionally restrict author
+      // deletion. Remove the smoke-owned aggregate roots first so their dependent
+      // audit rows can cascade before the test accounts are deleted.
+      await prisma.$transaction([
+        prisma.playGroupRun.deleteMany({
+          where: {
+            ownerId: {
+              in: userIds,
+            },
+          },
+        }),
+        prisma.customPackDefinition.deleteMany({
+          where: {
+            createdById: {
+              in: userIds,
+            },
+          },
+        }),
+      ]);
+      await prisma.user.deleteMany({
+        where: {
+          id: {
+            in: userIds,
           },
         },
       });
     });
   } catch (error) {
     console.warn(
-      `[e2e-online] Cleanup skipped because the API database was not reachable: ${
+      `[e2e-online] Cleanup failed: ${
         error instanceof Error ? error.message : String(error)
       }`,
     );
@@ -1030,12 +1065,12 @@ async function main() {
   const suffix = Date.now();
   const primary: SmokeUser = {
     duelistId: `ONLINE-A-${suffix}`,
-    password: "Smoke123",
+    password: "Smoke12345",
     displayName: "Online Smoke Host",
   };
   const secondary: SmokeUser = {
     duelistId: `ONLINE-B-${suffix}`,
-    password: "Smoke123",
+    password: "Smoke12345",
     displayName: "Online Smoke Player",
   };
 

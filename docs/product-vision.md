@@ -1,12 +1,57 @@
 # Yu-Gi-Oh Duel Hub – Produktvision und Sandbox-Zielbild
 
-Stand: 2026-07-17
+Stand: 2026-07-24
 
 Der aktuelle visuelle Befund zu Kampagnen, Bindern und Decks ist in
 [ux-audit-campaign-binders-decks.md](ux-audit-campaign-binders-decks.md) dokumentiert.
 
 Der interaktive lokale Wireframe für das gemeinsame Editor-System liegt unter
 [wireframes/editor-system.html](wireframes/editor-system.html).
+
+## Umsetzungsstand nach Gesamtprüfung
+
+Der gemeinsame Kartenkatalog, der kampagnengebundene Deckeditor, der Bindereditor
+mit Wunschlistenpfad, versionierte Kampagnenregeln und versionierte Custom Packs
+sind als belastbare erste Ausbaustufe vorhanden. Die Prüfung vom 18.07.2026 hat
+insbesondere Parallelzugriffe, historische Referenzen, Rollen- und
+Kampagnengrenzen, sichere Online-Vorbereitung sowie die Desktop-/Mobile-Bedienung
+gehärtet.
+
+Bereits umgesetzt und geprüft:
+
+- serverseitiger All-Cards-Katalog mit Besitz- und Bannlistenstatus pro `runId`,
+- Entwurfsdecks mit fehlenden Karten, zentraler Spielbarkeitsprüfung und
+  kampagnenabhängigen Deckregeln,
+- transaktionssichere Drei-Kopien-Grenze über Main, Extra und Side,
+- Binder mit konkreten Druckversionen, Autosave-Fehlerbehandlung, Undo/Redo und
+  zugänglicher Wunschlistenaktion für nicht besessene Karten,
+- unveränderliche Regel- und Packversionen einschließlich planbarer Aktivierung,
+- idempotente, serverseitig zufällige Custom-Pack-Öffnungen mit atomarer
+  Credit-Abbuchung, Seed und Audit-Hash,
+- ownergebundene Regeländerungen mit Pflichtbegründung sowie wirksame
+  Credit-Limits, Catch-up-Startwerte, Trade-Reservierungsfristen,
+  Matchmodi und Ergebnisbestätigung,
+- private Custom-Pack-Vorlagen, die in eine aktive Kampagne kopiert werden können,
+- eine eigene kampagnengebundene Wunschlistenansicht,
+- veröffentlichte Profil-Showcases als Snapshots statt als direkter Zugriff auf
+  veränderliche Kampagnen-Binder,
+- Deckduplikate, Bibliotheksfilter und `.ydk`-Download in Desktop und Browser,
+- sichere Release-Skripte ohne automatisches destruktives Reseeding sowie
+  gehärteter Remote-Asset-Proxy.
+
+Noch nicht als vollständig abgeschlossen gelten:
+
+- alle übrigen dokumentierten Sandbox-Regeln bis in jeden Verbraucher
+  durchzureichen (insbesondere Pack-/Sammlungsoptionen, Deck-Lock und zusätzliche
+  Turniermodi),
+- die vollständige Einbindung eigener Packs in Progression sowie frei
+  konfigurierbare Rewards,
+- Credit-Anteile in Trades; die Einstellung ist bis zur atomaren
+  Ledger-Implementierung bewusst deaktiviert,
+- echtes Deck-Autosave mit Konfliktwiederholung; aktuell bleibt der explizite
+  Speichern-Button die verlässliche Primäraktion,
+- vollständiger Online-E2E-Smoke gegen die späteren Produktions-URLs und
+  produktiven Zugangsdaten.
 
 ## Produktversprechen
 

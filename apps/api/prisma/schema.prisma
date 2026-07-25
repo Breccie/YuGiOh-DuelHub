@@ -237,6 +237,7 @@ model User {
   createdAt                    DateTime                @default(now())
   updatedAt                    DateTime                @updatedAt
   showcaseBinder               CollectionBinder?       @relation("ShowcaseBinder", fields: [showcaseBinderId], references: [id], onDelete: SetNull)
+  showcaseSnapshot             ProfileShowcaseSnapshot?
   activeRun                    PlayGroupRun?           @relation("ActiveRun", fields: [activeRunId], references: [id], onDelete: SetNull)
   sessions                     Session[]
   ownedRuns                    PlayGroupRun[]          @relation("RunOwner")
@@ -276,6 +277,19 @@ model User {
   campaignRuleVersionsAuthored CampaignRuleVersion[]   @relation("CampaignRuleVersionAuthor")
   customPackDefinitionsCreated CustomPackDefinition[]  @relation("CustomPackDefinitionCreator")
   customPackTemplates          CustomPackTemplate[]
+}
+
+model ProfileShowcaseSnapshot {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  sourceBinderId   String?
+  binderName       String
+  highlightedCards Json
+  publishedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([publishedAt])
 }
 
 model PlayGroupRun {
@@ -409,12 +423,15 @@ model RunProgressionCheckpoint {
   updatedAt            DateTime               @updatedAt
   run                  PlayGroupRun           @relation(fields: [runId], references: [id], onDelete: Cascade)
   requiredTournament   Tournament?            @relation(fields: [requiredTournamentId], references: [id], onDelete: SetNull)
+  ruleVersion          CampaignRuleVersion?   @relation("ProgressionRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  scheduledRuleVersions CampaignRuleVersion[] @relation("EffectiveCampaignRuleCheckpoint")
   unlocks              RunProgressionUnlock[]
   promoAccesses        RunPromoAccess[]
 
   @@unique([runId, sequence])
   @@index([runId, status, sequence])
   @@index([requiredTournamentId])
+  @@index([ruleVersionId])
 }
 
 model RunProgressionUnlock {
@@ -546,8 +563,10 @@ model RewardGrant {
   recipient     User              @relation("RewardGrantRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   grantedBy     User?             @relation("RewardGrantGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
   packSet       CardSet?          @relation(fields: [packSetId], references: [id], onDelete: SetNull)
+  ruleVersion   CampaignRuleVersion? @relation("RewardGrantRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
 
   @@index([runId, recipientId, status])
+  @@index([ruleVersionId])
 }
 
 model Session {
@@ -641,6 +660,7 @@ model CardSet {
   rewardGrants       RewardGrant[]
   promoSources       PromoSource[]
   progressionUnlocks RunProgressionUnlock[]
+  generatedCustomPackVersions CustomPackVersion[] @relation("CustomPackGeneratedSet")
 }
 
 model SetCard {
@@ -658,6 +678,7 @@ model SetCard {
   collectionEntries CollectionEntry[]
   promoSourceCards  PromoSourceCard[]
   promoClaims       PromoClaim[]
+  customPackPoolEntries CustomPackCardPoolEntry[] @relation("CustomPackPoolPrinting")
 
   @@unique([setId, setCode, rarity])
   @@index([cardId])
@@ -679,11 +700,15 @@ model PackOpening {
   set                 CardSet           @relation(fields: [setId], references: [id], onDelete: Cascade)
   run                 PlayGroupRun?     @relation(fields: [runId], references: [id], onDelete: Cascade)
   batch               PackOpeningBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  ruleVersion         CampaignRuleVersion? @relation("PackOpeningRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  customPackVersion   CustomPackVersion? @relation("CustomPackVersionOpenings", fields: [customPackVersionId], references: [id], onDelete: Restrict)
   pulls               PackPull[]
 
   @@index([userId, openedAt])
   @@index([runId, openedAt])
   @@index([batchId])
+  @@index([ruleVersionId])
+  @@index([customPackVersionId])
 }
 
 model PackOpeningBatch {
@@ -700,11 +725,13 @@ model PackOpeningBatch {
   run            PlayGroupRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   set            CardSet              @relation(fields: [setId], references: [id], onDelete: Cascade)
+  ruleVersion    CampaignRuleVersion? @relation("PackOpeningBatchRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
   openings       PackOpening[]
 
   @@unique([runId, userId, idempotencyKey])
   @@index([runId, createdAt])
   @@index([userId, createdAt])
+  @@index([ruleVersionId])
 }
 
 model PackPull {
@@ -841,6 +868,7 @@ model CampaignWishlistItem {
   @@index([runId, userId, updatedAt])
 }
 
+/// PostgreSQL also enforces one ACTIVE row per run with a partial unique index.
 model CampaignRuleVersion {
   id                    String                    @id @default(cuid())
   runId                 String
@@ -851,14 +879,22 @@ model CampaignRuleVersion {
   effectiveAt           DateTime?
   effectiveCheckpointId String?
   createdById           String
+  changeReason          String?
   createdAt             DateTime                  @default(now())
   activatedAt           DateTime?
   run                   PlayGroupRun              @relation("CampaignRuleVersions", fields: [runId], references: [id], onDelete: Cascade)
   activeForRun          PlayGroupRun?             @relation("ActiveCampaignRuleVersion")
   createdBy             User                      @relation("CampaignRuleVersionAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  effectiveCheckpoint   RunProgressionCheckpoint? @relation("EffectiveCampaignRuleCheckpoint", fields: [effectiveCheckpointId], references: [id], onDelete: SetNull)
+  rewardGrants          RewardGrant[]              @relation("RewardGrantRuleVersion")
+  packOpenings          PackOpening[]              @relation("PackOpeningRuleVersion")
+  openingBatches        PackOpeningBatch[]         @relation("PackOpeningBatchRuleVersion")
+  progressionCheckpoints RunProgressionCheckpoint[] @relation("ProgressionRuleVersion")
+  tournaments           Tournament[]               @relation("TournamentRuleVersion")
 
   @@unique([runId, version])
   @@index([runId, status, effectiveAt])
+  @@index([effectiveCheckpointId])
 }
 
 model CustomPackDefinition {
@@ -896,12 +932,15 @@ model CustomPackVersion {
   createdAt      DateTime                   @default(now())
   updatedAt      DateTime                   @updatedAt
   definition     CustomPackDefinition       @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  generatedSet   CardSet?                   @relation("CustomPackGeneratedSet", fields: [generatedSetId], references: [id], onDelete: Restrict)
   poolEntries    CustomPackCardPoolEntry[]
   slots          CustomPackSlot[]
   accesses       CampaignCustomPackAccess[]
+  openings       PackOpening[]              @relation("CustomPackVersionOpenings")
 
   @@unique([definitionId, version])
   @@index([definitionId, status, version])
+  @@index([generatedSetId])
 }
 
 model CustomPackCardPoolEntry {
@@ -914,9 +953,11 @@ model CustomPackCardPoolEntry {
   createdAt DateTime          @default(now())
   version   CustomPackVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
   card      Card              @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  setCard   SetCard?          @relation("CustomPackPoolPrinting", fields: [setCardId], references: [id], onDelete: Restrict)
 
   @@unique([versionId, cardId, rarity, setCardId])
   @@index([versionId, rarity])
+  @@index([setCardId])
 }
 
 model CustomPackSlot {
@@ -1056,6 +1097,7 @@ model Trade {
   activeVersionId      String?        @unique
   acceptedVersionId    String?        @unique
   acceptedAt           DateTime?
+  reservationExpiresAt DateTime?
   proposerConfirmedAt  DateTime?
   responderConfirmedAt DateTime?
   cancelledByUserId    String?
@@ -1073,6 +1115,7 @@ model Trade {
   @@index([proposerId, proposedAt])
   @@index([responderId, proposedAt])
   @@index([runId, proposedAt])
+  @@index([runId, status, reservationExpiresAt])
 }
 
 model TradeItem {
@@ -1190,6 +1233,7 @@ model Tournament {
   updatedAt              DateTime                   @updatedAt
   host                   User                       @relation("TournamentHost", fields: [hostId], references: [id], onDelete: Cascade)
   run                    PlayGroupRun?              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  ruleVersion            CampaignRuleVersion?       @relation("TournamentRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
   participants           TournamentParticipant[]
   rounds                 TournamentRound[]
   matches                TournamentMatch[]
@@ -1197,6 +1241,7 @@ model Tournament {
 
   @@index([hostId, createdAt])
   @@index([runId, createdAt])
+  @@index([ruleVersionId])
 }
 
 model TournamentParticipant {

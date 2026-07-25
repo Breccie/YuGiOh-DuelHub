@@ -798,6 +798,8 @@ describe("tournament rewards and progression", () => {
           ownerId: owner.id,
           name: `${tag} run`,
           startingCredits: 0,
+          setsPerProgressionStep: 1,
+          separatePromoProgression: false,
           tournamentWinnerCredits: 900,
           tournamentRunnerUpCredits: 450,
           tournamentParticipationCredits: 125,
@@ -851,8 +853,6 @@ describe("tournament rewards and progression", () => {
       const generated = await generateRunProgression(prisma, owner.id, run.id, {
         count: 2,
         fromDate: "2099-01-01T00:00:00.000Z",
-        setsPerCheckpoint: 1,
-        includePromos: true,
         includeTournamentPacks: true,
       });
 

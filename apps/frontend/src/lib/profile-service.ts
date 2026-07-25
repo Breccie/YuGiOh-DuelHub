@@ -1,7 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
 import type { PublicProfile } from "@/lib/app-dtos";
-import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
 
 export async function getPublicProfileByDuelistId(
   prisma: PrismaClient,
@@ -14,41 +13,7 @@ export async function getPublicProfileByDuelistId(
       duelistId: normalized,
     },
     include: {
-      showcaseBinder: {
-        include: {
-          pages: {
-            orderBy: {
-              pageIndex: "asc",
-            },
-            include: {
-              slots: {
-                orderBy: {
-                  slotIndex: "asc",
-                },
-                include: {
-                  collectionEntry: {
-                    include: {
-                      card: true,
-                      setCard: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      decks: {
-        orderBy: {
-          updatedAt: "desc",
-        },
-        take: 6,
-        include: {
-          formatProfile: true,
-          banlist: true,
-          cards: true,
-        },
-      },
+      showcaseSnapshot: true,
     },
   });
 
@@ -74,35 +39,23 @@ export async function getPublicProfileByDuelistId(
       OR: [{ requesterId: user.id }, { addresseeId: user.id }],
     },
   });
-  const [uniqueCards, copies] = await Promise.all([
-    prisma.collectionEntry.groupBy({
-      by: ["cardId"],
-      where: {
-        userId: user.id,
-      },
-    }),
-    prisma.collectionEntry.count({
-      where: {
-        userId: user.id,
-      },
-    }),
-  ]);
-
-  const highlightedCards =
-    user.showcaseBinder?.pages
-      .flatMap((page) => page.slots)
-      .filter((slot) => slot.collectionEntry || slot.snapshotCardName)
-      .slice(0, 8)
-      .map((slot) => ({
-        collectionEntryId: slot.collectionEntryId,
-        cardName: slot.collectionEntry?.card.name ?? slot.snapshotCardName ?? null,
-        imageUrl:
-          getCardAssetUrl(slot.collectionEntry?.card.externalCardId ?? null) ??
-          resolveAppImageUrl(slot.snapshotImageUrl) ??
-          null,
-        rarity: slot.collectionEntry?.setCard?.rarity ?? slot.snapshotRarity ?? null,
-        setCode: slot.collectionEntry?.setCard?.setCode ?? slot.snapshotSetCode ?? null,
-      })) ?? [];
+  const highlightedCards = Array.isArray(user.showcaseSnapshot?.highlightedCards)
+    ? user.showcaseSnapshot.highlightedCards.flatMap((value) => {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+        const card = value as Record<string, unknown>;
+        return [{
+          collectionEntryId:
+            typeof card.collectionEntryId === "string" ? card.collectionEntryId : null,
+          cardName: typeof card.cardName === "string" ? card.cardName : null,
+          imageUrl: typeof card.imageUrl === "string" ? card.imageUrl : null,
+          rarity: typeof card.rarity === "string" ? card.rarity : null,
+          setCode: typeof card.setCode === "string" ? card.setCode : null,
+        }];
+      })
+    : [];
+  const uniqueCards = new Set(
+    highlightedCards.map((card) => card.cardName).filter(Boolean),
+  ).size;
 
   return {
     userId: user.id,
@@ -115,21 +68,14 @@ export async function getPublicProfileByDuelistId(
     showcaseBinderId: user.showcaseBinderId ?? null,
     counts: {
       friends: acceptedFriendships,
-      decks: user.decks.length,
-      uniqueCards: uniqueCards.length,
-      copies,
+      decks: 0,
+      uniqueCards,
+      copies: highlightedCards.length,
     },
     showcase: {
-      binderName: user.showcaseBinder?.name ?? null,
+      binderName: user.showcaseSnapshot?.binderName ?? null,
       highlightedCards,
     },
-    decks: user.decks.map((deck) => ({
-      id: deck.id,
-      name: deck.name,
-      updatedAt: deck.updatedAt.toISOString(),
-      cardCount: deck.cards.reduce((total, card) => total + card.quantity, 0),
-      formatName: deck.formatProfile?.name ?? null,
-      banlistName: deck.banlist?.name ?? null,
-    })),
+    decks: [],
   };
 }

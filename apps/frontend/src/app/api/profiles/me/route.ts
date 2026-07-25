@@ -4,6 +4,7 @@ import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy"
 import { requireViewerSession } from "@/lib/auth";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { getPrisma } from "@/lib/prisma";
+import { updateViewerProfile } from "@/lib/profile-settings-service";
 
 export const dynamic = "force-dynamic";
 
@@ -18,33 +19,7 @@ export async function PATCH(request: Request) {
     const rawBody = await request.json().catch(() => ({}));
     const body = updateProfileRequestSchema.parse(rawBody);
 
-    const updated = await prisma.user.update({
-      where: {
-        id: session.userId,
-      },
-      data: {
-        displayName: body.displayName,
-        bio: body.bio === undefined ? undefined : body.bio?.trim() || null,
-        favoriteEra:
-          body.favoriteEra === undefined ? undefined : body.favoriteEra?.trim() || null,
-        avatarKey: body.avatarKey,
-        isPublic: body.isPublic,
-        showcaseBinderId:
-          body.showcaseBinderId === undefined
-            ? undefined
-            : body.showcaseBinderId?.trim() || null,
-      },
-      select: {
-        id: true,
-        duelistId: true,
-        displayName: true,
-        bio: true,
-        favoriteEra: true,
-        avatarKey: true,
-        isPublic: true,
-        showcaseBinderId: true,
-      },
-    });
+    const updated = await updateViewerProfile(prisma, session.userId, body);
 
     return NextResponse.json({
       profile: updated,

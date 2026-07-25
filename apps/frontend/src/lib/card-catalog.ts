@@ -10,6 +10,12 @@ import type {
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { getActiveRun } from "@/lib/run-service";
 
+function containsText(value: string): Prisma.StringFilter {
+  const filter: Record<string, unknown> = { contains: value };
+  if (process.env.API_DATABASE_URL) filter.mode = "insensitive";
+  return filter as Prisma.StringFilter;
+}
+
 function getBanlistFilter(query: CardCatalogQuery): Prisma.CardWhereInput | null {
   if (!query.banlistId || query.banlistStatus === "ALL") {
     return null;
@@ -59,17 +65,20 @@ function buildCardWhere(
   query: CardCatalogQuery,
   viewerId: string,
   runId: string,
+  visiblePrintingWhere: Prisma.SetCardWhereInput,
 ): Prisma.CardWhereInput {
   const and: Prisma.CardWhereInput[] = [];
 
   if (query.q) {
     and.push({
       OR: [
-        { name: { contains: query.q } },
-        { slug: { contains: query.q } },
+        { name: containsText(query.q) },
+        { slug: containsText(query.q) },
         {
           setCards: {
-            some: { setCode: { contains: query.q } },
+            some: {
+              AND: [visiblePrintingWhere, { setCode: containsText(query.q) }],
+            },
           },
         },
       ],
@@ -91,7 +100,7 @@ function buildCardWhere(
     and.push({ attribute: { equals: query.attribute } });
   }
   if (query.monsterType) {
-    and.push({ monsterType: { contains: query.monsterType } });
+    and.push({ monsterType: containsText(query.monsterType) });
   }
   if (query.levelRankLink !== undefined) {
     and.push({ levelRankLink: query.levelRankLink });
@@ -105,14 +114,18 @@ function buildCardWhere(
   if (query.rarity) {
     and.push({
       setCards: {
-        some: { rarity: { equals: query.rarity } },
+        some: {
+          AND: [visiblePrintingWhere, { rarity: { equals: query.rarity } }],
+        },
       },
     });
   }
   if (query.setCode) {
     and.push({
       setCards: {
-        some: { setCode: { contains: query.setCode } },
+        some: {
+          AND: [visiblePrintingWhere, { setCode: containsText(query.setCode) }],
+        },
       },
     });
   }
@@ -157,7 +170,27 @@ export async function getCardCatalog(
   query: CardCatalogQuery,
 ): Promise<CardCatalogResponse> {
   const activeRun = await getActiveRun(prisma, viewerId);
-  const where = buildCardWhere(query, viewerId, activeRun.id);
+  const customSetAccesses = await prisma.campaignCustomPackAccess.findMany({
+    where: {
+      runId: activeRun.id,
+      version: {
+        status: "PUBLISHED",
+        generatedSetId: { not: null },
+        definition: { runId: activeRun.id },
+      },
+    },
+    select: { version: { select: { generatedSetId: true } } },
+  });
+  const visibleCustomSetIds = customSetAccesses
+    .map((access) => access.version.generatedSetId)
+    .filter((setId): setId is string => Boolean(setId));
+  const visiblePrintingWhere: Prisma.SetCardWhereInput = {
+    OR: [
+      { set: { region: { not: "CUSTOM" } } },
+      ...(visibleCustomSetIds.length > 0 ? [{ setId: { in: visibleCustomSetIds } }] : []),
+    ],
+  };
+  const where = buildCardWhere(query, viewerId, activeRun.id, visiblePrintingWhere);
   const [cards, total, ownedGroups, totalCards] = await Promise.all([
     prisma.card.findMany({
       where,
@@ -172,6 +205,7 @@ export async function getCardCatalog(
           take: 1,
         },
         setCards: {
+          where: visiblePrintingWhere,
           select: { rarity: true, setCode: true },
           orderBy: { set: { releaseDate: "desc" } },
           take: 12,

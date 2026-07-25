@@ -1,8 +1,29 @@
 # Ausführbare Editor-Spezifikation
 
-Stand: 2026-07-17
+Stand: 2026-07-24
 
 Diese Datei ist die verbindliche Spezifikation für Deck- und Binder-Editor. Die Bedienmuster orientieren sich an Yu-Gi-Oh! Master Duel und EDOPro; Farben, Typografie, Assets und Oberflächen bleiben Teil des Duel-Hub-Designsystems.
+
+## Implementierungs- und Abnahmestatus
+
+Die Desktop-Editoren verwenden das vorgesehene Drei-Bereich-Muster; mobil werden
+Katalog, Arbeitsfläche und Details gestuft beziehungsweise untereinander
+dargestellt. Dialogfokus, Escape, Fokuswiederherstellung, Besitzfilter,
+Bannlistenfilter und die zugänglichen Alternativen zu Drag-and-drop wurden im
+Browser geprüft. Nicht besessene Binderkarten sind bewusst auswählbar und öffnen
+den Wunschlistenpfad, besitzen aber keine Platzierungsaktion.
+
+Der Binder speichert automatisch und hält fehlgeschlagene Seitenspeicherungen bis
+zur erfolgreichen Wiederholung sichtbar. Der Deckeditor speichert Entwürfe und
+Fehler sicher, verwendet derzeit jedoch noch eine explizite Speichern-Aktion. Das
+in dieser Spezifikation beschriebene Deck-Autosave bleibt deshalb ein offener
+Komfortschritt und darf bis dahin nicht als fertig ausgewiesen werden.
+
+Die Deckbibliothek unterstützt Öffnen, Umbenennen im Editor, Duplizieren,
+Exportieren und Löschen. Suche sowie Filter nach Spielbarkeit, Format und
+Bannliste und eine Sortierung nach Aktualität oder Name sind umgesetzt. Der
+`.ydk`-Export verwendet im Desktop den nativen Speicherdialog und im Browser
+einen Download.
 
 ## Gemeinsamer Kartenkatalog
 

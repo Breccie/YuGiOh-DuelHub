@@ -1,28 +1,49 @@
 import { createHash, randomUUID } from "node:crypto";
 import { CustomPackEra, OwnershipSource, Prisma, type PrismaClient } from "@prisma/client";
 import type { CreateCustomPackRequest, UpdateCustomPackDraftRequest } from "@ygo/contracts";
-import { applyLedgerAmount, assertSufficientCredits, DomainError } from "@ygo/domain";
+import { DomainError } from "@ygo/domain";
 import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
 import { getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
 
 const ERA_SLOTS: Record<CustomPackEra, Array<{ slotIndex: number; count: number; allowedRarities: string[]; weight: number }>> = {
   EARLY_TCG: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Rare", "Super Rare", "Ultra Rare"], weight: 1 },
+    { slotIndex: 0, count: 1, allowedRarities: ["Rare", "Super Rare", "Ultra Rare"], weight: 10 },
     { slotIndex: 1, count: 8, allowedRarities: ["Common"], weight: 1 },
   ],
   GX_5DS: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Rare", "Super Rare", "Ultra Rare", "Secret Rare"], weight: 1 },
+    { slotIndex: 0, count: 1, allowedRarities: ["Rare", "Super Rare", "Ultra Rare", "Secret Rare"], weight: 8 },
     { slotIndex: 1, count: 8, allowedRarities: ["Common"], weight: 1 },
   ],
   MODERN_CORE: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Super Rare", "Ultra Rare", "Secret Rare"], weight: 1 },
+    { slotIndex: 0, count: 1, allowedRarities: ["Super Rare", "Ultra Rare", "Secret Rare"], weight: 15 },
     { slotIndex: 1, count: 7, allowedRarities: ["Common"], weight: 1 },
-    { slotIndex: 2, count: 1, allowedRarities: ["Common", "Rare", "Super Rare", "Ultra Rare"], weight: 1 },
+    { slotIndex: 2, count: 1, allowedRarities: ["Common", "Rare", "Super Rare", "Ultra Rare"], weight: 4 },
   ],
   PROMO_CUSTOM: [
     { slotIndex: 0, count: 1, allowedRarities: ["Promo"], weight: 1 },
   ],
 };
+
+type Db = PrismaClient | Prisma.TransactionClient;
+
+async function withSerializableTransaction<T>(
+  prisma: PrismaClient,
+  operation: (tx: Prisma.TransactionClient) => Promise<T>,
+) {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await prisma.$transaction(operation, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      const retryable = error instanceof Prisma.PrismaClientKnownRequestError
+        && error.code === "P2034";
+      if (!retryable || attempt === maxAttempts) throw error;
+    }
+  }
+  throw new Error("Unreachable transaction retry state.");
+}
 
 type CustomPackTemplateConfig = {
   definition: {
@@ -99,6 +120,13 @@ export function createDeterministicRandom(seed: string) {
 }
 
 function weightedPick<T extends { weight: number }>(items: T[], random: () => number) {
+  if (items.length === 0) {
+    throw new DomainError({
+      code: "custom_pack_empty_runtime_pool",
+      message: "Für einen Pack-Slot ist kein gültiger Kartenpool verfügbar.",
+      status: 409,
+    });
+  }
   const total = items.reduce((sum, item) => sum + item.weight, 0);
   let cursor = random() * total;
   for (const item of items) {
@@ -108,13 +136,55 @@ function weightedPick<T extends { weight: number }>(items: T[], random: () => nu
   return items[items.length - 1];
 }
 
+function pickSlotRarity(
+  allowedRarities: string[],
+  upgradeWeight: number,
+  random: () => number,
+) {
+  return weightedPick(
+    allowedRarities.map((rarity, index) => ({
+      rarity,
+      weight: index === 0 ? 100 : upgradeWeight,
+    })),
+    random,
+  ).rarity;
+}
+
 export async function listCustomPacks(prisma: PrismaClient, viewerId: string, runId: string) {
-  await requireRunMembership(prisma, { runId, userId: viewerId });
-  return prisma.customPackDefinition.findMany({
+  const membership = await requireRunMembership(prisma, { runId, userId: viewerId });
+  const isOrganizer = membership.role === "OWNER" || membership.role === "ORGANIZER";
+  const packs = await prisma.customPackDefinition.findMany({
     where: { runId },
     orderBy: { updatedAt: "desc" },
-    include: { versions: { orderBy: { version: "desc" }, include: { poolEntries: true, slots: true } } },
+    include: {
+      versions: {
+        orderBy: { version: "desc" },
+        include: {
+          poolEntries: { include: { card: { select: { name: true } } } },
+          slots: true,
+          accesses: true,
+        },
+      },
+    },
   });
+  if (isOrganizer) return packs;
+
+  return packs
+    .map((pack) => ({
+      ...pack,
+      versions: pack.versions
+        .filter((version) =>
+          version.status === "PUBLISHED"
+          && version.accesses.some((access) => access.runId === runId),
+        )
+        .map((version) => ({
+          ...version,
+          poolEntries: [],
+          slots: [],
+          accesses: version.accesses.filter((access) => access.runId === runId),
+        })),
+    }))
+    .filter((pack) => pack.versions.length > 0);
 }
 
 export async function createCustomPack(
@@ -149,17 +219,6 @@ export async function createCustomPack(
   });
 }
 
-async function requireDraftVersion(prisma: PrismaClient, viewerId: string, runId: string, versionId: string) {
-  await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
-  const version = await prisma.customPackVersion.findFirst({
-    where: { id: versionId, definition: { runId } },
-    include: { definition: true, poolEntries: true, slots: true },
-  });
-  if (!version) throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
-  assertDraft(version.status);
-  return version;
-}
-
 export async function updateCustomPackDraft(
   prisma: PrismaClient,
   viewerId: string,
@@ -167,27 +226,35 @@ export async function updateCustomPackDraft(
   versionId: string,
   input: UpdateCustomPackDraftRequest,
 ) {
-  const version = await requireDraftVersion(prisma, viewerId, runId, versionId);
-  validatePackDraft(input, version.packSize);
-
-  const cardIds = [...new Set(input.poolEntries.map((entry) => entry.cardId))];
-  const cards = await prisma.card.count({ where: { id: { in: cardIds } } });
-  if (cards !== cardIds.length) {
-    throw new DomainError({ code: "custom_pack_unknown_card", message: "Mindestens eine Karte existiert nicht.", status: 400 });
-  }
-  const requestedSetCards = input.poolEntries.filter((entry) => entry.setCardId);
-  if (requestedSetCards.length > 0) {
-    const setCards = await prisma.setCard.findMany({
-      where: { id: { in: requestedSetCards.map((entry) => entry.setCardId!) } },
-      select: { id: true, cardId: true },
+  await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
+  return withSerializableTransaction(prisma, async (tx) => {
+    const version = await tx.customPackVersion.findFirst({
+      where: { id: versionId, definition: { runId } },
+      include: { definition: true },
     });
-    const validPairs = new Set(setCards.map((entry) => `${entry.id}:${entry.cardId}`));
-    if (requestedSetCards.some((entry) => !validPairs.has(`${entry.setCardId}:${entry.cardId}`))) {
-      throw new DomainError({ code: "custom_pack_printing_mismatch", message: "Mindestens eine Druckversion gehört nicht zur gewählten Karte.", status: 400 });
+    if (!version) {
+      throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
     }
-  }
+    assertDraft(version.status);
+    validatePackDraft(input, version.packSize);
 
-  return prisma.$transaction(async (tx) => {
+    const cardIds = [...new Set(input.poolEntries.map((entry) => entry.cardId))];
+    const cards = await tx.card.count({ where: { id: { in: cardIds } } });
+    if (cards !== cardIds.length) {
+      throw new DomainError({ code: "custom_pack_unknown_card", message: "Mindestens eine Karte existiert nicht.", status: 400 });
+    }
+    const requestedSetCards = input.poolEntries.filter((entry) => entry.setCardId);
+    if (requestedSetCards.length > 0) {
+      const setCards = await tx.setCard.findMany({
+        where: { id: { in: requestedSetCards.map((entry) => entry.setCardId!) } },
+        select: { id: true, cardId: true },
+      });
+      const validPairs = new Set(setCards.map((entry) => `${entry.id}:${entry.cardId}`));
+      if (requestedSetCards.some((entry) => !validPairs.has(`${entry.setCardId}:${entry.cardId}`))) {
+        throw new DomainError({ code: "custom_pack_printing_mismatch", message: "Mindestens eine Druckversion gehört nicht zur gewählten Karte.", status: 400 });
+      }
+    }
+
     await tx.customPackCardPoolEntry.deleteMany({ where: { versionId } });
     await tx.customPackSlot.deleteMany({ where: { versionId } });
     await tx.customPackCardPoolEntry.createMany({
@@ -216,12 +283,21 @@ export async function updateCustomPackDraft(
 }
 
 export async function publishCustomPackVersion(prisma: PrismaClient, viewerId: string, runId: string, versionId: string) {
-  const version = await requireDraftVersion(prisma, viewerId, runId, versionId);
-  validatePackDraft({
-    poolEntries: version.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })),
-    slots: version.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as string[], weight: slot.weight })),
-  }, version.packSize);
-  return prisma.$transaction(async (tx) => {
+  await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
+  return withSerializableTransaction(prisma, async (tx) => {
+    const version = await tx.customPackVersion.findFirst({
+      where: { id: versionId, definition: { runId } },
+      include: { definition: true, poolEntries: true, slots: true },
+    });
+    if (!version) {
+      throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
+    }
+    assertDraft(version.status);
+    validatePackDraft({
+      poolEntries: version.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })),
+      slots: version.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as string[], weight: slot.weight })),
+    }, version.packSize);
+
     const generatedCode = `CUST-${version.definitionId.slice(-8)}-V${version.version}`.toUpperCase();
     const generatedSet = await tx.cardSet.create({
       data: {
@@ -235,22 +311,41 @@ export async function publishCustomPackVersion(prisma: PrismaClient, viewerId: s
         notes: `Unveränderlicher Kartenbestand für CustomPackVersion:${version.id}`,
       },
     });
-    for (const [index, entry] of version.poolEntries.entries()) {
-      const setCard = await tx.setCard.create({
-        data: {
-          setId: generatedSet.id,
-          cardId: entry.cardId,
-          setCode: `${generatedCode}-${String(index + 1).padStart(3, "0")}`,
-          rarity: entry.rarity,
-          collectorNumber: String(index + 1).padStart(3, "0"),
-          pullWeight: entry.weight,
-        },
-      });
-      await tx.customPackCardPoolEntry.update({
-        where: { id: entry.id },
-        data: { setCardId: setCard.id },
-      });
-    }
+    const generatedPrintings = version.poolEntries.map((entry, index) => {
+      const collectorNumber = String(index + 1).padStart(3, "0");
+      return {
+        entry,
+        collectorNumber,
+        setCode: `${generatedCode}-${collectorNumber}`,
+      };
+    });
+    await tx.setCard.createMany({
+      data: generatedPrintings.map(({ entry, collectorNumber, setCode }) => ({
+        setId: generatedSet.id,
+        cardId: entry.cardId,
+        setCode,
+        rarity: entry.rarity,
+        collectorNumber,
+        pullWeight: entry.weight,
+      })),
+    });
+    const createdPrintings = await tx.setCard.findMany({
+      where: { setId: generatedSet.id },
+      select: { id: true, setCode: true },
+    });
+    const printingIdByCode = new Map(
+      createdPrintings.map((printing) => [printing.setCode, printing.id]),
+    );
+    await tx.customPackCardPoolEntry.deleteMany({ where: { versionId } });
+    await tx.customPackCardPoolEntry.createMany({
+      data: generatedPrintings.map(({ entry, setCode }) => ({
+        versionId,
+        cardId: entry.cardId,
+        setCardId: printingIdByCode.get(setCode)!,
+        rarity: entry.rarity,
+        weight: entry.weight,
+      })),
+    });
     const published = await tx.customPackVersion.update({
       where: { id: versionId },
       data: { status: "PUBLISHED", publishedAt: new Date(), generatedSetId: generatedSet.id },
@@ -266,135 +361,242 @@ export async function publishCustomPackVersion(prisma: PrismaClient, viewerId: s
   });
 }
 
+async function findExistingCustomPackOpening(
+  db: Db,
+  options: {
+    runId: string;
+    viewerId: string;
+    versionId: string;
+    idempotencyKey: string;
+  },
+) {
+  const batch = await db.packOpeningBatch.findUnique({
+    where: {
+      runId_userId_idempotencyKey: {
+        runId: options.runId,
+        userId: options.viewerId,
+        idempotencyKey: options.idempotencyKey,
+      },
+    },
+    include: {
+      openings: {
+        orderBy: { openedAt: "asc" },
+        include: { pulls: { orderBy: [{ slotIndex: "asc" }, { id: "asc" }] } },
+      },
+    },
+  });
+  if (!batch) return null;
+
+  const opening = batch.openings[0];
+  if (!opening || opening.customPackVersionId !== options.versionId) {
+    throw new DomainError({
+      code: "custom_pack_idempotency_conflict",
+      message: "Dieser Kauf-Schlüssel wurde bereits für eine andere Packöffnung verwendet.",
+      status: 409,
+    });
+  }
+
+  return {
+    id: opening.id,
+    versionId: options.versionId,
+    seed: opening.randomSeed ?? "",
+    auditHash: opening.auditHash ?? "",
+    price: batch.totalCost,
+    pulls: opening.pulls.map((pull) => ({
+      cardId: pull.cardId,
+      setCardId: pull.setCardId,
+      rarity: pull.rarity ?? "Unknown",
+      slotIndex: pull.slotIndex,
+    })),
+  };
+}
+
 export async function openCustomPackVersion(
   prisma: PrismaClient,
   viewerId: string,
   runId: string,
   versionId: string,
-  seed: string = randomUUID(),
+  options: { idempotencyKey: string },
 ) {
   await requireRunMembership(prisma, { runId, userId: viewerId });
-  return prisma.$transaction(async (tx) => {
-    const access = await tx.campaignCustomPackAccess.findUnique({
-      where: { runId_versionId: { runId, versionId } },
-      include: {
-        version: {
-          include: { definition: true, poolEntries: true, slots: true },
-        },
-      },
+  const idempotencyKey = options.idempotencyKey.trim();
+  if (!idempotencyKey) {
+    throw new DomainError({
+      code: "idempotency_key_required",
+      message: "Für das Öffnen eines Custom Packs ist ein Idempotency-Key erforderlich.",
+      status: 400,
     });
-    const version = access?.version;
-    if (!access || !version || version.status !== "PUBLISHED" || !version.generatedSetId) {
-      throw new DomainError({ code: "custom_pack_unavailable", message: "Diese Packversion ist in der Kampagne nicht freigeschaltet.", status: 409 });
-    }
-    if (access.rewardOnly) {
-      throw new DomainError({ code: "custom_pack_reward_only", message: "Dieses Pack ist nur als Belohnung erhältlich.", status: 409 });
-    }
-    const price = access.price ?? version.price;
-    const wallet = await getOrCreateWallet(tx, { runId, userId: viewerId });
-    assertSufficientCredits({ balance: wallet.balance, cost: price });
-    const balanceAfter = applyLedgerAmount({ balance: wallet.balance, amount: -price });
-    const ruleVersionId = await getActiveCampaignRuleVersionId(tx, runId);
-    const random = createDeterministicRandom(seed);
-    const pulls: Array<{ cardId: string; setCardId: string; rarity: string; slotIndex: number }> = [];
-    for (const slot of [...version.slots].sort((a, b) => a.slotIndex - b.slotIndex)) {
-      const allowedRarities = slot.allowedRarities as string[];
-      for (let copy = 0; copy < slot.count; copy += 1) {
-        const rarity = allowedRarities[Math.floor(random() * allowedRarities.length)]!;
-        const candidates = version.poolEntries.filter((entry) => entry.rarity === rarity && entry.setCardId);
-        const selected = weightedPick(candidates, random);
-        pulls.push({
-          cardId: selected.cardId,
-          setCardId: selected.setCardId!,
-          rarity,
-          slotIndex: slot.slotIndex,
+  }
+  const seed = randomUUID();
+
+  try {
+    return await withSerializableTransaction(prisma, async (tx) => {
+      const existing = await findExistingCustomPackOpening(tx, {
+        runId,
+        viewerId,
+        versionId,
+        idempotencyKey,
+      });
+      if (existing) return existing;
+
+      const access = await tx.campaignCustomPackAccess.findUnique({
+        where: { runId_versionId: { runId, versionId } },
+        include: {
+          version: {
+            include: { definition: true, poolEntries: true, slots: true },
+          },
+        },
+      });
+      const version = access?.version;
+      if (!access || !version || version.status !== "PUBLISHED" || !version.generatedSetId) {
+        throw new DomainError({ code: "custom_pack_unavailable", message: "Diese Packversion ist in der Kampagne nicht freigeschaltet.", status: 409 });
+      }
+      if (version.definition.runId !== runId) {
+        throw new DomainError({ code: "custom_pack_cross_campaign", message: "Diese Packversion gehört nicht zu dieser Kampagne.", status: 409 });
+      }
+      if (access.rewardOnly) {
+        throw new DomainError({ code: "custom_pack_reward_only", message: "Dieses Pack ist nur als Belohnung erhältlich.", status: 409 });
+      }
+      const price = access.price ?? version.price;
+      const ruleVersionId = await getActiveCampaignRuleVersionId(tx, runId);
+      const wallet = await getOrCreateWallet(tx, { runId, userId: viewerId });
+      const random = createDeterministicRandom(seed);
+      const poolsByRarity = new Map<string, typeof version.poolEntries>();
+      for (const entry of version.poolEntries) {
+        if (!entry.setCardId) continue;
+        const pool = poolsByRarity.get(entry.rarity) ?? [];
+        pool.push(entry);
+        poolsByRarity.set(entry.rarity, pool);
+      }
+      const pulls: Array<{ cardId: string; setCardId: string; rarity: string; slotIndex: number }> = [];
+      for (const slot of [...version.slots].sort((a, b) => a.slotIndex - b.slotIndex)) {
+        const allowedRarities = slot.allowedRarities as string[];
+        for (let copy = 0; copy < slot.count; copy += 1) {
+          const rarity = pickSlotRarity(allowedRarities, slot.weight, random);
+          const selected = weightedPick(poolsByRarity.get(rarity) ?? [], random);
+          pulls.push({
+            cardId: selected.cardId,
+            setCardId: selected.setCardId!,
+            rarity,
+            slotIndex: slot.slotIndex,
+          });
+        }
+      }
+      const debit = await tx.creditWallet.updateMany({
+        where: { id: wallet.id, balance: { gte: price } },
+        data: { balance: { decrement: price } },
+      });
+      if (debit.count !== 1) {
+        const currentWallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: wallet.id } });
+        throw new DomainError({
+          code: "insufficient_credits",
+          message: "Nicht genug Credits für diesen Kauf.",
+          status: 409,
+          details: { balance: currentWallet.balance, cost: price },
         });
       }
-    }
-    const auditHash = createHash("sha256").update(`${runId}:${viewerId}:${versionId}:${seed}`).digest("hex");
-    const batch = await tx.packOpeningBatch.create({
-      data: {
-        runId,
-        userId: viewerId,
-        setId: version.generatedSetId,
-        ruleVersionId,
-        type: "SINGLE_PACK",
-        quantity: 1,
-        totalCost: price,
-      },
-    });
-    const opening = await tx.packOpening.create({
-      data: {
-        runId,
-        userId: viewerId,
-        setId: version.generatedSetId,
-        batchId: batch.id,
-        ruleVersionId,
-        customPackVersionId: version.id,
-        randomSeed: seed,
+      const updatedWallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: wallet.id } });
+      const balanceAfter = updatedWallet.balance;
+      const auditHash = createHash("sha256")
+        .update(JSON.stringify({ runId, viewerId, versionId, ruleVersionId, price, seed, pulls }))
+        .digest("hex");
+      const batch = await tx.packOpeningBatch.create({
+        data: {
+          runId,
+          userId: viewerId,
+          setId: version.generatedSetId,
+          ruleVersionId,
+          type: "SINGLE_PACK",
+          quantity: 1,
+          totalCost: price,
+          idempotencyKey,
+        },
+      });
+      const opening = await tx.packOpening.create({
+        data: {
+          runId,
+          userId: viewerId,
+          setId: version.generatedSetId,
+          batchId: batch.id,
+          ruleVersionId,
+          customPackVersionId: version.id,
+          randomSeed: seed,
+          auditHash,
+          notes: `CustomPackVersion:${version.id}`,
+        },
+      });
+      await tx.packPull.createMany({
+        data: pulls.map((pull) => ({ ...pull, openingId: opening.id })),
+      });
+      await tx.collectionEntry.createMany({
+        data: pulls.map((pull) => ({
+          userId: viewerId,
+          runId,
+          cardId: pull.cardId,
+          setCardId: pull.setCardId,
+          source: OwnershipSource.PACK_OPENING,
+          sourceReferenceId: opening.id,
+        })),
+      });
+      await tx.creditLedgerEntry.create({
+        data: {
+          runId,
+          walletId: wallet.id,
+          userId: viewerId,
+          amount: -price,
+          balanceAfter,
+          source: "PACK_PURCHASE",
+          referenceType: "CustomPackVersion",
+          referenceId: version.id,
+          note: `Custom Pack geöffnet: ${version.definition.name} v${version.version}`,
+        },
+      });
+      return {
+        id: opening.id,
+        versionId: version.id,
+        seed,
         auditHash,
-        notes: `CustomPackVersion:${version.id}`,
-      },
+        price,
+        pulls,
+      };
     });
-    await tx.packPull.createMany({
-      data: pulls.map((pull) => ({ ...pull, openingId: opening.id })),
-    });
-    await tx.collectionEntry.createMany({
-      data: pulls.map((pull) => ({
-        userId: viewerId,
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const existing = await findExistingCustomPackOpening(prisma, {
         runId,
-        cardId: pull.cardId,
-        setCardId: pull.setCardId,
-        source: OwnershipSource.PACK_OPENING,
-        sourceReferenceId: opening.id,
-      })),
-    });
-    await tx.creditWallet.update({ where: { id: wallet.id }, data: { balance: balanceAfter } });
-    await tx.creditLedgerEntry.create({
-      data: {
-        runId,
-        walletId: wallet.id,
-        userId: viewerId,
-        amount: -price,
-        balanceAfter,
-        source: "PACK_PURCHASE",
-        referenceType: "CustomPackVersion",
-        referenceId: version.id,
-        note: `Custom Pack geöffnet: ${version.definition.name} v${version.version}`,
-      },
-    });
-    return {
-      id: opening.id,
-      versionId: version.id,
-      seed,
-      auditHash,
-      price,
-      pulls,
-    };
-  });
+        viewerId,
+        versionId,
+        idempotencyKey,
+      });
+      if (existing) return existing;
+    }
+    throw error;
+  }
 }
 
 export async function createNextCustomPackDraft(prisma: PrismaClient, viewerId: string, runId: string, versionId: string) {
   await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
-  const source = await prisma.customPackVersion.findFirst({
-    where: { id: versionId, definition: { runId } },
-    include: { poolEntries: true, slots: true },
-  });
-  if (!source) throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
-  const latest = await prisma.customPackVersion.aggregate({ where: { definitionId: source.definitionId }, _max: { version: true } });
-  return prisma.customPackVersion.create({
-    data: {
-      definitionId: source.definitionId,
-      version: (latest._max.version ?? 0) + 1,
-      packSize: source.packSize,
-      displaySize: source.displaySize,
-      price: source.price,
-      rewardOnly: source.rewardOnly,
-      slotConfig: source.slotConfig as Prisma.InputJsonValue,
-      poolEntries: { create: source.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })) },
-      slots: { create: source.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as Prisma.InputJsonValue, weight: slot.weight })) },
-    },
-    include: { poolEntries: true, slots: true },
+  return withSerializableTransaction(prisma, async (tx) => {
+    const source = await tx.customPackVersion.findFirst({
+      where: { id: versionId, definition: { runId } },
+      include: { poolEntries: true, slots: true },
+    });
+    if (!source) throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
+    const latest = await tx.customPackVersion.aggregate({ where: { definitionId: source.definitionId }, _max: { version: true } });
+    return tx.customPackVersion.create({
+      data: {
+        definitionId: source.definitionId,
+        version: (latest._max.version ?? 0) + 1,
+        packSize: source.packSize,
+        displaySize: source.displaySize,
+        price: source.price,
+        rewardOnly: source.rewardOnly,
+        slotConfig: source.slotConfig as Prisma.InputJsonValue,
+        poolEntries: { create: source.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })) },
+        slots: { create: source.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as Prisma.InputJsonValue, weight: slot.weight })) },
+      },
+      include: { poolEntries: true, slots: true },
+    });
   });
 }
 
@@ -521,7 +723,7 @@ export async function simulateCustomPackVersion(
   versionId: string,
   options: { iterations: number; seed: string },
 ) {
-  await requireRunMembership(prisma, { runId, userId: viewerId });
+  await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
   const version = await prisma.customPackVersion.findFirst({
     where: { id: versionId, definition: { runId } },
     include: { poolEntries: { include: { card: true } }, slots: true, definition: true },
@@ -535,12 +737,18 @@ export async function simulateCustomPackVersion(
   const random = createDeterministicRandom(options.seed);
   const rarityCounts = new Map<string, number>();
   const cardCounts = new Map<string, { cardId: string; name: string; count: number }>();
+  const poolsByRarity = new Map<string, typeof version.poolEntries>();
+  for (const entry of version.poolEntries) {
+    const pool = poolsByRarity.get(entry.rarity) ?? [];
+    pool.push(entry);
+    poolsByRarity.set(entry.rarity, pool);
+  }
+  const orderedSlots = [...input.slots].sort((a, b) => a.slotIndex - b.slotIndex);
   for (let iteration = 0; iteration < options.iterations; iteration += 1) {
-    for (const slot of input.slots.sort((a, b) => a.slotIndex - b.slotIndex)) {
+    for (const slot of orderedSlots) {
       for (let copy = 0; copy < slot.count; copy += 1) {
-        const rarity = slot.allowedRarities[Math.floor(random() * slot.allowedRarities.length)];
-        const pool = version.poolEntries.filter((entry) => entry.rarity === rarity);
-        const selected = weightedPick(pool, random);
+        const rarity = pickSlotRarity(slot.allowedRarities, slot.weight, random);
+        const selected = weightedPick(poolsByRarity.get(rarity) ?? [], random);
         rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + 1);
         const current = cardCounts.get(selected.cardId) ?? { cardId: selected.cardId, name: selected.card.name, count: 0 };
         current.count += 1;

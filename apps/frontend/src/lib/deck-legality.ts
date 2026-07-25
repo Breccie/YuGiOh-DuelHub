@@ -5,7 +5,9 @@ import {
   ErrataPolicy,
   type PrismaClient,
 } from "@prisma/client";
+import type { CampaignRuleConfig } from "@ygo/contracts";
 import { getCardAssetUrl } from "@/lib/asset-urls";
+import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
@@ -359,31 +361,32 @@ function buildPlannedCopiesByCardId(deck: LoadedDeck) {
 function addDeckSizeIssues(
   issues: DeckIssueSummary[],
   counts: ReturnType<typeof buildDeckCounts>,
+  rules: CampaignRuleConfig["decks"],
 ) {
-  if (counts.mainCount < 40 || counts.mainCount > 60) {
+  if (counts.mainCount < rules.minMainDeck || counts.mainCount > rules.maxMainDeck) {
     issues.push({
       cardId: "deck-size-main",
       cardName: "Deckgröße",
       type: "DECK_SIZE",
-      message: "Das Main Deck muss zwischen 40 und 60 Karten enthalten.",
+      message: `Das Main Deck muss zwischen ${rules.minMainDeck} und ${rules.maxMainDeck} Karten enthalten.`,
     });
   }
 
-  if (counts.extraCount > 15) {
+  if (counts.extraCount > rules.maxExtraDeck) {
     issues.push({
       cardId: "deck-size-extra",
       cardName: "Deckgröße",
       type: "DECK_SIZE",
-      message: "Das Extra Deck darf höchstens 15 Karten enthalten.",
+      message: `Das Extra Deck darf höchstens ${rules.maxExtraDeck} Karten enthalten.`,
     });
   }
 
-  if (counts.sideCount > 15) {
+  if (counts.sideCount > rules.maxSideDeck) {
     issues.push({
       cardId: "deck-size-side",
       cardName: "Deckgröße",
       type: "DECK_SIZE",
-      message: "Das Side Deck darf höchstens 15 Karten enthalten.",
+      message: `Das Side Deck darf höchstens ${rules.maxSideDeck} Karten enthalten.`,
     });
   }
 }
@@ -403,6 +406,7 @@ function dedupeIssues(issues: DeckIssueSummary[]) {
 function evaluateDeck(
   deck: LoadedDeck,
   ownershipByCardId: Map<string, OwnershipSummary>,
+  deckRules: CampaignRuleConfig["decks"],
 ) {
   const snapshotDate = resolveSnapshotDate(
     deck,
@@ -416,7 +420,7 @@ function evaluateDeck(
   const pointLimit = effectiveBanlist?.pointLimit ?? null;
   let pointTotal = 0;
 
-  addDeckSizeIssues(issues, counts);
+  addDeckSizeIssues(issues, counts, deckRules);
 
   const cards = deck.cards.map((deckCard) => {
     const activeTextVersion = resolveTextVersion(
@@ -484,7 +488,7 @@ function evaluateDeck(
       });
     }
 
-    if (plannedCopies > ownership.availableCopies) {
+    if (!deckRules.allowProxies && plannedCopies > ownership.availableCopies) {
       cardIssues.push("OWNERSHIP");
       issues.push({
         cardId: deckCard.cardId,
@@ -578,6 +582,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
   }
 
   const activeRun = await getActiveRun(prisma, viewer.id);
+  const activeRuleConfig = await getActiveCampaignRuleConfig(prisma, activeRun.id);
 
   const [decks, collectionEntries, availableBanlists] = await Promise.all([
     loadDecks(prisma, viewer.id, activeRun.id),
@@ -663,7 +668,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
   }
 
   const summarizedDecks = decks.map((deck) => {
-    const evaluation = evaluateDeck(deck, ownershipByCardId);
+    const evaluation = evaluateDeck(deck, ownershipByCardId, activeRuleConfig.decks);
 
     return {
       id: deck.id,
@@ -686,7 +691,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
   });
 
   const activeEvaluation = selectedDeck
-    ? evaluateDeck(selectedDeck, ownershipByCardId)
+    ? evaluateDeck(selectedDeck, ownershipByCardId, activeRuleConfig.decks)
     : null;
   const activeDeckCardCopies = new Map<
     string,

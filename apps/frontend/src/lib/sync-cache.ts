@@ -1,13 +1,13 @@
 import type { SyncBootstrapResponse, SyncChangesResponse } from "@ygo/contracts";
 
-const SYNC_CACHE_KEY = "ygo:sync-cache:v1";
+const SYNC_CACHE_KEY = "ygo:sync-cache:v2";
 
 type SyncEntity = Record<string, unknown> & {
   id?: unknown;
 };
 
 export type LocalSyncCache = {
-  version: 1;
+  version: 2;
   updatedAt: string;
   cursor: string | null;
   bootstrap: SyncBootstrapResponse | null;
@@ -22,7 +22,7 @@ export type LocalSyncCache = {
 
 function createEmptySyncCache(): LocalSyncCache {
   return {
-    version: 1,
+    version: 2,
     updatedAt: new Date(0).toISOString(),
     cursor: null,
     bootstrap: null,
@@ -87,7 +87,7 @@ export function readLocalSyncCache(
 
     const parsed = JSON.parse(rawValue) as Partial<LocalSyncCache>;
 
-    if (parsed.version !== 1) {
+    if (parsed.version !== 2) {
       return createEmptySyncCache();
     }
 
@@ -123,12 +123,35 @@ export function writeLocalSyncCache(
   }
 }
 
+export function clearLocalSyncCache(
+  storage: Storage | undefined | null =
+    typeof window === "undefined" ? null : window.localStorage,
+) {
+  if (!canUseStorage(storage)) return;
+  try {
+    storage.removeItem(SYNC_CACHE_KEY);
+    storage.removeItem("ygo:sync-cache:v1");
+  } catch {
+    // Cache invalidation is best-effort and must never block navigation.
+  }
+}
+
 export function applySyncBootstrap(
   bootstrap: SyncBootstrapResponse,
   cache = readLocalSyncCache(),
 ) {
+  const previousBootstrap = cache.bootstrap;
+  const scopeChanged = Boolean(
+    previousBootstrap
+    && (
+      previousBootstrap.viewer.userId !== bootstrap.viewer.userId
+      || previousBootstrap.activeRunId !== bootstrap.activeRunId
+    ),
+  );
+  const scopedCache = scopeChanged ? createEmptySyncCache() : cache;
+
   return {
-    ...cache,
+    ...scopedCache,
     updatedAt: bootstrap.serverTime,
     cursor: bootstrap.cursor,
     bootstrap,

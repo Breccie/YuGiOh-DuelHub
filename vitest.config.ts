@@ -15,6 +15,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    fileParallelism: false,
     include: [
       "packages/**/*.test.ts",
       "apps/api/src/**/*.test.ts",

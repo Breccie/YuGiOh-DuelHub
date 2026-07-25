@@ -4,6 +4,7 @@ export const consoleNavItems = [
   { href: "/", label: "Start", iconName: "nav-start" },
   { href: "/packs", label: "Packs", iconName: "nav-packs" },
   { href: "/collection", label: "Sammlung", iconName: "nav-collection" },
+  { href: "/wishlist", label: "Wünsche", iconName: "mail" },
   { href: "/decks", label: "Decks", iconName: "nav-decks" },
   { href: "/tournaments", label: "Turniere", iconName: "shield" },
   { href: "/trade", label: "Tausch", iconName: "nav-trade" },

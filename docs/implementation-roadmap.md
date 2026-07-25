@@ -1,6 +1,6 @@
 # Umsetzungs-Roadmap und Abnahmecheckliste
 
-Stand: 2026-07-17
+Stand: 2026-07-24
 
 ## Phase 1 – Gemeinsamer Katalog
 
@@ -20,7 +20,7 @@ Stand: 2026-07-17
 - [x] Zentraler Spielbarkeitsguard für Export und Duellanfrage
 - [x] Entwurfsstatus und Export-Sperre in der Deckbibliothek
 - [ ] Turnierregistrierungs-Guard an allen zukünftigen Deckzuordnungsendpunkten
-- [ ] Duplizieren/Umbenennen/Löschen und Bibliotheksfilter
+- [x] Duplizieren/Umbenennen/Löschen und Bibliotheksfilter
 
 ## Phase 3 – Binder und Wunschliste
 
@@ -30,7 +30,7 @@ Stand: 2026-07-17
 - [x] Kampagnenweite Doppelbelegung serverseitig gesperrt
 - [x] 18 Slots, Seiten, Autosave, Undo/Redo
 - [x] Kampagnen- und Spieler-isoliertes Wunschlistenmodell/API
-- [ ] Eigene Wunschlistenübersicht mit Erledigt-Filter
+- [x] Eigene Wunschlistenübersicht mit Erledigt-Filter
 
 ## Phase 4 – Sandbox-Regelversionen
 
@@ -40,7 +40,7 @@ Stand: 2026-07-17
 - [x] Start-Credits verändern keine bestehenden Wallets
 - [x] Regelversion an Öffnungen, Progressionsschritte, Rewards und Turniere schreiben
 - [x] Kategorisierte Host-Oberfläche für Economy, Progression, Decks, Trades, Turniere und Aktivierung
-- [ ] Presets beim Auswählen als vollständige Wertvorschau anwenden
+- [x] Presets beim Auswählen als vollständige Wertvorschau anwenden
 
 ## Phase 5 – Custom Packs
 
@@ -52,17 +52,19 @@ Stand: 2026-07-17
 - [x] Private Vorlagen und kampagnenübergreifendes Kopieren im Service und API
 - [x] Custom-Pack-Studio mit Kartenpool, Rarity-Zuweisung, Simulation und Veröffentlichung
 - [x] Auditierbare Custom-Pack-Öffnung aus dem Studio
-- [ ] Private Vorlagen in der Oberfläche verwalten
+- [x] Private Vorlagen in der Oberfläche verwalten
 - [ ] Custom Packs zusätzlich in Standard-Shop, Progression und Turnierrewards auswählbar machen
 
 ## Phase 6 – Härtung und Rollout
 
 - [x] TypeScript-Gesamtprüfung
-- [x] Unit-/Integrationstests: 72 bestanden, 1 bewusst übersprungen
+- [x] Unit-/Integrationstests: 100 bestanden, 1 bewusst übersprungen
 - [x] Playwright-Abnahme Desktop und Mobile für Deck, Binder, Regeln und Custom Packs
 - [x] Referenz-/App-Screenshotvergleich und `design-qa.md: final result: passed`
 - [x] Integrationstest für unveränderliche, reproduzierbare Custom-Pack-Öffnungen
-- [ ] Zusätzliche Integrationstests für Regelhistorie und Wunschliste
+- [x] Zusätzliche Integrationstests für Regelhistorie
+- [x] Eigener Integrationstest für die Wunschlisten-API
+- [x] Lokaler Online-E2E-Smoke über Next, Fastify und PostgreSQL
 - [ ] Preview-Deployment, Migration und Smoke-Test
 - [ ] Produktions-Rollout und vollständiger E2E-Smoke
 

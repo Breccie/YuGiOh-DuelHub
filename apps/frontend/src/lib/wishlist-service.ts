@@ -3,6 +3,7 @@ import type {
   UpsertWishlistItemRequest,
   WishlistItem,
 } from "@ygo/contracts";
+import { DomainError } from "@ygo/domain";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { getActiveRun } from "@/lib/run-service";
 
@@ -54,7 +55,13 @@ export async function upsertWishlistItem(
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
   const card = await prisma.card.findUnique({ where: { id: input.cardId } });
-  if (!card) throw new Error("Die ausgewählte Karte wurde nicht gefunden.");
+  if (!card) {
+    throw new DomainError({
+      code: "wishlist_card_not_found",
+      message: "Die ausgewählte Karte wurde nicht gefunden.",
+      status: 404,
+    });
+  }
 
   await prisma.campaignWishlistItem.upsert({
     where: {
@@ -91,5 +98,11 @@ export async function removeWishlistItem(
   const result = await prisma.campaignWishlistItem.deleteMany({
     where: { id: itemId, runId: activeRun.id, userId: viewerId },
   });
-  if (result.count === 0) throw new Error("Wunschlisteneintrag wurde nicht gefunden.");
+  if (result.count === 0) {
+    throw new DomainError({
+      code: "wishlist_item_not_found",
+      message: "Wunschlisteneintrag wurde nicht gefunden.",
+      status: 404,
+    });
+  }
 }

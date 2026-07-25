@@ -6,8 +6,6 @@ import {
 } from "@prisma/client";
 import {
   DomainError,
-  applyLedgerAmount,
-  assertSufficientCredits,
   normalizeDuelistId,
   normalizePackEconomy,
 } from "@ygo/domain";
@@ -25,6 +23,27 @@ import {
   requireRunMembership,
   serializeWallet,
 } from "@/lib/run-service";
+
+async function debitWalletAtomically(
+  tx: Prisma.TransactionClient,
+  walletId: string,
+  cost: number,
+) {
+  const debit = await tx.creditWallet.updateMany({
+    where: { id: walletId, balance: { gte: cost } },
+    data: { balance: { decrement: cost } },
+  });
+  const wallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: walletId } });
+  if (debit.count !== 1) {
+    throw new DomainError({
+      code: "insufficient_credits",
+      message: "Nicht genug Credits für diesen Kauf.",
+      status: 409,
+      details: { balance: wallet.balance, cost },
+    });
+  }
+  return wallet.balance;
+}
 
 export type PackDashboardSnapshot = {
   viewer: {
@@ -1247,23 +1266,7 @@ export async function openPack(
       });
 
       if (totalCost > 0) {
-        assertSufficientCredits({
-          balance: wallet.balance,
-          cost: totalCost,
-        });
-        const balanceAfter = applyLedgerAmount({
-          balance: wallet.balance,
-          amount: -totalCost,
-        });
-
-        await tx.creditWallet.update({
-          where: {
-            id: wallet.id,
-          },
-          data: {
-            balance: balanceAfter,
-          },
-        });
+        const balanceAfter = await debitWalletAtomically(tx, wallet.id, totalCost);
         await tx.creditLedgerEntry.create({
           data: {
             runId: options.runId,
@@ -1434,23 +1437,11 @@ export async function openDisplay(
       userId: viewer.id,
     });
 
-    assertSufficientCredits({
-      balance: wallet.balance,
-      cost: economy.displayCost,
-    });
-
-    const balanceAfter = applyLedgerAmount({
-      balance: wallet.balance,
-      amount: -economy.displayCost,
-    });
-    await tx.creditWallet.update({
-      where: {
-        id: wallet.id,
-      },
-      data: {
-        balance: balanceAfter,
-      },
-    });
+    const balanceAfter = await debitWalletAtomically(
+      tx,
+      wallet.id,
+      economy.displayCost,
+    );
 
     const batch = await tx.packOpeningBatch.create({
       data: {

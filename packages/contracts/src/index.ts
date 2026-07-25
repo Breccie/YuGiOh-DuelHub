@@ -35,7 +35,7 @@ export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
 export const registerRequestSchema = z.object({
   duelistId: z.string().trim().min(1),
-  password: z.string().trim().min(6),
+  password: z.string().trim().min(10),
   displayName: z.string().trim().min(1),
   favoriteEra: z.string().trim().max(40).nullable().optional(),
 });
@@ -601,6 +601,7 @@ export type TradeDetailDto = {
   updatedAt: string;
   resolvedAt: string | null;
   acceptedAt: string | null;
+  reservationExpiresAt: string | null;
   acceptedVersionId: string | null;
   proposerConfirmedAt: string | null;
   responderConfirmedAt: string | null;
@@ -992,9 +993,12 @@ export const runMemberSchema = runMembershipSchema.extend({
 });
 export type RunMemberDto = z.infer<typeof runMemberSchema>;
 
+export const assignableRunRoleSchema = z.enum(["ORGANIZER", "PLAYER"]);
+export type AssignableRunRole = z.infer<typeof assignableRunRoleSchema>;
+
 export const addRunMemberRequestSchema = z.object({
   duelistId: z.string().trim().min(1),
-  role: runRoleSchema.optional(),
+  role: assignableRunRoleSchema.optional(),
 });
 export type AddRunMemberRequest = z.infer<typeof addRunMemberRequestSchema>;
 
@@ -1255,8 +1259,6 @@ export type ApplyRunProgressionRequest = z.infer<
 export const generateRunProgressionRequestSchema = z.object({
   count: z.number().int().min(1).max(50).optional(),
   fromDate: z.string().trim().min(1).nullable().optional(),
-  setsPerCheckpoint: z.number().int().min(1).max(12).optional(),
-  includePromos: z.boolean().optional(),
   includeTournamentPacks: z.boolean().optional(),
 });
 export type GenerateRunProgressionRequest = z.infer<
@@ -1448,12 +1450,31 @@ export const campaignRuleConfigSchema = z.object({
     requireReasonForChanges: z.boolean().default(true),
     activationMode: z.enum(["IMMEDIATE", "AT_DATE", "NEXT_PROGRESSION_STEP"]).default("IMMEDIATE"),
   }),
+}).superRefine((config, context) => {
+  if (config.decks.minMainDeck > config.decks.maxMainDeck) {
+    context.addIssue({
+      code: "custom",
+      path: ["decks", "minMainDeck"],
+      message: "Die minimale Main-Deck-Größe darf nicht über dem Maximum liegen.",
+    });
+  }
+  if (
+    config.economy.creditLimit !== null
+    && config.economy.startingCredits > config.economy.creditLimit
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["economy", "creditLimit"],
+      message: "Das Credit-Limit darf nicht unter den Start-Credits liegen.",
+    });
+  }
 });
 export type CampaignRuleConfig = z.infer<typeof campaignRuleConfigSchema>;
 
 export const createCampaignRuleVersionRequestSchema = z.object({
   preset: campaignRulePresetSchema.default("CUSTOM"),
   config: campaignRuleConfigSchema,
+  reason: z.string().trim().max(400).nullable().optional(),
   effectiveAt: z.string().datetime().nullable().optional(),
   effectiveCheckpointId: z.string().trim().min(1).nullable().optional(),
   activateImmediately: z.boolean().default(false),
@@ -1470,6 +1491,7 @@ export const campaignRuleVersionSchema = z.object({
   effectiveAt: z.string().nullable(),
   effectiveCheckpointId: z.string().nullable(),
   createdById: z.string(),
+  changeReason: z.string().nullable(),
   createdAt: z.string(),
   activatedAt: z.string().nullable(),
 });
@@ -1501,12 +1523,50 @@ export const createCustomPackRequestSchema = z.object({
 });
 export type CreateCustomPackRequest = z.infer<typeof createCustomPackRequestSchema>;
 export const updateCustomPackDraftRequestSchema = z.object({
-  poolEntries: z.array(customPackPoolEntryInputSchema),
-  slots: z.array(customPackSlotInputSchema).min(1),
+  poolEntries: z.array(customPackPoolEntryInputSchema).max(5_000),
+  slots: z.array(customPackSlotInputSchema).min(1).max(100),
+}).superRefine((draft, context) => {
+  const slotIndexes = new Set<number>();
+  draft.slots.forEach((slot, index) => {
+    if (slotIndexes.has(slot.slotIndex)) {
+      context.addIssue({
+        code: "custom",
+        path: ["slots", index, "slotIndex"],
+        message: "Jeder Slot-Index darf nur einmal vorkommen.",
+      });
+    }
+    slotIndexes.add(slot.slotIndex);
+
+    if (new Set(slot.allowedRarities).size !== slot.allowedRarities.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["slots", index, "allowedRarities"],
+        message: "Eine Seltenheit darf pro Slot nur einmal vorkommen.",
+      });
+    }
+  });
+
+  const poolKeys = new Set<string>();
+  draft.poolEntries.forEach((entry, index) => {
+    const key = `${entry.cardId}:${entry.rarity}:${entry.setCardId ?? "default"}`;
+    if (poolKeys.has(key)) {
+      context.addIssue({
+        code: "custom",
+        path: ["poolEntries", index],
+        message: "Doppelte Karten-Pool-Einträge sind nicht erlaubt.",
+      });
+    }
+    poolKeys.add(key);
+  });
 });
 export type UpdateCustomPackDraftRequest = z.infer<typeof updateCustomPackDraftRequestSchema>;
 export const simulateCustomPackRequestSchema = z.object({
-  iterations: z.number().int().min(1).max(100_000).default(10_000),
+  iterations: z.number().int().min(1).max(10_000).default(10_000),
   seed: z.string().trim().min(1).max(200).default("duel-hub-simulation"),
 });
 export type SimulateCustomPackRequest = z.infer<typeof simulateCustomPackRequestSchema>;
+
+export const openCustomPackRequestSchema = z.object({
+  idempotencyKey: z.string().trim().min(1).max(200),
+});
+export type OpenCustomPackRequest = z.infer<typeof openCustomPackRequestSchema>;

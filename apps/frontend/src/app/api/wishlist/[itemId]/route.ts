@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
@@ -13,6 +14,6 @@ export async function DELETE(request: Request, context: { params: Promise<{ item
     await removeWishlistItem(prisma, session.userId, itemId);
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Wunschlisteneintrag konnte nicht entfernt werden." }, { status: 500 });
+    return toNextErrorResponse(error, "Wunschlisteneintrag konnte nicht entfernt werden.");
   }
 }

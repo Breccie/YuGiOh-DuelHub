@@ -16,6 +16,14 @@ const MAX_REMOTE_ASSET_BYTES = 10 * 1024 * 1024;
 const MAX_MEMORY_CACHE_BYTES = 128 * 1024 * 1024;
 const MAX_MEMORY_CACHE_ENTRIES = 256;
 const UPSTREAM_FETCH_TIMEOUT_MS = 15_000;
+const MAX_UPSTREAM_REDIRECTS = 3;
+const ALLOWED_RASTER_CONTENT_TYPES = new Set([
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 const CARD_ASSET_TTL_MS = 180 * 24 * 60 * 60 * 1000;
 const REMOTE_ASSET_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 const MEMORY_CACHE_DIRECTORY = "memory://desktop-asset-cache";
@@ -68,8 +76,8 @@ function getNormalizedRemoteUrl(rawUrl: string) {
     throw new Error("Ungültige Asset-URL.");
   }
 
-  if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new Error("Asset-URL muss per HTTP oder HTTPS geladen werden.");
+  if (url.protocol !== "https:") {
+    throw new Error("Asset-URL muss per HTTPS geladen werden.");
   }
 
   if (!ALLOWED_REMOTE_HOSTS.has(url.hostname)) {
@@ -181,14 +189,40 @@ function createMissingCardPlaceholder(cardId: string) {
 }
 
 async function fetchUpstreamAsset(descriptor: CachedAssetDescriptor) {
-  const response = await fetch(descriptor.upstreamUrl, {
-    headers: {
-      "User-Agent": "Yu-Gi-Oh Duel Hub/1.0",
-      Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-    },
-    cache: "no-store",
-    signal: AbortSignal.timeout(UPSTREAM_FETCH_TIMEOUT_MS),
-  });
+  let upstreamUrl = descriptor.upstreamUrl;
+  let response: Response | null = null;
+
+  for (let redirectCount = 0; redirectCount <= MAX_UPSTREAM_REDIRECTS; redirectCount += 1) {
+    response = await fetch(upstreamUrl, {
+      headers: {
+        "User-Agent": "Yu-Gi-Oh Duel Hub/1.0",
+        Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      },
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(UPSTREAM_FETCH_TIMEOUT_MS),
+    });
+
+    if (response.status < 300 || response.status >= 400) {
+      break;
+    }
+
+    const location = response.headers.get("location");
+
+    if (!location) {
+      throw new Error("Asset-Weiterleitung enthält kein Ziel.");
+    }
+
+    if (redirectCount >= MAX_UPSTREAM_REDIRECTS) {
+      throw new Error("Asset enthält zu viele Weiterleitungen.");
+    }
+
+    upstreamUrl = getNormalizedRemoteUrl(new URL(location, upstreamUrl).toString());
+  }
+
+  if (!response) {
+    throw new Error("Asset konnte nicht geladen werden.");
+  }
 
   if (!response.ok) {
     throw new Error(
@@ -197,9 +231,10 @@ async function fetchUpstreamAsset(descriptor: CachedAssetDescriptor) {
   }
 
   const contentType = response.headers.get("content-type") ?? "application/octet-stream";
+  const normalizedContentType = contentType.split(";", 1)[0]!.trim().toLowerCase();
 
-  if (!contentType.toLowerCase().startsWith("image/")) {
-    throw new Error("Upstream-Antwort ist kein Bild.");
+  if (!ALLOWED_RASTER_CONTENT_TYPES.has(normalizedContentType)) {
+    throw new Error("Upstream-Antwort ist kein erlaubtes Rasterbild.");
   }
 
   const contentLength = response.headers.get("content-length");
@@ -220,7 +255,7 @@ async function fetchUpstreamAsset(descriptor: CachedAssetDescriptor) {
 
   return {
     body,
-    contentType,
+    contentType: normalizedContentType,
   };
 }
 
