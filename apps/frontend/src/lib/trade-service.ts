@@ -16,6 +16,7 @@ import type {
   TradeVersionDraft,
   TradeVersionDto,
 } from "@/lib/app-dtos";
+import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
 import { getActiveRun, requireRunMembership } from "@/lib/run-service";
 
 class TradeServiceError extends Error {
@@ -25,6 +26,75 @@ class TradeServiceError extends Error {
     super(message);
     this.name = "TradeServiceError";
     this.status = status;
+  }
+}
+
+async function requireTradesEnabled(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  runId: string,
+) {
+  const config = await getActiveCampaignRuleConfig(prisma, runId);
+  if (!config.trades.enabled) {
+    throw new TradeServiceError(
+      "Tauschen ist in den aktiven Kampagnenregeln deaktiviert.",
+      409,
+    );
+  }
+  return config.trades;
+}
+
+async function expireTradeReservationIfNeeded(
+  prisma: PrismaClient,
+  tradeId: string,
+  runId: string,
+) {
+  const trade = await loadTrade(prisma, tradeId);
+  if (
+    !trade
+    || trade.runId !== runId
+    || trade.status !== "ACCEPTED"
+    || !trade.reservationExpiresAt
+    || trade.reservationExpiresAt.getTime() > Date.now()
+  ) {
+    return false;
+  }
+  const acceptedVersion = getAcceptedVersion(trade);
+  await prisma.$transaction(async (tx) => {
+    if (acceptedVersion) {
+      await tx.collectionEntry.updateMany({
+        where: {
+          id: { in: acceptedVersion.items.map((item) => item.collectionEntryId) },
+          runId,
+          lockState: EntryLockState.RESERVED,
+        },
+        data: { lockState: EntryLockState.AVAILABLE },
+      });
+    }
+    await tx.trade.updateMany({
+      where: { id: tradeId, status: "ACCEPTED" },
+      data: {
+        status: "CANCELLED",
+        resolvedAt: new Date(),
+      },
+    });
+  });
+  return true;
+}
+
+async function expireStaleTradeReservations(
+  prisma: PrismaClient,
+  runId: string,
+) {
+  const stale = await prisma.trade.findMany({
+    where: {
+      runId,
+      status: "ACCEPTED",
+      reservationExpiresAt: { lte: new Date() },
+    },
+    select: { id: true },
+  });
+  for (const trade of stale) {
+    await expireTradeReservationIfNeeded(prisma, trade.id, runId);
   }
 }
 
@@ -318,6 +388,7 @@ function toTradeDetailDto(trade: TradeRecord, viewerId: string): TradeDetailDto 
     updatedAt: trade.updatedAt.toISOString(),
     resolvedAt: trade.resolvedAt?.toISOString() ?? null,
     acceptedAt: trade.acceptedAt?.toISOString() ?? null,
+    reservationExpiresAt: trade.reservationExpiresAt?.toISOString() ?? null,
     acceptedVersionId: trade.acceptedVersionId ?? null,
     proposerConfirmedAt: trade.proposerConfirmedAt?.toISOString() ?? null,
     responderConfirmedAt: trade.responderConfirmedAt?.toISOString() ?? null,
@@ -670,6 +741,7 @@ function requireParticipant(trade: TradeRecord, viewerId: string) {
 export async function listTradesForViewer(prisma: PrismaClient, viewerId: string) {
   const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradesForViewer(prisma, viewerId);
+  await expireStaleTradeReservations(prisma, activeRun.id);
 
   const trades = await prisma.trade.findMany({
     where: {
@@ -700,6 +772,7 @@ export async function createTradeOffer(
   draft: TradeOfferDraft,
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  await requireTradesEnabled(prisma, activeRun.id);
   const responder = await prisma.user.findUnique({
     where: {
       duelistId: draft.responderDuelistId.trim().toUpperCase(),
@@ -797,6 +870,7 @@ export async function createTradeCounterOffer(
   draft: TradeVersionDraft,
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  await requireTradesEnabled(prisma, activeRun.id);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
@@ -895,6 +969,7 @@ export async function acceptTradeVersion(
   tradeId: string,
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const tradeRules = await requireTradesEnabled(prisma, activeRun.id);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
@@ -953,6 +1028,9 @@ export async function acceptTradeVersion(
           },
         },
         acceptedAt: new Date(),
+        reservationExpiresAt: new Date(
+          Date.now() + tradeRules.reservationMinutes * 60_000,
+        ),
         proposerConfirmedAt: null,
         responderConfirmedAt: null,
         resolvedAt: null,
@@ -971,6 +1049,12 @@ export async function confirmTradeCompletion(
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
   await backfillTradeById(prisma, tradeId);
+  if (await expireTradeReservationIfNeeded(prisma, tradeId, activeRun.id)) {
+    throw new TradeServiceError(
+      "Die Reservierungsfrist dieses Trades ist abgelaufen. Die Karten wurden wieder freigegeben.",
+      409,
+    );
+  }
 
   await prisma.$transaction(async (tx) => {
     const trade = await loadTrade(tx, tradeId);
@@ -1039,6 +1123,7 @@ export async function confirmTradeCompletion(
         data: {
           status: "COMPLETED",
           resolvedAt: now,
+          reservationExpiresAt: null,
         },
       });
     }
@@ -1158,6 +1243,7 @@ export async function cancelTrade(
       },
       data: {
         status: "CANCELLED",
+        reservationExpiresAt: null,
         cancelledBy: {
           connect: {
             id: viewerId,

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
@@ -35,6 +35,8 @@ type DeckOverviewConsoleProps = {
     sideCount: number;
     isLegal: boolean;
     issueCount: number;
+    missingCardCount: number;
+    formatName: string | null;
     banlistName: string | null;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -290,13 +292,24 @@ export function DeckOverviewConsole({
 }: DeckOverviewConsoleProps) {
   const router = useRouter();
   const libraryRowRef = useRef<HTMLDivElement | null>(null);
+  const editorDialogRef = useRef<HTMLDivElement | null>(null);
+  const editorCloseRef = useRef<HTMLButtonElement | null>(null);
+  const editorTriggerRef = useRef<HTMLElement | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [draftDeckName, setDraftDeckName] = useState("");
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const [creatorFeedback, setCreatorFeedback] = useState<string | null>(null);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryStatus, setLibraryStatus] = useState<"ALL" | "PLAYABLE" | "DRAFT">(
+    "ALL",
+  );
+  const [libraryFormat, setLibraryFormat] = useState("");
+  const [libraryBanlist, setLibraryBanlist] = useState("");
+  const [librarySort, setLibrarySort] = useState<"UPDATED" | "NAME">("UPDATED");
   const selectedDeck =
     decks.find((deck) => deck.id === selectedDeckId) ??
     decks[0] ??
@@ -314,6 +327,90 @@ export function DeckOverviewConsole({
           }
         : null;
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
+  const formatOptions = useMemo(
+    () =>
+      [...new Set(decks.map((deck) => deck.formatName).filter(Boolean) as string[])].sort(
+        (left, right) => left.localeCompare(right, "de"),
+      ),
+    [decks],
+  );
+  const banlistOptions = useMemo(
+    () =>
+      [...new Set(decks.map((deck) => deck.banlistName).filter(Boolean) as string[])].sort(
+        (left, right) => left.localeCompare(right, "de"),
+      ),
+    [decks],
+  );
+  const filteredDecks = useMemo(() => {
+    const normalizedQuery = libraryQuery.trim().toLocaleLowerCase("de");
+    const result = decks.filter((deck) => {
+      if (normalizedQuery && !deck.name.toLocaleLowerCase("de").includes(normalizedQuery)) {
+        return false;
+      }
+      if (libraryStatus === "PLAYABLE" && !deck.isLegal) {
+        return false;
+      }
+      if (libraryStatus === "DRAFT" && deck.isLegal) {
+        return false;
+      }
+      if (libraryFormat && deck.formatName !== libraryFormat) {
+        return false;
+      }
+      if (libraryBanlist && deck.banlistName !== libraryBanlist) {
+        return false;
+      }
+      return true;
+    });
+
+    return result.sort((left, right) =>
+      librarySort === "NAME"
+        ? left.name.localeCompare(right.name, "de")
+        : new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+    );
+  }, [decks, libraryBanlist, libraryFormat, libraryQuery, librarySort, libraryStatus]);
+
+  useEffect(() => {
+    if (!showEditor) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    editorCloseRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showEditor]);
+
+  function openEditor(event: React.MouseEvent<HTMLElement>) {
+    editorTriggerRef.current = event.currentTarget;
+    setShowEditor(true);
+  }
+
+  function closeEditor() {
+    setShowEditor(false);
+    window.setTimeout(() => editorTriggerRef.current?.focus(), 0);
+  }
+
+  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeEditor();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = [...(editorDialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) ?? [])].filter((element) => !element.hasAttribute("hidden"));
+    if (focusable.length === 0) return;
+    const first = focusable[0]!;
+    const last = focusable.at(-1)!;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   function scrollLibrary(direction: "left" | "right") {
     libraryRowRef.current?.scrollBy({
@@ -341,23 +438,57 @@ export function DeckOverviewConsole({
 
       const shell = window.desktopShell;
 
-      if (!shell?.saveTextFile) {
-        throw new Error("Desktop-Export ist in dieser Umgebung nicht verfügbar.");
-      }
+      if (shell?.saveTextFile) {
+        const saveResult = await shell.saveTextFile({
+          defaultPath: data.export.fileName,
+          content: data.export.exportBody,
+          filters: [{ name: "EDOPro Deck", extensions: ["ydk"] }],
+        });
 
-      const saveResult = await shell.saveTextFile({
-        defaultPath: data.export.fileName,
-        content: data.export.exportBody,
-        filters: [{ name: "EDOPro Deck", extensions: ["ydk"] }],
-      });
-
-      if (!saveResult.canceled && saveResult.filePath) {
-        await shell.revealPath?.(saveResult.filePath);
+        if (!saveResult.canceled && saveResult.filePath) {
+          await shell.revealPath?.(saveResult.filePath);
+        }
+      } else {
+        const blob = new Blob([data.export.exportBody], {
+          type: "text/plain;charset=utf-8",
+        });
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = data.export.fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(href);
       }
     } catch (error) {
       setExportFeedback(getApiErrorMessage(error, "Deck konnte nicht exportiert werden."));
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function handleDuplicateDeck() {
+    if (!activeDeck) {
+      return;
+    }
+
+    setIsDuplicating(true);
+    setExportFeedback(null);
+
+    try {
+      const payload = await deckClient.duplicate(activeDeck.id);
+
+      if (!payload.deck?.id) {
+        throw new Error("Deck wurde dupliziert, aber die Deck-ID fehlt.");
+      }
+
+      router.push(`/decks?deck=${payload.deck.id}`);
+      router.refresh();
+    } catch (error) {
+      setExportFeedback(getApiErrorMessage(error, "Deck konnte nicht dupliziert werden."));
+    } finally {
+      setIsDuplicating(false);
     }
   }
 
@@ -397,7 +528,7 @@ export function DeckOverviewConsole({
     <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
       <div className="app-background" />
 
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
+      <div className="relative z-10 flex min-h-screen flex-col lg:block" inert={showEditor} aria-hidden={showEditor}>
         <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
           <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-0 lg:py-0">
             <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-6 lg:pb-8 lg:pt-6">
@@ -494,7 +625,7 @@ export function DeckOverviewConsole({
                   <div className="mt-7 flex max-w-[320px] flex-col gap-3">
                     <button
                       type="button"
-                      onClick={() => setShowEditor(true)}
+                      onClick={openEditor}
                       className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
                     >
                       <span>Deck bearbeiten</span>
@@ -504,10 +635,26 @@ export function DeckOverviewConsole({
                     <button
                       type="button"
                       onClick={handleExportDeck}
-                      disabled={!activeDeck || isExporting}
+                      disabled={!activeDeck || !activeDeck.isLegal || isExporting}
                       className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(88,163,169,0.26)] bg-[rgba(58,118,124,0.14)] px-5 text-sm uppercase tracking-[0.18em] text-[#c5eef0] transition hover:bg-[rgba(58,118,124,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <span>{isExporting ? "Exportiert..." : "Als .ydk exportieren"}</span>
+                      <span>
+                        {isExporting
+                          ? "Exportiert..."
+                          : activeDeck?.isLegal
+                            ? "Als .ydk exportieren"
+                            : "Entwurf nicht exportierbar"}
+                      </span>
+                      <AssetIcon name="copy" className="h-4 w-4 text-current" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => void handleDuplicateDeck()}
+                      disabled={!activeDeck || isDuplicating}
+                      className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(208,170,110,0.24)] bg-[rgba(208,170,110,0.08)] px-5 text-sm uppercase tracking-[0.18em] text-[#ead5b8] transition hover:bg-[rgba(208,170,110,0.14)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span>{isDuplicating ? "Dupliziert..." : "Deck duplizieren"}</span>
                       <AssetIcon name="copy" className="h-4 w-4 text-current" />
                     </button>
 
@@ -571,13 +718,76 @@ export function DeckOverviewConsole({
                   </div>
                 </div>
 
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  <label className="sm:col-span-2 xl:col-span-1">
+                    <span className="sr-only">Decks durchsuchen</span>
+                    <input
+                      value={libraryQuery}
+                      onChange={(event) => setLibraryQuery(event.target.value)}
+                      className="ui-input"
+                      placeholder="Deck suchen"
+                    />
+                  </label>
+                  <select
+                    value={libraryStatus}
+                    onChange={(event) =>
+                      setLibraryStatus(
+                        event.target.value as "ALL" | "PLAYABLE" | "DRAFT",
+                      )
+                    }
+                    className="ui-input"
+                    aria-label="Spielbarkeit filtern"
+                  >
+                    <option value="ALL">Alle Zustände</option>
+                    <option value="PLAYABLE">Spielbereit</option>
+                    <option value="DRAFT">Entwürfe</option>
+                  </select>
+                  <select
+                    value={libraryFormat}
+                    onChange={(event) => setLibraryFormat(event.target.value)}
+                    className="ui-input"
+                    aria-label="Format filtern"
+                  >
+                    <option value="">Alle Formate</option>
+                    {formatOptions.map((formatName) => (
+                      <option key={formatName} value={formatName}>
+                        {formatName}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={libraryBanlist}
+                    onChange={(event) => setLibraryBanlist(event.target.value)}
+                    className="ui-input"
+                    aria-label="Bannliste filtern"
+                  >
+                    <option value="">Alle Bannlisten</option>
+                    {banlistOptions.map((banlistName) => (
+                      <option key={banlistName} value={banlistName}>
+                        {banlistName}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={librarySort}
+                    onChange={(event) =>
+                      setLibrarySort(event.target.value as "UPDATED" | "NAME")
+                    }
+                    className="ui-input"
+                    aria-label="Decks sortieren"
+                  >
+                    <option value="UPDATED">Zuletzt geändert</option>
+                    <option value="NAME">Name A–Z</option>
+                  </select>
+                </div>
+
                 <div
                   id="deck-library"
                   ref={libraryRowRef}
                   className="no-scrollbar mt-4 flex gap-3 overflow-x-auto pb-3"
                 >
-                  {decks.map((deck) => {
-                    const selected = deck.id === selectedDeckId;
+                  {filteredDecks.map((deck) => {
+                    const selected = deck.id === selectedDeck?.id;
 
                     return (
                       <button
@@ -614,7 +824,11 @@ export function DeckOverviewConsole({
                               : "border-[rgba(207,91,66,0.28)] bg-[rgba(126,23,15,0.18)] text-[#ffd7c9]",
                           )}
                         >
-                          {deck.isLegal ? "Legal" : `${deck.issueCount} Fehler`}
+                          {deck.isLegal
+                            ? "Spielbereit"
+                            : deck.missingCardCount > 0
+                              ? `Entwurf · ${deck.missingCardCount} fehlen`
+                              : `Entwurf · ${deck.issueCount} Fehler`}
                         </span>
 
                         {selected ? (
@@ -625,6 +839,11 @@ export function DeckOverviewConsole({
                       </button>
                     );
                   })}
+                  {filteredDecks.length === 0 ? (
+                    <div className="flex min-h-[220px] min-w-[260px] items-center justify-center rounded-[16px] border border-dashed border-[rgba(255,255,255,0.12)] px-5 text-center text-sm text-[#ad9a84]">
+                      Keine Decks entsprechen den gewählten Filtern.
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setCreatorOpen(true)}
@@ -699,7 +918,7 @@ export function DeckOverviewConsole({
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setShowEditor(true)}
+                      onClick={openEditor}
                       className="rounded-full p-2 text-[#cab69b] transition hover:bg-[rgba(255,255,255,0.04)] hover:text-[#f0dcc7]"
                       aria-label="Deck bearbeiten"
                     >
@@ -833,20 +1052,28 @@ export function DeckOverviewConsole({
 
       {showEditor ? (
         <div className="fixed inset-0 z-50 bg-[rgba(4,6,10,0.74)] p-4 backdrop-blur-md sm:p-6">
-          <div className="mx-auto flex h-full max-w-[1450px] flex-col rounded-[28px] border border-[rgba(255,255,255,0.10)] bg-[linear-gradient(180deg,rgba(10,13,18,0.94),rgba(7,9,13,0.98))] shadow-[0_34px_80px_rgba(0,0,0,0.48)]">
+          <div
+            ref={editorDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="deck-editor-dialog-title"
+            onKeyDown={handleEditorKeyDown}
+            className="mx-auto flex h-full max-w-[1450px] flex-col rounded-[28px] border border-[rgba(255,255,255,0.10)] bg-[linear-gradient(180deg,rgba(10,13,18,0.94),rgba(7,9,13,0.98))] shadow-[0_34px_80px_rgba(0,0,0,0.48)]"
+          >
             <div className="flex items-center justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] px-5 py-4 sm:px-6">
               <div>
                 <p className="text-[0.74rem] uppercase tracking-[0.22em] text-[#cb5c44]">
                   Editor
                 </p>
-                <h2 className="font-display inscription-text-soft mt-2 text-3xl leading-tight">
+                <h2 id="deck-editor-dialog-title" className="font-display inscription-text-soft mt-2 text-3xl leading-tight">
                   {activeDeck?.name ?? "Neues Deck"}
                 </h2>
               </div>
 
               <button
+                ref={editorCloseRef}
                 type="button"
-                onClick={() => setShowEditor(false)}
+                onClick={closeEditor}
                 className="grid h-10 w-10 place-items-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#d9c5ac] transition hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(18,22,28,0.72)]"
                 aria-label="Editor schließen"
               >
@@ -856,6 +1083,7 @@ export function DeckOverviewConsole({
 
             <div className="flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-5">
               <DeckEditorConsole
+                key={activeDeck?.id ?? "new-deck"}
                 activeDeck={activeDeck}
                 availableBanlists={availableBanlists}
                 collectionCards={collectionCards}

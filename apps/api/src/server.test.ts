@@ -2,11 +2,17 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createServer } from "./server";
 import { getPrisma } from "./lib/prisma";
 
-vi.mock("./lib/prisma", () => ({
-  getPrisma: vi.fn(() => ({
-    $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
-  })),
-}));
+vi.mock("./lib/prisma", async (importOriginal) => {
+  if (process.env.API_INTEGRATION_TESTS === "1") {
+    return importOriginal<typeof import("./lib/prisma")>();
+  }
+
+  return {
+    getPrisma: vi.fn(() => ({
+      $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
+    })),
+  };
+});
 
 const runApiIntegrationTests = process.env.API_INTEGRATION_TESTS === "1";
 
@@ -49,43 +55,49 @@ describe("api server", () => {
     expect(response.headers["cross-origin-resource-policy"]).toBe("same-site");
   });
 
-  it("exposes a database readiness endpoint", async () => {
-    vi.mocked(getPrisma).mockReturnValueOnce({
-      $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
-    } as unknown as ReturnType<typeof getPrisma>);
+  it.skipIf(runApiIntegrationTests)(
+    "exposes a database readiness endpoint",
+    async () => {
+      vi.mocked(getPrisma).mockReturnValueOnce({
+        $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
+      } as unknown as ReturnType<typeof getPrisma>);
 
-    const response = await server.inject({
-      method: "GET",
-      url: "/ready",
-    });
+      const response = await server.inject({
+        method: "GET",
+        url: "/ready",
+      });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
-      ok: true,
-      service: "ygo-api",
-      database: "reachable",
-    });
-  });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({
+        ok: true,
+        service: "ygo-api",
+        database: "reachable",
+      });
+    },
+  );
 
-  it("reports readiness failure when the database is unreachable", async () => {
-    vi.mocked(getPrisma).mockReturnValueOnce({
-      $queryRaw: vi.fn(async () => {
-        throw new Error("database offline");
-      }),
-    } as unknown as ReturnType<typeof getPrisma>);
+  it.skipIf(runApiIntegrationTests)(
+    "reports readiness failure when the database is unreachable",
+    async () => {
+      vi.mocked(getPrisma).mockReturnValueOnce({
+        $queryRaw: vi.fn(async () => {
+          throw new Error("database offline");
+        }),
+      } as unknown as ReturnType<typeof getPrisma>);
 
-    const response = await server.inject({
-      method: "GET",
-      url: "/ready",
-    });
+      const response = await server.inject({
+        method: "GET",
+        url: "/ready",
+      });
 
-    expect(response.statusCode).toBe(503);
-    expect(response.json()).toEqual({
-      ok: false,
-      service: "ygo-api",
-      database: "unreachable",
-    });
-  });
+      expect(response.statusCode).toBe(503);
+      expect(response.json()).toEqual({
+        ok: false,
+        service: "ygo-api",
+        database: "unreachable",
+      });
+    },
+  );
 
   it("exposes rules through api v1", async () => {
     const response = await server.inject({
@@ -178,6 +190,42 @@ describe("api server", () => {
     expect(profileResponse.statusCode).toBe(401);
   });
 
+  it("rejects cross-origin mutations before route handling", async () => {
+    const response = await server.inject({
+      method: "POST",
+      url: "/api/v1/auth/login",
+      headers: {
+        origin: "https://attacker.test",
+      },
+      payload: {
+        duelistId: "ATTACKER",
+        password: "not-relevant",
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().errorDetail.code).toBe("invalid_origin");
+  });
+
+  it("rate-limits repeated login attempts", async () => {
+    const responses = [];
+
+    for (let attempt = 0; attempt < 11; attempt += 1) {
+      responses.push(
+        await server.inject({
+          method: "POST",
+          url: "/api/v1/auth/login",
+          payload: {},
+        }),
+      );
+    }
+
+    expect(responses.slice(0, 10).every((response) => response.statusCode === 400)).toBe(
+      true,
+    );
+    expect(responses[10]?.statusCode).toBe(429);
+  });
+
   it.skipIf(!runApiIntegrationTests)(
     "supports an authenticated run through Fastify API v1 routes",
     async () => {
@@ -199,6 +247,19 @@ describe("api server", () => {
         expect(registerResponse.statusCode).toBe(201);
         const cookie = extractSessionCookie(registerResponse);
         const userId = registerResponse.json().session.userId as string;
+
+        const createRunResponse = await server.inject({
+          method: "POST",
+          url: "/api/v1/runs",
+          headers: {
+            cookie,
+          },
+          payload: {
+            name: "API Smoke Progression",
+          },
+        });
+
+        expect(createRunResponse.statusCode).toBe(201);
 
         const activeRunResponse = await server.inject({
           method: "GET",
@@ -309,11 +370,27 @@ describe("api server", () => {
           status: "CLAIMED",
         });
       } finally {
-        await prisma.user.deleteMany({
+        const user = await prisma.user.findUnique({
           where: {
             duelistId,
           },
+          select: {
+            id: true,
+          },
         });
+
+        if (user) {
+          await prisma.playGroupRun.deleteMany({
+            where: {
+              ownerId: user.id,
+            },
+          });
+          await prisma.user.delete({
+            where: {
+              id: user.id,
+            },
+          });
+        }
       }
     },
   );

@@ -2,6 +2,8 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { getFrontendRuntimeStatus } from "@/lib/app-mode";
 
+const API_SERVICE_TIMEOUT_MS = 20_000;
+
 export function getApiBaseUrl() {
   const status = getFrontendRuntimeStatus();
 
@@ -78,6 +80,7 @@ export async function fetchApiService(
       ...init,
       headers: forwardedHeaders,
       cache: "no-store",
+      signal: init?.signal ?? AbortSignal.timeout(API_SERVICE_TIMEOUT_MS),
     });
   } catch (error) {
     const serviceError = new Error(

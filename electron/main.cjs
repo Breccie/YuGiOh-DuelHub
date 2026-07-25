@@ -10,6 +10,7 @@ const DESKTOP_HOST = "127.0.0.1";
 let mainWindow = null;
 let serverProcess = null;
 let isQuitting = false;
+let trustedWindowOrigin = null;
 
 function getAppRoot() {
   return resolve(__dirname, "..");
@@ -140,6 +141,7 @@ async function resolveStartUrl() {
 
 async function createMainWindow() {
   const startUrl = await resolveStartUrl();
+  trustedWindowOrigin = new URL(startUrl).origin;
 
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -153,7 +155,21 @@ async function createMainWindow() {
       preload: join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    openExternalWebUrl(url);
+    return { action: "deny" };
+  });
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (isTrustedWindowUrl(url)) {
+      return;
+    }
+
+    event.preventDefault();
+    openExternalWebUrl(url);
   });
 
   await mainWindow.loadURL(startUrl);
@@ -164,17 +180,54 @@ async function createMainWindow() {
 
   mainWindow.on("closed", () => {
     mainWindow = null;
+    trustedWindowOrigin = null;
   });
 }
 
+function isTrustedWindowUrl(url) {
+  if (!trustedWindowOrigin) {
+    return false;
+  }
+
+  try {
+    return new URL(url).origin === trustedWindowOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function openExternalWebUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+
+    if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") {
+      void shell.openExternal(parsedUrl.toString());
+    }
+  } catch {
+    // Ignore malformed or unsupported external URLs.
+  }
+}
+
+function isTrustedIpcEvent(event) {
+  return (
+    Boolean(mainWindow) &&
+    event.sender === mainWindow.webContents &&
+    isTrustedWindowUrl(event.senderFrame?.url ?? "")
+  );
+}
+
 function registerDesktopIpc() {
-  ipcMain.handle("desktop:minimize-window", () => {
+  ipcMain.handle("desktop:minimize-window", (event) => {
+    if (!isTrustedIpcEvent(event)) {
+      return false;
+    }
+
     mainWindow?.minimize();
     return true;
   });
 
-  ipcMain.handle("desktop:toggle-maximize-window", () => {
-    if (!mainWindow) {
+  ipcMain.handle("desktop:toggle-maximize-window", (event) => {
+    if (!mainWindow || !isTrustedIpcEvent(event)) {
       return false;
     }
 
@@ -187,13 +240,17 @@ function registerDesktopIpc() {
     return true;
   });
 
-  ipcMain.handle("desktop:close-window", () => {
+  ipcMain.handle("desktop:close-window", (event) => {
+    if (!isTrustedIpcEvent(event)) {
+      return false;
+    }
+
     mainWindow?.close();
     return true;
   });
 
-  ipcMain.handle("desktop:save-text-file", async (_event, payload) => {
-    if (!mainWindow) {
+  ipcMain.handle("desktop:save-text-file", async (event, payload) => {
+    if (!mainWindow || !isTrustedIpcEvent(event)) {
       return { canceled: true, filePath: null };
     }
 
@@ -215,8 +272,8 @@ function registerDesktopIpc() {
     };
   });
 
-  ipcMain.handle("desktop:open-path", async (_event, targetPath) => {
-    if (!targetPath) {
+  ipcMain.handle("desktop:open-path", async (event, targetPath) => {
+    if (!targetPath || !isTrustedIpcEvent(event)) {
       return false;
     }
 
@@ -224,8 +281,8 @@ function registerDesktopIpc() {
     return result === "";
   });
 
-  ipcMain.handle("desktop:reveal-path", async (_event, targetPath) => {
-    if (!targetPath) {
+  ipcMain.handle("desktop:reveal-path", async (event, targetPath) => {
+    if (!targetPath || !isTrustedIpcEvent(event)) {
       return false;
     }
 

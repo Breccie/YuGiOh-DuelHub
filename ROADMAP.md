@@ -3,19 +3,19 @@
 Das langfristige kampagnenzentrierte Sandbox-Zielbild und der Ausbauplan stehen in
 [docs/product-vision.md](docs/product-vision.md).
 
-Stand: 2026-07-08
+Stand: 2026-07-24
 
 ## Release-Reihenfolge
 
 | Phase | Ziel | Status |
 | --- | --- | --- |
-| 1. Online-Basis | Env-Profile, Render/Vercel/Supabase-Doku, API-Health | In Arbeit |
-| 2. Datenparitaet | Auth, Kampagnen, Packs, Collection, Binder, Decks, Trades, Turniere, Rewards ueber API | In Arbeit |
-| 3. Kampagnenflow | Login -> Kampagnenauswahl -> aktive Kampagne -> Dashboard-Aufgaben | Groesstenteils vorhanden, weiter haerten |
-| 4. Trade-MVP | Online erstellen, reservieren, akzeptieren, beidseitig bestaetigen | Implementiert, Smoke erweitert |
-| 5. Turnier-MVP | Externe Scores melden/bestaetigen, Standings, Abschluss, Rewards | Implementiert, Smoke erweitert |
-| 6. Deck/Export | Bannlisten/Genesys live pruefen, `.ydk` exportieren | Vorhanden, Online-Smoke noch erweiterbar |
-| 7. Deployment-Abnahme | Supabase/Render/Vercel setzen, Smoke gegen echte URLs | Wartet auf echte Projekt-Credentials |
+| 1. Online-Basis | Env-Profile, sichere Migrationen, API-Health, Seed-Schutz | Implementiert und lokal geprueft |
+| 2. Kampagnenflow | Login -> Kampagnenauswahl -> aktive Kampagne -> serverseitige Guards | Implementiert, Rollen-/Online-Smoke weiter ausbauen |
+| 3. Gemeinsamer Editor | All-Cards-Katalog, Besitzfilter, Deck-, Binder- und Wunschlistenfluss | Implementiert und per Desktop/Mobile-Playwright abgenommen |
+| 4. Regelversionen | Presets, sofortige/datums-/checkpointbasierte Aktivierung, historische Referenzen | Kern implementiert; Rollen, Änderungsgründe, Credit-Limit, Catch-up, Trade-Frist und Matchmodus durchgesetzt |
+| 5. Custom Packs | Entwurf, Slots/Gewichte, Simulation, Veröffentlichung und idempotentes Öffnen | Private Vorlagen und Kampagnenkopie implementiert; vollständige Reward-Einbindung offen |
+| 6. Trade-/Turnier-MVP | Reservierung, Bestätigung, Standings, Abschluss und Rewards | Implementiert; zusätzliche Sandbox-Modi offen |
+| 7. Deployment-Abnahme | Postgres-Smoke und Smoke gegen echte Vercel/Render-URLs | Wartet auf echte Projekt-Credentials |
 
 ## P0 vor externem Deployment
 
@@ -32,6 +32,8 @@ Stand: 2026-07-08
 - Deckeditor mit echter Online-Kampagne durchspielen: Karte hinzufuegen/entfernen, Banlist wechseln, Genesys-Werte sehen, `.ydk` exportieren.
 - Trade-UI manuell mit zwei Accounts testen: wer ist dran, was ist reserviert, was wird uebertragen.
 - Turnier-UI manuell testen: Einladung, Pairing, Score melden, Gegner bestaetigt, Abschluss, Credits.
+- Custom Pack mit produktiver Kampagne erstellen, simulieren, veroeffentlichen und einen idempotenten Retry der Oeffnung pruefen.
+- Geplante Regelversion einmal per Datum und einmal per Progressionsschritt aktivieren und die historischen Referenzen kontrollieren.
 
 ## P2 nach erstem Release
 
@@ -40,6 +42,10 @@ Stand: 2026-07-08
 - Nicht matchbare offizielle Genesys-Karten als Known Issue pflegen.
 - E-Mail/Passwort-Reset oder bessere Account-Wiederherstellung ergaenzen.
 - Organizer-Rechte und Kampagnenbeitritt UX-seitig verbessern.
+- Deck-Autosave mit Konfliktwiederholung ergaenzen.
+- Custom Packs vollstaendig in Progression/Rewards integrieren.
+- Verbleibende Sandbox-Regeln (unter anderem Pack-/Sammlungsoptionen, Deck-Lock und zusätzliche Turniermodi) in allen Verbrauchern umsetzen.
+- Credit-Anteile in Trades erst nach einem eigenen, atomaren Ledger-Transferkonzept aktivieren; die Option bleibt bis dahin sichtbar als nicht verfügbar deaktiviert.
 
 ## Nicht-Ziel
 

@@ -9,6 +9,7 @@ import {
   completeTournament,
   recordTournamentMatchResult,
 } from "@/lib/tournament-service";
+import { deleteRunFixture } from "@/test-support/run-fixture-cleanup";
 
 const prisma = new PrismaClient();
 
@@ -154,7 +155,7 @@ describe("tournament rewards and progression", () => {
       );
     } finally {
       if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+        await deleteRunFixture(prisma, createdIds.runId);
       }
       if (createdIds.ownerId || createdIds.playerId) {
         await prisma.user.deleteMany({
@@ -689,7 +690,7 @@ describe("tournament rewards and progression", () => {
       ).resolves.toEqual(expect.objectContaining({ amount: -run.defaultPackPrice }));
     } finally {
       if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+        await deleteRunFixture(prisma, createdIds.runId);
       }
       if (createdIds.ownerId || createdIds.playerId) {
         await prisma.user.deleteMany({
@@ -798,6 +799,8 @@ describe("tournament rewards and progression", () => {
           ownerId: owner.id,
           name: `${tag} run`,
           startingCredits: 0,
+          setsPerProgressionStep: 1,
+          separatePromoProgression: false,
           tournamentWinnerCredits: 900,
           tournamentRunnerUpCredits: 450,
           tournamentParticipationCredits: 125,
@@ -851,8 +854,6 @@ describe("tournament rewards and progression", () => {
       const generated = await generateRunProgression(prisma, owner.id, run.id, {
         count: 2,
         fromDate: "2099-01-01T00:00:00.000Z",
-        setsPerCheckpoint: 1,
-        includePromos: true,
         includeTournamentPacks: true,
       });
 
@@ -981,7 +982,7 @@ describe("tournament rewards and progression", () => {
       ).resolves.toEqual(expect.objectContaining({ promoSourceId: promoSource.id }));
     } finally {
       if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+        await deleteRunFixture(prisma, createdIds.runId);
       }
       if (createdIds.promoSourceIds.length > 0) {
         await prisma.promoSource.deleteMany({

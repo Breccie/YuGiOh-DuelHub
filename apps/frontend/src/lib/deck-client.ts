@@ -74,6 +74,15 @@ export const deckClient = {
     return response;
   },
 
+  async duplicate(deckId: string) {
+    const response = await apiPostJson<DeckMutationResponse, Record<string, never>>(
+      `/api/decks/${deckId}/duplicate`,
+      {},
+    );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
+  },
+
   async upsertCard(deckId: string, input: UpsertDeckCardRequest) {
     const response = await apiPostJson<DeckCardMutationResponse, UpsertDeckCardRequest>(
       `/api/decks/${deckId}/cards`,

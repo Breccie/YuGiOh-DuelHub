@@ -29,7 +29,6 @@ import {
   updateRunSettingsRequestSchema,
   walletResponseSchema,
 } from "@ygo/contracts";
-import { DomainError, normalizeDuelistId } from "@ygo/domain";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import {
@@ -48,6 +47,7 @@ import {
   getRunPromos,
 } from "@/lib/progression-service";
 import {
+  addRunMember,
   createRun,
   getActiveRun,
   getOrCreateWallet,
@@ -322,50 +322,11 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       const session = await requireViewerSession(request, getPrisma());
       const { runId } = runParamsSchema.parse(request.params);
       const body = addRunMemberRequestSchema.parse(request.body ?? {});
-      await requireRunMembership(getSharedPrisma(), {
+      const member = await addRunMember(getSharedPrisma(), {
         runId,
-        userId: session.userId,
-        organizerOnly: true,
-      });
-
-      const user = await getSharedPrisma().user.findUnique({
-        where: {
-          duelistId: normalizeDuelistId(body.duelistId),
-        },
-        select: {
-          id: true,
-          duelistId: true,
-          displayName: true,
-        },
-      });
-
-      if (!user) {
-        throw new DomainError({
-          code: "member_not_found",
-          message: "Dieser Duelist wurde nicht gefunden.",
-          status: 404,
-        });
-      }
-
-      const member = await getSharedPrisma().runMembership.upsert({
-        where: {
-          runId_userId: {
-            runId,
-            userId: user.id,
-          },
-        },
-        create: {
-          runId,
-          userId: user.id,
-          role: body.role ?? "PLAYER",
-        },
-        update: {
-          role: body.role ?? "PLAYER",
-        },
-      });
-      await getOrCreateWallet(getSharedPrisma(), {
-        runId,
-        userId: user.id,
+        actorId: session.userId,
+        duelistId: body.duelistId,
+        role: body.role,
       });
 
       return reply.status(201).send(
@@ -373,8 +334,8 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
           id: member.id,
           runId: member.runId,
           userId: member.userId,
-          duelistId: user.duelistId,
-          displayName: user.displayName,
+          duelistId: member.user.duelistId,
+          displayName: member.user.displayName,
           role: member.role,
           joinedAt: member.joinedAt.toISOString(),
         }),

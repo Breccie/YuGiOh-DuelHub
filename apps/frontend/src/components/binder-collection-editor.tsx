@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import type { CardCatalogItem, CardOwnershipFilter } from "@ygo/contracts";
 import { AssetIcon } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
 import { consoleNavItems } from "@/components/console-nav-items";
@@ -24,6 +25,8 @@ import type {
   CollectionBinderPageDto,
   CollectionBinderSlotDto,
 } from "@/lib/collection-showcase";
+import { cardCatalogClient } from "@/lib/card-catalog-client";
+import { wishlistClient } from "@/lib/wishlist-client";
 
 type EditorKindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
 type EditorRarityFilter = "ALL" | string;
@@ -44,6 +47,16 @@ type SlotContextMenuState = {
   slotIndex: number;
   x: number;
   y: number;
+};
+
+type InventoryTile = {
+  availableNow: number;
+  card: CardCatalogItem;
+  disabled: boolean;
+  isSelected: boolean;
+  key: string;
+  payload: BinderEntryDragPayload | null;
+  printing: BinderEditorPrintingDto | null;
 };
 
 type BinderCollectionEditorProps = {
@@ -234,8 +247,17 @@ export function BinderCollectionEditor({
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryKind, setInventoryKind] = useState<EditorKindFilter>("ALL");
   const [inventoryRarity, setInventoryRarity] = useState<EditorRarityFilter>("ALL");
+  const [ownershipFilter, setOwnershipFilter] = useState<CardOwnershipFilter>("ALL");
+  const [catalogCards, setCatalogCards] = useState<CardCatalogItem[]>([]);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [selectedCatalogCard, setSelectedCatalogCard] = useState<CardCatalogItem | null>(null);
+  const [wishlistFeedback, setWishlistFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(isOpen && initialSnapshot === null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(
@@ -248,15 +270,26 @@ export function BinderCollectionEditor({
   const [hoverSlotIndex, setHoverSlotIndex] = useState<number | null>(null);
   const [stagedPayload, setStagedPayload] = useState<BinderEntryDragPayload | null>(null);
   const [slotContextMenu, setSlotContextMenu] = useState<SlotContextMenuState | null>(null);
+  const [closeWarning, setCloseWarning] = useState<string | null>(null);
 
   const saveSequenceRef = useRef(0);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingSaveCountRef = useRef(0);
+  const metadataSavePromiseRef = useRef<Promise<void> | null>(null);
+  const metadataDirtyRef = useRef(false);
+  const metadataEditRevisionRef = useRef(0);
+  const failedSaveTargetsRef = useRef(new Set<string>());
+  const latestSaveRequestByPageRef = useRef(new Map<string, number>());
   const activeDragRef = useRef<ActiveDragState | null>(null);
   const dragCandidateRef = useRef<DragCandidateState | null>(null);
   const suppressClickRef = useRef(false);
   const handleDropEntryRef = useRef<(slotIndex: number, payload: BinderEntryDragPayload) => void>(
     () => undefined,
   );
+  const handleCloseEditorRef = useRef<() => void>(() => undefined);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     activeDragRef.current = activeDrag;
@@ -275,13 +308,27 @@ export function BinderCollectionEditor({
       setSlotContextMenu(null);
     }
 
+    function handleMenuKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    }
+
     window.addEventListener("click", closeMenu);
-    window.addEventListener("keydown", closeMenu);
+    window.addEventListener("keydown", handleMenuKeyDown);
 
     return () => {
       window.removeEventListener("click", closeMenu);
-      window.removeEventListener("keydown", closeMenu);
+      window.removeEventListener("keydown", handleMenuKeyDown);
     };
+  }, [slotContextMenu]);
+
+  useEffect(() => {
+    if (!slotContextMenu) {
+      return;
+    }
+
+    contextMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
   }, [slotContextMenu]);
 
   useEffect(() => {
@@ -293,7 +340,7 @@ export function BinderCollectionEditor({
 
     async function loadSnapshot() {
       setIsLoading(true);
-      setLoadError(null);
+      setSnapshotError(null);
 
       try {
         let typedPayload = await collectionClient.getBinderEditor(binderId);
@@ -323,13 +370,19 @@ export function BinderCollectionEditor({
         setHistoryFuture([]);
         setSaveStatus("idle");
         setSaveError(null);
+        setCloseWarning(null);
+        metadataDirtyRef.current = false;
+        metadataEditRevisionRef.current = 0;
+        metadataSavePromiseRef.current = null;
+        failedSaveTargetsRef.current.clear();
+        latestSaveRequestByPageRef.current.clear();
         setLastSavedAt(typedPayload.binder.updatedAt);
       } catch (error) {
         if (cancelled) {
           return;
         }
 
-        setLoadError(
+        setSnapshotError(
           getApiErrorMessage(error, "Binder-Editor konnte nicht geladen werden."),
         );
       } finally {
@@ -345,6 +398,48 @@ export function BinderCollectionEditor({
       cancelled = true;
     };
   }, [binderId, initialPageIndex, initialSlotIndex, initialSnapshot, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      setCatalogLoading(true);
+      void cardCatalogClient
+        .search({
+          q: inventorySearch.trim() || undefined,
+          ownership: ownershipFilter,
+          kind: inventoryKind === "ALL" ? undefined : inventoryKind,
+          rarity: inventoryRarity === "ALL" ? undefined : inventoryRarity,
+          limit: 60,
+        })
+        .then((payload) => {
+          if (cancelled) return;
+          setCatalogError(null);
+          setCatalogCards(payload.items);
+          setCatalogTotal(payload.total);
+          setCatalogCursor(payload.nextCursor);
+          setSelectedCatalogCard((current) =>
+            current ? payload.items.find((card) => card.cardId === current.cardId) ?? current : null,
+          );
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setCatalogError(getApiErrorMessage(error, "Kartenkatalog konnte nicht geladen werden."));
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setCatalogLoading(false);
+        });
+    }, 180);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [catalogRevision, inventoryKind, inventoryRarity, inventorySearch, isOpen, ownershipFilter]);
 
   useEffect(() => {
     if (!dragCandidate && !activeDrag) {
@@ -437,36 +532,20 @@ export function BinderCollectionEditor({
     ),
   );
 
-  const inventoryCards = (snapshot?.inventoryCards ?? [])
-    .filter((card) => {
-      if (inventoryKind !== "ALL" && card.kind !== inventoryKind) {
-        return false;
-      }
-
-      if (!inventorySearch.trim()) {
-        return true;
-      }
-
-      const normalizedSearch = inventorySearch.trim().toLowerCase();
-      const printingText = card.printings.map((printing) => printing.setLabel).join(" ");
-
-      return `${card.name} ${card.slug} ${printingText}`.toLowerCase().includes(normalizedSearch);
-    })
-    .sort((left, right) => {
-      if (right.totalCopies !== left.totalCopies) {
-        return right.totalCopies - left.totalCopies;
-      }
-
-      return left.name.localeCompare(right.name, "de");
-    });
+  const inventoryByCardId = new Map(
+    (snapshot?.inventoryCards ?? []).map((card) => [card.cardId, card]),
+  );
 
   const inventoryRarities = Array.from(
     new Set(
-      (snapshot?.inventoryCards ?? []).flatMap((card) =>
-        card.printings
-          .map((printing) => printing.rarity)
-          .filter((rarity): rarity is string => Boolean(rarity)),
-      ),
+      [
+        ...(snapshot?.inventoryCards ?? []).flatMap((card) =>
+          card.printings
+            .map((printing) => printing.rarity)
+            .filter((rarity): rarity is string => Boolean(rarity)),
+        ),
+        ...catalogCards.flatMap((card) => card.rarities),
+      ],
     ),
   ).sort((left, right) => left.localeCompare(right, "de"));
 
@@ -474,13 +553,18 @@ export function BinderCollectionEditor({
     const page = nextPages[pageIndex];
 
     if (!page) {
-      return;
+      return false;
     }
 
     const requestId = saveSequenceRef.current + 1;
     saveSequenceRef.current = requestId;
+    latestSaveRequestByPageRef.current.set(page.id, requestId);
+    pendingSaveCountRef.current += 1;
     setSaveStatus("saving");
-    setSaveError(null);
+    if (failedSaveTargetsRef.current.size === 0) {
+      setSaveError(null);
+    }
+    setCloseWarning(null);
 
     const saveOperation = saveQueueRef.current
       .catch(() => undefined)
@@ -491,44 +575,66 @@ export function BinderCollectionEditor({
 
     try {
       const payload = await saveOperation;
-
-      if (saveSequenceRef.current !== requestId) {
-        return;
-      }
-
       const savedPage = payload.page;
+      failedSaveTargetsRef.current.delete(page.id);
 
-      setPages((current) =>
-        current.map((candidate) => (candidate.id === savedPage.id ? savedPage : candidate)),
-      );
-      setSnapshot((current) =>
-        current
-          ? {
-              ...current,
-              binder: {
-                ...current.binder,
-                pages: current.binder.pages.map((candidate) =>
-                  candidate.id === savedPage.id ? savedPage : candidate,
-                ),
-              },
-            }
-          : current,
-      );
-      setLastSavedAt(new Date().toISOString());
-      setSaveStatus("saved");
-    } catch (error) {
-      if (saveSequenceRef.current !== requestId) {
-        return;
+      if (latestSaveRequestByPageRef.current.get(page.id) === requestId) {
+        setPages((current) =>
+          current.map((candidate) => (candidate.id === savedPage.id ? savedPage : candidate)),
+        );
+        setSnapshot((current) =>
+          current
+            ? {
+                ...current,
+                binder: {
+                  ...current.binder,
+                  pages: current.binder.pages.map((candidate) =>
+                    candidate.id === savedPage.id ? savedPage : candidate,
+                  ),
+                },
+              }
+            : current,
+        );
       }
 
-      setSaveStatus("error");
-      setSaveError(getApiErrorMessage(error, "Binder-Seite konnte nicht gespeichert werden."));
+      setLastSavedAt(new Date().toISOString());
+      return true;
+    } catch (error) {
+      const message = getApiErrorMessage(error, "Binder-Seite konnte nicht gespeichert werden.");
+      failedSaveTargetsRef.current.add(page.id);
+      setSaveError(`Seite ${pageIndex + 1}: ${message}`);
+      return false;
+    } finally {
+      pendingSaveCountRef.current = Math.max(0, pendingSaveCountRef.current - 1);
+
+      if (pendingSaveCountRef.current > 0) {
+        setSaveStatus("saving");
+      } else if (failedSaveTargetsRef.current.size > 0) {
+        setSaveStatus("error");
+        setSaveError((current) => current ?? "Mindestens eine Binder-Seite konnte nicht gespeichert werden.");
+      } else {
+        setSaveStatus("saved");
+        setSaveError(null);
+      }
     }
   }
 
   async function handleCloseEditor() {
-    if (saveStatus === "saving") {
+    if (metadataSavePromiseRef.current) {
+      await metadataSavePromiseRef.current;
+    }
+
+    if (pendingSaveCountRef.current > 0) {
       await saveQueueRef.current;
+    }
+
+    if (metadataDirtyRef.current || failedSaveTargetsRef.current.size > 0) {
+      setCloseWarning(
+        metadataDirtyRef.current
+          ? "Bindername oder Cover wurden noch nicht gespeichert. Speichere die Änderungen oder verwirf sie ausdrücklich."
+          : "Mindestens eine Änderung wurde nicht gespeichert. Speichere erneut oder verwirf die lokalen Änderungen ausdrücklich.",
+      );
+      return;
     }
 
     onClose();
@@ -542,49 +648,80 @@ export function BinderCollectionEditor({
     const nextName = draftBinderName.trim();
 
     if (!nextName) {
+      failedSaveTargetsRef.current.add(`binder:${binderId}`);
       setSaveStatus("error");
       setSaveError("Bitte einen Binder-Namen angeben.");
       return;
     }
 
-    const requestId = saveSequenceRef.current + 1;
-    saveSequenceRef.current = requestId;
     setSaveStatus("saving");
-    setSaveError(null);
+    if (failedSaveTargetsRef.current.size === 0) {
+      setSaveError(null);
+    }
+    setCloseWarning(null);
+    const metadataRevision = metadataEditRevisionRef.current;
 
-    try {
-      const payload = await collectionClient.updateBinder(binderId, {
-        name: nextName,
-        coverKey: draftCoverKey,
-      });
+    const metadataSaveOperation = (async () => {
+      try {
+        const payload = await collectionClient.updateBinder(binderId, {
+          name: nextName,
+          coverKey: draftCoverKey,
+        });
 
-      if (saveSequenceRef.current !== requestId) {
-        return;
+        failedSaveTargetsRef.current.delete(`binder:${binderId}`);
+        setSnapshot((current) =>
+          current
+            ? {
+                ...current,
+                binder: {
+                  ...payload.binder,
+                  pages,
+                },
+              }
+            : current,
+        );
+        if (metadataEditRevisionRef.current === metadataRevision) {
+          metadataDirtyRef.current = false;
+          setDraftBinderName(payload.binder.name);
+          setDraftCoverKey(normalizeBinderCoverKey(payload.binder.coverKey));
+        }
+        setLastSavedAt(new Date().toISOString());
+        return true;
+      } catch (error) {
+        failedSaveTargetsRef.current.add(`binder:${binderId}`);
+        setSaveStatus("error");
+        setSaveError(getApiErrorMessage(error, "Binder konnte nicht gespeichert werden."));
+        return false;
       }
+    })();
+    const trackedMetadataSave = metadataSaveOperation.then(() => undefined);
+    metadataSavePromiseRef.current = trackedMetadataSave;
+    const metadataSaved = await metadataSaveOperation;
 
-      setSnapshot((current) =>
-        current
-          ? {
-              ...current,
-              binder: {
-                ...payload.binder,
-                pages,
-              },
-            }
-          : current,
-      );
-      setDraftBinderName(payload.binder.name);
-      setDraftCoverKey(normalizeBinderCoverKey(payload.binder.coverKey));
-      setLastSavedAt(new Date().toISOString());
+    if (metadataSavePromiseRef.current === trackedMetadataSave) {
+      metadataSavePromiseRef.current = null;
+    }
 
+    if (metadataSaved) {
       await persistPage(pages, activePageIndex);
-    } catch (error) {
-      if (saveSequenceRef.current !== requestId) {
-        return;
+      if (metadataDirtyRef.current && failedSaveTargetsRef.current.size === 0) {
+        setSaveStatus("idle");
       }
+    }
+  }
 
-      setSaveStatus("error");
-      setSaveError(getApiErrorMessage(error, "Binder konnte nicht gespeichert werden."));
+  async function handleRetryFailedSaves() {
+    setCloseWarning(null);
+    const failedTargets = new Set(failedSaveTargetsRef.current);
+
+    if (metadataDirtyRef.current || failedTargets.has(`binder:${binderId}`)) {
+      await handleSaveAll();
+    }
+
+    for (const [pageIndex, page] of pages.entries()) {
+      if (failedTargets.has(page.id)) {
+        await persistPage(pages, pageIndex);
+      }
     }
   }
 
@@ -675,8 +812,85 @@ export function BinderCollectionEditor({
     handleDropEntryRef.current = handleDropEntry;
   });
 
+  useEffect(() => {
+    handleCloseEditorRef.current = () => {
+      void handleCloseEditor();
+    };
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
+    function handleDialogKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        if (contextMenuRef.current) {
+          return;
+        }
+
+        event.preventDefault();
+        handleCloseEditorRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialogRef.current) {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+      const first = focusableElements[0];
+      const last = focusableElements.at(-1);
+
+      if (!first || !last) {
+        event.preventDefault();
+        dialogRef.current.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleDialogKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleDialogKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [isOpen]);
+
+  function handleSelectPage(pageIndex: number) {
+    if (pageIndex === activePageIndex) {
+      return;
+    }
+
+    setActivePageIndex(pageIndex);
+    setSelectedSlotIndex(null);
+    setSlotContextMenu(null);
+    setHistoryPast([]);
+    setHistoryFuture([]);
+  }
+
   async function handleCreatePage() {
-    setSaveError(null);
+    if (failedSaveTargetsRef.current.size === 0) {
+      setSaveError(null);
+    }
 
     try {
       const payload = await collectionClient.createBinderPage(binderId);
@@ -700,7 +914,7 @@ export function BinderCollectionEditor({
       setHistoryPast([]);
       setHistoryFuture([]);
       setSelectedSlotIndex(null);
-      setSaveStatus("saved");
+      setSaveStatus(failedSaveTargetsRef.current.size > 0 ? "error" : "saved");
       setLastSavedAt(new Date().toISOString());
     } catch (error) {
       setSaveStatus("error");
@@ -746,6 +960,50 @@ export function BinderCollectionEditor({
     });
   }
 
+  async function handleAddSelectedCardToWishlist() {
+    if (!selectedCatalogCard) return;
+
+    setWishlistFeedback(null);
+    try {
+      await wishlistClient.upsert({
+        cardId: selectedCatalogCard.cardId,
+        desiredQuantity: 1,
+        priority: "NORMAL",
+        note: `Aus Binder „${draftBinderName || "Unbenannt"}“`,
+      });
+      setWishlistFeedback(`${selectedCatalogCard.name} wurde zur Wunschliste hinzugefügt.`);
+    } catch (error) {
+      setWishlistFeedback(getApiErrorMessage(error, "Wunschliste konnte nicht aktualisiert werden."));
+    }
+  }
+
+  async function handleLoadMoreCatalogCards() {
+    if (!catalogCursor || catalogLoading) return;
+
+    setCatalogLoading(true);
+    try {
+      const payload = await cardCatalogClient.search({
+        q: inventorySearch.trim() || undefined,
+        ownership: ownershipFilter,
+        kind: inventoryKind === "ALL" ? undefined : inventoryKind,
+        rarity: inventoryRarity === "ALL" ? undefined : inventoryRarity,
+        cursor: catalogCursor,
+        limit: 60,
+      });
+      setCatalogError(null);
+      setCatalogCards((current) => {
+        const known = new Set(current.map((card) => card.cardId));
+        return [...current, ...payload.items.filter((card) => !known.has(card.cardId))];
+      });
+      setCatalogCursor(payload.nextCursor);
+      setCatalogTotal(payload.total);
+    } catch (error) {
+      setCatalogError(getApiErrorMessage(error, "Weitere Karten konnten nicht geladen werden."));
+    } finally {
+      setCatalogLoading(false);
+    }
+  }
+
   const selectedSlotLabel =
     selectedSlot !== null ? `Slot ${selectedSlot.slotIndex + 1}` : "Kein Slot";
   const filledSlotCount = activePage?.slots.filter((slot) => slot.status === "filled").length ?? 0;
@@ -765,31 +1023,49 @@ export function BinderCollectionEditor({
         : lastSavedAt
           ? `Gespeichert · ${formatGermanDateTime(lastSavedAt)}`
           : "Bereit";
-  const inventoryTiles = inventoryCards.flatMap((card) =>
-    card.printings.map((printing) => {
-      const freeEntryId = getFreeEntryId(printing, usedEntryIds, activeSlotEntryId);
-      const availableNow = getAvailableCopies(printing, usedEntryIds, activeSlotEntryId);
-      const payload = freeEntryId ? buildDragPayload(card, printing, freeEntryId) : null;
+  const inventoryTiles = catalogCards.flatMap<InventoryTile>((catalogCard) => {
+    const inventoryCard = inventoryByCardId.get(catalogCard.cardId);
 
-      return {
-        availableNow,
-        card,
-        disabled: !freeEntryId,
-        isSelected:
-          Boolean(payload) && stagedPayload?.collectionEntryId === payload?.collectionEntryId,
-        key: `${card.cardId}-${printing.key}`,
-        payload,
-        printing,
-      };
-    }),
-  ).filter(
-    (tile) => inventoryRarity === "ALL" || tile.printing.rarity === inventoryRarity,
-  );
+    if (!inventoryCard || inventoryCard.printings.length === 0) {
+      return [{
+        availableNow: 0,
+        card: catalogCard,
+        disabled: true,
+        isSelected: selectedCatalogCard?.cardId === catalogCard.cardId,
+        key: `${catalogCard.cardId}-unowned`,
+        payload: null,
+        printing: null,
+      }];
+    }
+
+    return inventoryCard.printings
+      .filter((printing) => inventoryRarity === "ALL" || printing.rarity === inventoryRarity)
+      .map((printing) => {
+        const freeEntryId = getFreeEntryId(printing, usedEntryIds, activeSlotEntryId);
+        const availableNow = getAvailableCopies(printing, usedEntryIds, activeSlotEntryId);
+        const payload = freeEntryId ? buildDragPayload(inventoryCard, printing, freeEntryId) : null;
+
+        return {
+          availableNow,
+          card: catalogCard,
+          disabled: !freeEntryId,
+          isSelected:
+            selectedCatalogCard?.cardId === catalogCard.cardId ||
+            (Boolean(payload) && stagedPayload?.collectionEntryId === payload?.collectionEntryId),
+          key: `${catalogCard.cardId}-${printing.key}`,
+          payload,
+          printing,
+        };
+      });
+  });
   const inventoryCardCount = snapshot?.inventoryCards.length ?? 0;
   const totalOwnedCopies =
     snapshot?.inventoryCards.reduce((sum, card) => sum + card.totalCopies, 0) ?? 0;
   const totalBinderSlots = pages.length * 18;
-  const totalFilledSlots = pages.reduce((sum, page) => sum + page.filledSlots, 0);
+  const totalFilledSlots = pages.reduce(
+    (sum, page) => sum + page.slots.filter((slot) => slot.status === "filled").length,
+    0,
+  );
 
   return (
     <div
@@ -799,6 +1075,11 @@ export function BinderCollectionEditor({
       )}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="binder-editor-title"
+        tabIndex={-1}
         className={classNames(
           "app-shell pointer-events-auto absolute inset-0 overflow-hidden bg-[#04060a] text-[#f2e5d1]",
           !isOpen && "hidden",
@@ -839,7 +1120,7 @@ export function BinderCollectionEditor({
                 <p className="text-[0.78rem] uppercase tracking-[0.26em] text-[#cb5c44]">
                   Sammlung
                 </p>
-                <h2 className="font-display inscription-text mt-2 text-4xl leading-[0.92] uppercase tracking-[0.025em] sm:text-[2.9rem] xl:text-[3.1rem]">
+                <h2 id="binder-editor-title" className="font-display inscription-text mt-2 text-4xl leading-[0.92] uppercase tracking-[0.025em] sm:text-[2.9rem] xl:text-[3.1rem]">
                   Binder-Editor
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[#cbb79d]">
@@ -874,6 +1155,7 @@ export function BinderCollectionEditor({
                 </div>
 
                 <button
+                  ref={closeButtonRef}
                   type="button"
                   onClick={() => void handleCloseEditor()}
                   className="min-h-[42px] rounded-[4px] border border-[rgba(255,255,255,0.12)] bg-[rgba(10,13,18,0.66)] px-5 text-sm font-semibold uppercase tracking-[0.14em] text-[#ead9c3] transition hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(18,22,28,0.82)]"
@@ -902,7 +1184,15 @@ export function BinderCollectionEditor({
                 </span>
                 <input
                   value={draftBinderName}
-                  onChange={(event) => setDraftBinderName(event.target.value.slice(0, 40))}
+                  onChange={(event) => {
+                    metadataDirtyRef.current = true;
+                    metadataEditRevisionRef.current += 1;
+                    setCloseWarning(null);
+                    if (!metadataSavePromiseRef.current && pendingSaveCountRef.current === 0) {
+                      setSaveStatus("idle");
+                    }
+                    setDraftBinderName(event.target.value.slice(0, 40));
+                  }}
                   type="text"
                   className="mt-2 h-10 w-full rounded-[4px] border border-[rgba(214,164,92,0.16)] bg-[rgba(5,7,10,0.5)] px-4 text-sm text-[#f2e5d1] outline-none transition focus:border-[rgba(214,164,92,0.34)]"
                 />
@@ -917,7 +1207,16 @@ export function BinderCollectionEditor({
                     <button
                       key={cover.key}
                       type="button"
-                      onClick={() => setDraftCoverKey(cover.key)}
+                      onClick={() => {
+                        if (cover.key === draftCoverKey) return;
+                        metadataDirtyRef.current = true;
+                        metadataEditRevisionRef.current += 1;
+                        setCloseWarning(null);
+                        if (!metadataSavePromiseRef.current && pendingSaveCountRef.current === 0) {
+                          setSaveStatus("idle");
+                        }
+                        setDraftCoverKey(cover.key);
+                      }}
                       className={classNames(
                         "relative h-[72px] w-[52px] overflow-hidden rounded-[5px] border bg-[rgba(255,255,255,0.03)] transition",
                         draftCoverKey === cover.key
@@ -925,6 +1224,7 @@ export function BinderCollectionEditor({
                           : "border-[rgba(255,255,255,0.1)] hover:border-[rgba(214,164,92,0.28)]",
                       )}
                       aria-label={`${cover.name} als Binder-Cover wählen`}
+                      aria-pressed={draftCoverKey === cover.key}
                     >
                       <Image
                         src={cover.imageUrl}
@@ -945,9 +1245,9 @@ export function BinderCollectionEditor({
             <div className="mx-auto mt-24 max-w-md rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(6,9,14,0.8)] px-6 py-5 text-sm text-[#d7c7b3]">
               Binder-Editor wird geladen...
             </div>
-          ) : loadError ? (
-            <div className="mx-auto mt-24 max-w-md rounded-[22px] border border-[rgba(214,100,74,0.2)] bg-[rgba(90,26,17,0.38)] px-6 py-5 text-sm text-[#ffd6c8]">
-              {loadError}
+          ) : snapshotError ? (
+            <div role="alert" className="mx-auto mt-24 max-w-md rounded-[22px] border border-[rgba(214,100,74,0.2)] bg-[rgba(90,26,17,0.38)] px-6 py-5 text-sm text-[#ffd6c8]">
+              {snapshotError}
             </div>
           ) : activePage ? (
             <div className="grid h-full min-h-0 gap-5 xl:grid-cols-[minmax(0,1.48fr)_minmax(340px,0.58fr)]">
@@ -967,10 +1267,8 @@ export function BinderCollectionEditor({
                       <button
                         key={page.id}
                         type="button"
-                        onClick={() => {
-                          setActivePageIndex(index);
-                          setSelectedSlotIndex(null);
-                        }}
+                        onClick={() => handleSelectPage(index)}
+                        aria-pressed={activePageIndex === index}
                         className={classNames(
                           "min-h-[34px] rounded-[4px] border px-4 text-[0.68rem] font-semibold uppercase tracking-[0.16em] transition",
                           activePageIndex === index
@@ -998,6 +1296,8 @@ export function BinderCollectionEditor({
                       {filledSlotCount}/18
                     </span>
                     <span
+                      role="status"
+                      aria-live="polite"
                       className={classNames(
                         "text-xs",
                         saveStatus === "error"
@@ -1054,8 +1354,30 @@ export function BinderCollectionEditor({
                 </div>
 
                 {saveError ? (
-                  <div className="mx-4 mt-3 rounded-[14px] border border-[rgba(214,100,74,0.2)] bg-[rgba(90,26,17,0.38)] px-3 py-2 text-sm text-[#ffd6c8]">
+                  <div role="alert" className="mx-4 mt-3 rounded-[14px] border border-[rgba(214,100,74,0.2)] bg-[rgba(90,26,17,0.38)] px-3 py-2 text-sm text-[#ffd6c8]">
                     {saveError}
+                  </div>
+                ) : null}
+
+                {closeWarning ? (
+                  <div role="alert" className="mx-4 mt-3 rounded-[14px] border border-[rgba(214,164,92,0.28)] bg-[rgba(150,97,33,0.16)] px-3 py-3 text-sm text-[#ffe3bd]">
+                    <p>{closeWarning}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="ui-button-secondary !px-3 !py-2"
+                        onClick={() => void handleRetryFailedSaves()}
+                      >
+                        Erneut speichern
+                      </button>
+                      <button
+                        type="button"
+                        className="ui-button-danger !px-3 !py-2"
+                        onClick={onClose}
+                      >
+                        Änderungen verwerfen
+                      </button>
+                    </div>
                   </div>
                 ) : null}
 
@@ -1099,13 +1421,56 @@ export function BinderCollectionEditor({
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#d5c4af]">
-                      {inventoryTiles.length} Drucke
+                      {catalogLoading ? "Lädt…" : `${catalogCards.length} / ${catalogTotal} Karten`}
                     </span>
                   </div>
                 </div>
 
                 <>
                     <div className="space-y-3 border-b border-[rgba(255,255,255,0.08)] px-5 py-4">
+                      {catalogError ? (
+                        <div role="alert" className="rounded-[14px] border border-[rgba(214,100,74,0.2)] bg-[rgba(90,26,17,0.38)] px-3 py-3 text-sm text-[#ffd6c8]">
+                          <p>{catalogError}</p>
+                          <button
+                            type="button"
+                            className="ui-button-neutral mt-2 !px-3 !py-2"
+                            onClick={() => setCatalogRevision((revision) => revision + 1)}
+                          >
+                            Katalog erneut laden
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {selectedCatalogCard ? (
+                        <div className="rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.035)] p-3">
+                          <div className="flex items-start gap-3">
+                            <div className="relative aspect-[59/86] w-14 shrink-0 overflow-hidden rounded-[6px] border border-[rgba(255,255,255,0.08)]">
+                              {selectedCatalogCard.imageUrl ? (
+                                <Image src={selectedCatalogCard.imageUrl} alt={selectedCatalogCard.name} fill sizes="56px" unoptimized className="object-contain" />
+                              ) : null}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-[#f2dfc8]">{selectedCatalogCard.name}</p>
+                              <p className="mt-1 text-xs text-[#aa9780]">
+                                {selectedCatalogCard.owned
+                                  ? `${selectedCatalogCard.availableCopies} freie von ${selectedCatalogCard.totalCopies} Kopien`
+                                  : "Nicht im Besitz · kann nicht in einen Binder gelegt werden"}
+                              </p>
+                              {!selectedCatalogCard.owned ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleAddSelectedCardToWishlist()}
+                                  className="mt-2 rounded-[4px] border border-[rgba(214,164,92,0.28)] bg-[rgba(150,97,33,0.16)] px-3 py-1.5 text-xs font-semibold text-[#ffe3bd]"
+                                >
+                                  Zur Wunschliste
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                          {wishlistFeedback ? <p className="mt-2 text-xs text-[#c9b79f]">{wishlistFeedback}</p> : null}
+                        </div>
+                      ) : null}
+
                       {stagedPayload ? (
                         <div className="flex items-center justify-between gap-3 rounded-[16px] border border-[rgba(214,164,92,0.24)] bg-[rgba(150,97,33,0.14)] px-4 py-3 text-sm text-[#f2dec1]">
                           <span className="truncate font-semibold text-[#ffe5bf]">
@@ -1114,6 +1479,7 @@ export function BinderCollectionEditor({
                           <button
                             type="button"
                             onClick={() => setStagedPayload(null)}
+                            aria-label={`${stagedPayload.cardName} nicht mehr zum Ablegen vormerken`}
                             className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-[#f1ddc4] transition hover:border-[rgba(255,255,255,0.22)]"
                           >
                             <AssetIcon name="window-close" className="h-3.5 w-3.5 text-current" />
@@ -1133,12 +1499,36 @@ export function BinderCollectionEditor({
                           />
                         </label>
 
+                        <div className="grid grid-cols-3 gap-2" aria-label="Besitzfilter">
+                          {([
+                            ["ALL", "Alle Karten"],
+                            ["OWNED", "Im Besitz"],
+                            ["UNOWNED", "Nicht im Besitz"],
+                          ] as const).map(([value, label]) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setOwnershipFilter(value)}
+                              aria-pressed={ownershipFilter === value}
+                              className={classNames(
+                                "rounded-[6px] border px-2 py-2 text-[0.66rem] font-semibold transition",
+                                ownershipFilter === value
+                                  ? "border-[rgba(207,91,66,0.34)] bg-[rgba(207,91,66,0.16)] text-[#ffe3ca]"
+                                  : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#cbb79d]",
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+
                         <div className="flex flex-wrap gap-2">
                           {(["ALL", "MONSTER", "SPELL", "TRAP", "TOKEN"] as const).map((kind) => (
                             <button
                               key={kind}
                               type="button"
                               onClick={() => setInventoryKind(kind)}
+                              aria-pressed={inventoryKind === kind}
                               className={classNames(
                                 "rounded-[6px] border px-3 py-2 text-xs font-semibold transition",
                                 inventoryKind === kind
@@ -1183,13 +1573,14 @@ export function BinderCollectionEditor({
                             <button
                               key={tile.key}
                               type="button"
-                              disabled={tile.disabled}
                               onClick={() => {
                                 if (suppressClickRef.current) {
                                   suppressClickRef.current = false;
                                   return;
                                 }
 
+                                setSelectedCatalogCard(tile.card);
+                                setWishlistFeedback(null);
                                 if (tile.payload) {
                                   setStagedPayload(tile.payload);
                                 }
@@ -1210,7 +1601,7 @@ export function BinderCollectionEditor({
                               className={classNames(
                                 "group rounded-[10px] border bg-[rgba(255,255,255,0.035)] p-1.5 text-left transition select-none touch-none",
                                 tile.disabled
-                                  ? "cursor-not-allowed border-[rgba(255,255,255,0.05)] opacity-55"
+                                  ? "cursor-pointer border-[rgba(255,255,255,0.05)] opacity-55 hover:border-[rgba(207,91,66,0.22)] hover:opacity-75 focus-visible:opacity-100"
                                   : tile.isSelected
                                     ? "cursor-grab border-[rgba(214,164,92,0.48)] bg-[rgba(150,97,33,0.18)] shadow-[0_0_0_1px_rgba(214,164,92,0.12),0_0_22px_rgba(151,29,20,0.16)] active:cursor-grabbing"
                                     : "cursor-grab border-[rgba(255,255,255,0.08)] hover:border-[rgba(207,91,66,0.22)] active:cursor-grabbing",
@@ -1233,7 +1624,7 @@ export function BinderCollectionEditor({
                                   </div>
                                 )}
                                 <span className="absolute right-1 top-1 rounded-[3px] border border-[rgba(0,0,0,0.28)] bg-[rgba(123,72,23,0.86)] px-1 py-0.5 text-[0.48rem] font-bold uppercase tracking-[0.06em] text-[#ffe0a8]">
-                                  {tile.printing.rarity ?? "N"}
+                                  {tile.printing?.rarity ?? tile.card.rarities[0] ?? "N"}
                                 </span>
                                 <span className="absolute bottom-1 right-1 rounded-[3px] bg-[rgba(4,6,10,0.78)] px-1 py-0.5 text-[0.54rem] font-bold text-[#f5e1c8]">
                                   {tile.availableNow}x
@@ -1243,9 +1634,9 @@ export function BinderCollectionEditor({
                                 {tile.card.name}
                               </p>
                               <p className="pointer-events-none mt-0.5 truncate text-[0.52rem] uppercase tracking-[0.1em] text-[#9f8c77]">
-                                {tile.printing.setCode ?? tile.printing.setLabel}
+                                {tile.printing?.setCode ?? tile.printing?.setLabel ?? "Nicht im Besitz"}
                               </p>
-                              {tile.printing.reservedCopies > 0 ? (
+                              {(tile.printing?.reservedCopies ?? 0) > 0 ? (
                                 <p className="pointer-events-none mt-0.5 truncate text-[0.5rem] uppercase tracking-[0.1em] text-[#d6a45c]">
                                   Reserviert
                                 </p>
@@ -1254,6 +1645,16 @@ export function BinderCollectionEditor({
                           ))}
                         </div>
                       )}
+                      {catalogCursor ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleLoadMoreCatalogCards()}
+                          disabled={catalogLoading}
+                          className="mt-3 w-full rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-xs font-semibold text-[#d5c4af] disabled:opacity-50"
+                        >
+                          {catalogLoading ? "Lädt…" : "Weitere Karten laden"}
+                        </button>
+                      ) : null}
                     </div>
                 </>
               </section>
@@ -1266,6 +1667,9 @@ export function BinderCollectionEditor({
 
       {slotContextMenu ? (
         <div
+          ref={contextMenuRef}
+          role="menu"
+          aria-label={`Aktionen für Slot ${slotContextMenu.slotIndex + 1}`}
           className="pointer-events-auto fixed z-[170] min-w-[190px] overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.12)] bg-[rgba(8,11,16,0.96)] py-2 shadow-[0_22px_50px_rgba(0,0,0,0.48)] backdrop-blur-xl"
           style={{
             left: contextMenuLeft,
@@ -1275,6 +1679,7 @@ export function BinderCollectionEditor({
         >
           <button
             type="button"
+            role="menuitem"
             onClick={() => {
               setSelectedSlotIndex(slotContextMenu.slotIndex);
               setSlotContextMenu(null);
@@ -1286,6 +1691,7 @@ export function BinderCollectionEditor({
           </button>
           <button
             type="button"
+            role="menuitem"
             disabled={!contextSlot || contextSlot.status === "empty"}
             onClick={() => handleClearSlot(slotContextMenu.slotIndex)}
             className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold text-[#ffd6c8] transition hover:bg-[rgba(214,100,74,0.1)] disabled:cursor-not-allowed disabled:text-[#77685b]"

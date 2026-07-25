@@ -12,6 +12,7 @@ import { getCardAssetUrl } from "@/lib/asset-urls";
 import {
   createDeck,
   deleteDeck,
+  duplicateDeck,
   removeDeckCard,
   upsertDeckCard,
   updateDeckMetadata,
@@ -57,6 +58,8 @@ type DeckOverviewPayload = {
     sideCount: number;
     isLegal: boolean;
     issueCount: number;
+    missingCardCount: number;
+    formatName: string | null;
     banlistName: string | null;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -173,6 +176,8 @@ async function buildDeckOverviewPayload(
         sideCount: summary?.sideCount ?? 0,
         isLegal: summary?.isLegal ?? false,
         issueCount: summary?.issueCount ?? 0,
+        missingCardCount: summary?.missingCardCount ?? 0,
+        formatName: summary?.formatName ?? null,
         banlistName: summary?.banlistName ?? null,
         previewImageUrl: getCardAssetUrl(deck.cards[0]?.card.externalCardId ?? null),
         previewLabel: deck.cards[0]?.card.name ?? deck.name,
@@ -253,6 +258,23 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ ok: true });
     } catch (error) {
       return sendApiError(reply, error, "Deck konnte nicht gelöscht werden.");
+    }
+  });
+
+  app.post("/:deckId/duplicate", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { deckId } = request.params as { deckId: string };
+      const deck = await duplicateDeck(getSharedPrisma(), session.userId, deckId);
+
+      return reply.status(201).send({
+        deck: {
+          id: deck.id,
+          name: deck.name,
+        },
+      });
+    } catch (error) {
+      return sendApiError(reply, error, "Deck konnte nicht dupliziert werden.");
     }
   });
 

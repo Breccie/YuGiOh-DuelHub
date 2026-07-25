@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { DuelRequestDto } from "@/lib/app-dtos";
+import { requirePlayableDeck } from "@/lib/deck-legality";
 import { getActiveRun, requireRunMembership } from "@/lib/run-service";
 
 type DuelRequestRecord = Prisma.DuelRequestGetPayload<{
@@ -149,11 +150,12 @@ export async function createDuelRequest(
         userId: viewerId,
         runId: activeRun.id,
       },
+      select: { id: true },
     });
-
     if (!deck) {
       throw new Error("Ausgewähltes Deck wurde nicht gefunden.");
     }
+    await requirePlayableDeck(prisma, viewerId, input.requesterDeckId);
   }
 
   const proposedAt = parseDateTime(input.proposedAt);

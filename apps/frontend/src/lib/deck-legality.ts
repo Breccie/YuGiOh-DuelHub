@@ -5,7 +5,9 @@ import {
   ErrataPolicy,
   type PrismaClient,
 } from "@prisma/client";
+import type { CampaignRuleConfig } from "@ygo/contracts";
 import { getCardAssetUrl } from "@/lib/asset-urls";
+import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
@@ -58,6 +60,16 @@ export type DeckCardResolution = {
   issues: DeckIssueType[];
 };
 
+export type MissingDeckCard = {
+  cardId: string;
+  cardName: string;
+  imageUrl: string | null;
+  requiredQuantity: number;
+  availableQuantity: number;
+  missingQuantity: number;
+  sections: DeckSection[];
+};
+
 export type DeckLegalitySnapshot = {
   viewer: {
     id: string;
@@ -77,6 +89,7 @@ export type DeckLegalitySnapshot = {
     banlistName: string | null;
     isLegal: boolean;
     issueCount: number;
+    missingCardCount: number;
   }>;
   activeDeck: null | {
     id: string;
@@ -96,6 +109,7 @@ export type DeckLegalitySnapshot = {
     extraCount: number;
     sideCount: number;
     issues: DeckIssueSummary[];
+    missingCards: MissingDeckCard[];
     cards: DeckCardResolution[];
   };
   editor: {
@@ -347,31 +361,32 @@ function buildPlannedCopiesByCardId(deck: LoadedDeck) {
 function addDeckSizeIssues(
   issues: DeckIssueSummary[],
   counts: ReturnType<typeof buildDeckCounts>,
+  rules: CampaignRuleConfig["decks"],
 ) {
-  if (counts.mainCount < 40 || counts.mainCount > 60) {
+  if (counts.mainCount < rules.minMainDeck || counts.mainCount > rules.maxMainDeck) {
     issues.push({
       cardId: "deck-size-main",
       cardName: "Deckgröße",
       type: "DECK_SIZE",
-      message: "Das Main Deck muss zwischen 40 und 60 Karten enthalten.",
+      message: `Das Main Deck muss zwischen ${rules.minMainDeck} und ${rules.maxMainDeck} Karten enthalten.`,
     });
   }
 
-  if (counts.extraCount > 15) {
+  if (counts.extraCount > rules.maxExtraDeck) {
     issues.push({
       cardId: "deck-size-extra",
       cardName: "Deckgröße",
       type: "DECK_SIZE",
-      message: "Das Extra Deck darf höchstens 15 Karten enthalten.",
+      message: `Das Extra Deck darf höchstens ${rules.maxExtraDeck} Karten enthalten.`,
     });
   }
 
-  if (counts.sideCount > 15) {
+  if (counts.sideCount > rules.maxSideDeck) {
     issues.push({
       cardId: "deck-size-side",
       cardName: "Deckgröße",
       type: "DECK_SIZE",
-      message: "Das Side Deck darf höchstens 15 Karten enthalten.",
+      message: `Das Side Deck darf höchstens ${rules.maxSideDeck} Karten enthalten.`,
     });
   }
 }
@@ -391,6 +406,7 @@ function dedupeIssues(issues: DeckIssueSummary[]) {
 function evaluateDeck(
   deck: LoadedDeck,
   ownershipByCardId: Map<string, OwnershipSummary>,
+  deckRules: CampaignRuleConfig["decks"],
 ) {
   const snapshotDate = resolveSnapshotDate(
     deck,
@@ -404,7 +420,7 @@ function evaluateDeck(
   const pointLimit = effectiveBanlist?.pointLimit ?? null;
   let pointTotal = 0;
 
-  addDeckSizeIssues(issues, counts);
+  addDeckSizeIssues(issues, counts, deckRules);
 
   const cards = deck.cards.map((deckCard) => {
     const activeTextVersion = resolveTextVersion(
@@ -472,7 +488,7 @@ function evaluateDeck(
       });
     }
 
-    if (plannedCopies > ownership.availableCopies) {
+    if (!deckRules.allowProxies && plannedCopies > ownership.availableCopies) {
       cardIssues.push("OWNERSHIP");
       issues.push({
         cardId: deckCard.cardId,
@@ -513,6 +529,30 @@ function evaluateDeck(
     });
   }
 
+  const missingCards: MissingDeckCard[] = [...plannedCopiesByCardId.entries()]
+    .map(([cardId, requiredQuantity]) => {
+      const ownership = ownershipByCardId.get(cardId);
+      const deckRows = deck.cards.filter((card) => card.cardId === cardId);
+      const card = deckRows[0]?.card;
+      const availableQuantity = ownership?.availableCopies ?? 0;
+
+      return {
+        cardId,
+        cardName: card?.name ?? ownership?.cardName ?? "Unbekannte Karte",
+        imageUrl:
+          ownership?.imageUrl ?? getCardAssetUrl(card?.externalCardId ?? null),
+        requiredQuantity,
+        availableQuantity,
+        missingQuantity: Math.max(0, requiredQuantity - availableQuantity),
+        sections: [...new Set(deckRows.map((row) => row.section))],
+      };
+    })
+    .filter((card) => card.missingQuantity > 0)
+    .sort((left, right) =>
+      right.missingQuantity - left.missingQuantity ||
+      left.cardName.localeCompare(right.cardName, "de"),
+    );
+
   return {
     snapshotDate,
     effectiveBanlist,
@@ -521,6 +561,7 @@ function evaluateDeck(
     pointTotal,
     counts,
     cards,
+    missingCards,
     issues: dedupeIssues(issues),
   };
 }
@@ -541,6 +582,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
   }
 
   const activeRun = await getActiveRun(prisma, viewer.id);
+  const activeRuleConfig = await getActiveCampaignRuleConfig(prisma, activeRun.id);
 
   const [decks, collectionEntries, availableBanlists] = await Promise.all([
     loadDecks(prisma, viewer.id, activeRun.id),
@@ -626,7 +668,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
   }
 
   const summarizedDecks = decks.map((deck) => {
-    const evaluation = evaluateDeck(deck, ownershipByCardId);
+    const evaluation = evaluateDeck(deck, ownershipByCardId, activeRuleConfig.decks);
 
     return {
       id: deck.id,
@@ -641,11 +683,15 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       banlistName: evaluation.effectiveBanlist?.name ?? null,
       isLegal: evaluation.issues.length === 0,
       issueCount: evaluation.issues.length,
+      missingCardCount: evaluation.missingCards.reduce(
+        (sum, card) => sum + card.missingQuantity,
+        0,
+      ),
     };
   });
 
   const activeEvaluation = selectedDeck
-    ? evaluateDeck(selectedDeck, ownershipByCardId)
+    ? evaluateDeck(selectedDeck, ownershipByCardId, activeRuleConfig.decks)
     : null;
   const activeDeckCardCopies = new Map<
     string,
@@ -795,8 +841,41 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       extraCount: activeEvaluation.counts.extraCount,
       sideCount: activeEvaluation.counts.sideCount,
       issues: activeEvaluation.issues,
+      missingCards: activeEvaluation.missingCards,
       cards: activeEvaluation.cards,
     },
     editor,
   };
+}
+
+export async function requirePlayableDeck(
+  prisma: PrismaClient,
+  viewerId: string,
+  deckId: string,
+) {
+  const snapshot = await getDeckLegalitySnapshot(
+    { viewerId, deckId },
+    prisma,
+  );
+
+  if (!snapshot.activeDeck || snapshot.activeDeck.id !== deckId) {
+    throw new Error("Deck wurde nicht gefunden.");
+  }
+
+  if (!snapshot.activeDeck.isLegal) {
+    const missing = snapshot.activeDeck.missingCards.reduce(
+      (sum, card) => sum + card.missingQuantity,
+      0,
+    );
+    const reason = missing > 0
+      ? `${missing} Karten fehlen noch.`
+      : snapshot.activeDeck.issues[0]?.message ?? "Das Deck ist nicht legal.";
+    const error = new Error(`Dieses Deck ist nur ein Entwurf. ${reason}`);
+    (error as Error & { status?: number; code?: string }).status = 409;
+    (error as Error & { status?: number; code?: string }).code =
+      "deck_not_playable";
+    throw error;
+  }
+
+  return snapshot.activeDeck;
 }

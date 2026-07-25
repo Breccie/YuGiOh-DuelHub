@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deckExportRequestSchema } from "@ygo/contracts";
-import { z } from "zod";
+import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireViewerSession } from "@/lib/auth";
 import { createDeckExport } from "@/lib/deck-export";
@@ -29,13 +29,6 @@ export async function POST(
       export: result,
     });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
-
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Deck konnte nicht exportiert werden.",
-      },
-      { status },
-    );
+    return toNextErrorResponse(error, "Deck konnte nicht exportiert werden.");
   }
 }

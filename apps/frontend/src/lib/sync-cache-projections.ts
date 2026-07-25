@@ -96,6 +96,8 @@ export type CachedDeckOverviewPayload = {
     sideCount: number;
     isLegal: boolean;
     issueCount: number;
+    missingCardCount: number;
+    formatName: string | null;
     banlistName: string | null;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -573,6 +575,8 @@ export function buildCachedDeckOverviewPayload(
         sideCount: counts.side,
         isLegal: true,
         issueCount: 0,
+        missingCardCount: 0,
+        formatName: null,
         banlistName: null,
         previewImageUrl: previewExternalId ? getCardAssetUrl(previewExternalId) : null,
         previewLabel: asString(previewCard?.card?.name) ?? name,

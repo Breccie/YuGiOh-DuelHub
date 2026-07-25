@@ -1,5 +1,22 @@
 import { DeckSection, type PrismaClient } from "@prisma/client";
+import { DomainError } from "@ygo/domain";
 import { getActiveRun } from "@/lib/run-service";
+
+const MAX_COPIES_PER_CARD_IDENTITY = 3;
+
+function deckCopyLimitError(cardId: string, requestedTotal: number) {
+  return new DomainError({
+    code: "deck_card_copy_limit_exceeded",
+    message:
+      "Von einer Kartenidentität sind höchstens drei Kopien über Main, Extra und Side erlaubt.",
+    status: 409,
+    details: {
+      cardId,
+      maximum: MAX_COPIES_PER_CARD_IDENTITY,
+      requestedTotal,
+    },
+  });
+}
 
 function parseSnapshotDate(value: string | null | undefined) {
   if (!value) {
@@ -167,6 +184,70 @@ export async function deleteDeck(prisma: PrismaClient, viewerId: string, deckId:
   });
 }
 
+export async function duplicateDeck(
+  prisma: PrismaClient,
+  viewerId: string,
+  deckId: string,
+) {
+  const viewer = await prisma.user.findUnique({
+    where: {
+      id: viewerId,
+    },
+  });
+
+  if (!viewer) {
+    throw new DomainError({
+      code: "viewer_not_found",
+      message: "Spielerprofil wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+
+  const activeRun = await getActiveRun(prisma, viewer.id);
+  const sourceDeck = await prisma.deck.findFirst({
+    where: {
+      id: deckId,
+      userId: viewer.id,
+      runId: activeRun.id,
+    },
+    include: {
+      cards: {
+        select: {
+          cardId: true,
+          section: true,
+          quantity: true,
+        },
+      },
+    },
+  });
+
+  if (!sourceDeck) {
+    throw new DomainError({
+      code: "deck_not_found",
+      message: "Deck wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+
+  return prisma.deck.create({
+    data: {
+      userId: viewer.id,
+      runId: activeRun.id,
+      name: `${sourceDeck.name} Kopie`,
+      formatProfileId: sourceDeck.formatProfileId,
+      banlistId: sourceDeck.banlistId,
+      snapshotDate: sourceDeck.snapshotDate,
+      cards: {
+        create: sourceDeck.cards.map((card) => ({
+          cardId: card.cardId,
+          section: card.section,
+          quantity: card.quantity,
+        })),
+      },
+    },
+  });
+}
+
 export async function upsertDeckCard(
   prisma: PrismaClient,
   viewerId: string,
@@ -184,47 +265,112 @@ export async function upsertDeckCard(
   });
 
   if (!viewer) {
-    throw new Error("Spielerprofil wurde nicht gefunden.");
+    throw new DomainError({
+      code: "viewer_not_found",
+      message: "Spielerprofil wurde nicht gefunden.",
+      status: 404,
+    });
   }
 
   const activeRun = await getActiveRun(prisma, viewer.id);
-  await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
-
   if (!input.cardId) {
-    throw new Error("Keine Karte ausgewählt.");
+    throw new DomainError({
+      code: "card_required",
+      message: "Keine Karte ausgewählt.",
+      status: 400,
+    });
   }
 
-  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 60) {
-    throw new Error("Die Menge muss zwischen 1 und 60 liegen.");
+  if (
+    !Number.isInteger(input.quantity) ||
+    input.quantity < 1 ||
+    input.quantity > MAX_COPIES_PER_CARD_IDENTITY
+  ) {
+    throw new DomainError({
+      code: "deck_card_quantity_invalid",
+      message: "Die Menge muss zwischen 1 und 3 liegen.",
+      status: 400,
+      details: {
+        minimum: 1,
+        maximum: MAX_COPIES_PER_CARD_IDENTITY,
+        received: input.quantity,
+      },
+    });
   }
 
-  const card = await prisma.card.findUnique({
-    where: {
-      id: input.cardId,
-    },
-  });
+  return prisma.$transaction(async (tx) => {
+    // Updating the parent deck gives every writer for this deck the same database
+    // lock row. The aggregate below therefore observes all previously committed
+    // section changes before deciding whether the requested total is valid.
+    const lockedDeck = await tx.deck.updateMany({
+      where: {
+        id: deckId,
+        userId: viewer.id,
+        runId: activeRun.id,
+      },
+      data: {
+        updatedAt: new Date(),
+      },
+    });
 
-  if (!card) {
-    throw new Error("Die ausgewählte Karte wurde nicht gefunden.");
-  }
+    if (lockedDeck.count !== 1) {
+      throw new DomainError({
+        code: "deck_not_found",
+        message: "Deck wurde nicht gefunden.",
+        status: 404,
+      });
+    }
 
-  return prisma.deckCard.upsert({
-    where: {
-      deckId_cardId_section: {
+    const card = await tx.card.findUnique({
+      where: {
+        id: input.cardId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!card) {
+      throw new DomainError({
+        code: "card_not_found",
+        message: "Die ausgewählte Karte wurde nicht gefunden.",
+        status: 404,
+      });
+    }
+
+    const copiesInOtherSections = await tx.deckCard.aggregate({
+      where: {
+        deckId,
+        cardId: input.cardId,
+        section: { not: input.section },
+      },
+      _sum: { quantity: true },
+    });
+    const requestedTotal =
+      (copiesInOtherSections._sum.quantity ?? 0) + input.quantity;
+
+    if (requestedTotal > MAX_COPIES_PER_CARD_IDENTITY) {
+      throw deckCopyLimitError(input.cardId, requestedTotal);
+    }
+
+    return tx.deckCard.upsert({
+      where: {
+        deckId_cardId_section: {
+          deckId,
+          cardId: input.cardId,
+          section: input.section,
+        },
+      },
+      update: {
+        quantity: input.quantity,
+      },
+      create: {
         deckId,
         cardId: input.cardId,
         section: input.section,
+        quantity: input.quantity,
       },
-    },
-    update: {
-      quantity: input.quantity,
-    },
-    create: {
-      deckId,
-      cardId: input.cardId,
-      section: input.section,
-      quantity: input.quantity,
-    },
+    });
   });
 }
 

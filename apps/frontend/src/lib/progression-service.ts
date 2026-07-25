@@ -7,6 +7,10 @@ import {
 import { DomainError } from "@ygo/domain";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import {
+  getActiveCampaignRuleConfig,
+  getActiveCampaignRuleVersionId,
+} from "@/lib/campaign-rule-service";
+import {
   isStandardProgressionPack,
   isTournamentRewardPack,
 } from "@/lib/pack-product-classification";
@@ -17,8 +21,6 @@ type PrismaLike = PrismaClient | Prisma.TransactionClient;
 type GenerateProgressionOptions = {
   count?: number;
   fromDate?: string | null;
-  setsPerCheckpoint?: number;
-  includePromos?: boolean;
   includeTournamentPacks?: boolean;
 };
 
@@ -309,9 +311,10 @@ export async function generateRunProgression(
     });
   }
 
+  const activeRules = await getActiveCampaignRuleConfig(prisma, runId);
   const count = options.count ?? 5;
-  const setsPerCheckpoint = options.setsPerCheckpoint ?? 1;
-  const includePromos = options.includePromos ?? true;
+  const setsPerCheckpoint = activeRules.progression.setsPerStep;
+  const includePromos = !activeRules.progression.separatePromoProgression;
   const includeTournamentPacks = options.includeTournamentPacks ?? true;
   const fromDate = parseOptionalDate(options.fromDate) ?? run.historyCursor ?? null;
 
@@ -434,6 +437,7 @@ export async function generateRunProgression(
   }
 
   const createdCheckpoints = await prisma.$transaction(async (tx) => {
+    const ruleVersionId = await getActiveCampaignRuleVersionId(tx, runId);
     const created: CheckpointWithUnlocks[] = [];
     let sequence = maxCheckpoint?.sequence ?? 0;
     let lastTournamentPackId: string | null = null;
@@ -453,6 +457,7 @@ export async function generateRunProgression(
           description: `Automatisch generierter Checkpoint für ${boosterNames}.`,
           unlockDate,
           status: "LOCKED",
+          ruleVersionId,
         },
       });
 
@@ -614,6 +619,9 @@ export async function applyProgressionCheckpoint(
     applyState === "already_applied"
       ? checkpoint
       : await prisma.$transaction(async (tx) => {
+          const ruleVersionId = await getActiveCampaignRuleVersionId(tx, runId, {
+            checkpointId: checkpoint.id,
+          });
           const [run, memberships] = await Promise.all([
             tx.playGroupRun.findUniqueOrThrow({
               where: {
@@ -686,6 +694,7 @@ export async function applyProgressionCheckpoint(
                       packQuantity: run.freePacksPerSetUnlock,
                       reason,
                       status: "PENDING",
+                      ruleVersionId,
                     })),
                   });
                 }
@@ -758,6 +767,7 @@ export async function applyProgressionCheckpoint(
             data: {
               status: "APPLIED",
               appliedAt: new Date(),
+              ruleVersionId,
             },
             include: {
               unlocks: {

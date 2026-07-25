@@ -1,9 +1,12 @@
 import { PrismaClient, FormatType, Region, ErrataPolicy } from "../generated/prisma";
 import { hashPassword } from "../../../packages/domain/src";
+import { assertDestructiveBaseSeedAllowed } from "../src/lib/seed-guard";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  assertDestructiveBaseSeedAllowed();
+
   await prisma.session.deleteMany();
   await prisma.friendship.deleteMany();
   await prisma.tournamentParticipant.deleteMany();

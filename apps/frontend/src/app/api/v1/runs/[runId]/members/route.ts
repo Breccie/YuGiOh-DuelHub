@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import type { RunMemberDto } from "@ygo/contracts";
 import { addRunMemberRequestSchema, runMemberSchema } from "@ygo/contracts";
-import { normalizeDuelistId } from "@ygo/domain";
 import { z } from "zod";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireSameOriginMutation } from "@/lib/api-route-security";
 import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
-import { getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
+import { addRunMember, requireRunMembership } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
 
@@ -95,64 +94,11 @@ export async function POST(
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const body = addRunMemberRequestSchema.parse(await request.json());
-    await requireRunMembership(prisma, {
+    const member = await addRunMember(prisma, {
       runId,
-      userId: session.userId,
-      organizerOnly: true,
-    });
-
-    const user = await prisma.user.findUnique({
-      where: {
-        duelistId: normalizeDuelistId(body.duelistId),
-      },
-      select: {
-        id: true,
-        duelistId: true,
-        displayName: true,
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          error: "Dieser Duelist wurde nicht gefunden.",
-          errorDetail: {
-            code: "member_not_found",
-            message: "Dieser Duelist wurde nicht gefunden.",
-            status: 404,
-          },
-        },
-        { status: 404 },
-      );
-    }
-
-    const member = await prisma.runMembership.upsert({
-      where: {
-        runId_userId: {
-          runId,
-          userId: user.id,
-        },
-      },
-      create: {
-        runId,
-        userId: user.id,
-        role: body.role ?? "PLAYER",
-      },
-      update: {
-        role: body.role ?? "PLAYER",
-      },
-      include: {
-        user: {
-          select: {
-            duelistId: true,
-            displayName: true,
-          },
-        },
-      },
-    });
-    await getOrCreateWallet(prisma, {
-      runId,
-      userId: user.id,
+      actorId: session.userId,
+      duelistId: body.duelistId,
+      role: body.role,
     });
 
     return NextResponse.json(serializeMember(member) satisfies RunMemberDto, {

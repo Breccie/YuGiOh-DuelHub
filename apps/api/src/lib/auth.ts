@@ -143,10 +143,10 @@ export async function registerUser(
     });
   }
 
-  if (input.password.trim().length < 6) {
+  if (input.password.trim().length < 10) {
     throw new DomainError({
       code: "invalid_password",
-      message: "Das Passwort muss mindestens 6 Zeichen haben.",
+      message: "Das Passwort muss mindestens 10 Zeichen haben.",
       status: 400,
     });
   }

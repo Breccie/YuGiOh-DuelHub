@@ -6,12 +6,11 @@ import {
 } from "@prisma/client";
 import {
   DomainError,
-  applyLedgerAmount,
-  assertSufficientCredits,
   normalizeDuelistId,
   normalizePackEconomy,
 } from "@ygo/domain";
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
+import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
 import {
   generatePackCards,
   getCanonicalSetCards,
@@ -24,6 +23,27 @@ import {
   requireRunMembership,
   serializeWallet,
 } from "@/lib/run-service";
+
+async function debitWalletAtomically(
+  tx: Prisma.TransactionClient,
+  walletId: string,
+  cost: number,
+) {
+  const debit = await tx.creditWallet.updateMany({
+    where: { id: walletId, balance: { gte: cost } },
+    data: { balance: { decrement: cost } },
+  });
+  const wallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: walletId } });
+  if (debit.count !== 1) {
+    throw new DomainError({
+      code: "insufficient_credits",
+      message: "Nicht genug Credits für diesen Kauf.",
+      status: 409,
+      details: { balance: wallet.balance, cost },
+    });
+  }
+  return wallet.balance;
+}
 
 export type PackDashboardSnapshot = {
   viewer: {
@@ -929,6 +949,7 @@ export async function createRunRewardGrant(
   }
 
   const grant = await prisma.$transaction(async (tx) => {
+    const ruleVersionId = await getActiveCampaignRuleVersionId(tx, options.runId);
     const createdGrant = await tx.rewardGrant.create({
       data: {
         runId: options.runId,
@@ -940,6 +961,7 @@ export async function createRunRewardGrant(
         reason: options.reason?.trim() || null,
         status: packQuantity > 0 ? "PENDING" : "CLAIMED",
         claimedAt: packQuantity > 0 ? null : new Date(),
+        ruleVersionId,
       },
       include: {
         packSet: true,
@@ -1060,6 +1082,9 @@ export async function claimRewardPack(
       return existingBatch.id;
     }
 
+    const ruleVersionId = grant.ruleVersionId
+      ?? await getActiveCampaignRuleVersionId(tx, options.runId);
+
     const batch = await tx.packOpeningBatch.create({
       data: {
         runId: options.runId,
@@ -1069,6 +1094,7 @@ export async function claimRewardPack(
         quantity: grant.packQuantity,
         totalCost: 0,
         idempotencyKey,
+        ruleVersionId,
       },
     });
 
@@ -1087,6 +1113,7 @@ export async function claimRewardPack(
           randomSeed,
           auditHash,
           notes: `RewardGrant:${grant.id}`,
+          ruleVersionId,
         },
       });
 
@@ -1168,6 +1195,9 @@ export async function openPack(
   const pulls = buildPackPulls(set);
 
   const createdOpeningId = await prisma.$transaction(async (tx) => {
+    const ruleVersionId = options.runId
+      ? await getActiveCampaignRuleVersionId(tx, options.runId)
+      : null;
     let batchId: string | null = null;
 
     if (options.runId) {
@@ -1236,23 +1266,7 @@ export async function openPack(
       });
 
       if (totalCost > 0) {
-        assertSufficientCredits({
-          balance: wallet.balance,
-          cost: totalCost,
-        });
-        const balanceAfter = applyLedgerAmount({
-          balance: wallet.balance,
-          amount: -totalCost,
-        });
-
-        await tx.creditWallet.update({
-          where: {
-            id: wallet.id,
-          },
-          data: {
-            balance: balanceAfter,
-          },
-        });
+        const balanceAfter = await debitWalletAtomically(tx, wallet.id, totalCost);
         await tx.creditLedgerEntry.create({
           data: {
             runId: options.runId,
@@ -1277,6 +1291,7 @@ export async function openPack(
           quantity: 1,
           totalCost,
           idempotencyKey: options.idempotencyKey ?? null,
+          ruleVersionId,
         },
       });
       batchId = batch.id;
@@ -1292,6 +1307,7 @@ export async function openPack(
         openedAt,
         randomSeed,
         auditHash,
+        ruleVersionId,
       },
     });
 
@@ -1368,6 +1384,7 @@ export async function openDisplay(
   }
 
   const createdBatchId = await prisma.$transaction(async (tx) => {
+    const ruleVersionId = await getActiveCampaignRuleVersionId(tx, options.runId);
     await requireRunMembership(tx, {
       runId: options.runId,
       userId: viewer.id,
@@ -1420,23 +1437,11 @@ export async function openDisplay(
       userId: viewer.id,
     });
 
-    assertSufficientCredits({
-      balance: wallet.balance,
-      cost: economy.displayCost,
-    });
-
-    const balanceAfter = applyLedgerAmount({
-      balance: wallet.balance,
-      amount: -economy.displayCost,
-    });
-    await tx.creditWallet.update({
-      where: {
-        id: wallet.id,
-      },
-      data: {
-        balance: balanceAfter,
-      },
-    });
+    const balanceAfter = await debitWalletAtomically(
+      tx,
+      wallet.id,
+      economy.displayCost,
+    );
 
     const batch = await tx.packOpeningBatch.create({
       data: {
@@ -1447,6 +1452,7 @@ export async function openDisplay(
         quantity: economy.displaySize,
         totalCost: economy.displayCost,
         idempotencyKey: options.idempotencyKey ?? null,
+        ruleVersionId,
       },
     });
 
@@ -1491,6 +1497,7 @@ export async function openDisplay(
         openedAt: opening.openedAt,
         randomSeed: opening.randomSeed,
         auditHash: opening.auditHash,
+        ruleVersionId,
       })),
     });
 

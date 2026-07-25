@@ -27,6 +27,19 @@ export async function refreshLocalSyncCache(options?: {
   shouldContinue?: () => boolean;
 }) {
   let cache = readLocalSyncCache();
+  if (options?.forceFullDelta) {
+    cache = {
+      ...cache,
+      cursor: null,
+      collectionEntries: [],
+      decks: [],
+      binders: [],
+      trades: [],
+      tournaments: [],
+      packOpenings: [],
+      rewards: [],
+    };
+  }
   const previousCursor = cache.cursor;
   const bootstrap = await syncClient.bootstrap();
 
@@ -37,8 +50,7 @@ export async function refreshLocalSyncCache(options?: {
   cache = applySyncBootstrap(bootstrap, cache);
   writeLocalSyncCache(cache);
 
-  const shouldStartFromBeginning =
-    options?.forceFullDelta || !hasCachedEntities(cache);
+  const shouldStartFromBeginning = !hasCachedEntities(cache);
   let cursor = shouldStartFromBeginning ? null : previousCursor;
   const maxDeltaPages = options?.maxDeltaPages ?? DEFAULT_MAX_DELTA_PAGES;
 

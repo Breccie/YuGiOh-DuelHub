@@ -11,12 +11,14 @@ import {
   shouldProxyToApiService,
   toProxiedNextResponse,
 } from "@/lib/api-service-proxy";
+import { requireAuthRateLimit } from "@/lib/auth-rate-limit";
 import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    requireAuthRateLimit(request, "login");
     const rawBody = await request.json().catch(() => ({}));
     const body = loginRequestSchema.parse(rawBody);
 

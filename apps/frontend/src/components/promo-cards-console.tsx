@@ -163,14 +163,10 @@ export function PromoCardsConsole({
         GenerateRunProgressionResponse,
         {
           count: number;
-          setsPerCheckpoint: number;
-          includePromos: boolean;
           includeTournamentPacks: boolean;
         }
       >(`/api/v1/runs/${progressionState.run.id}/progression/generate`, {
         count: 5,
-        setsPerCheckpoint: 1,
-        includePromos: true,
         includeTournamentPacks: true,
       });
       setProgressionState(payload.progression);

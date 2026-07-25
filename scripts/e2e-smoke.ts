@@ -99,13 +99,34 @@ async function waitForServer() {
 }
 
 async function resetSmokeDatabase() {
-  await Promise.all([
-    rm(smokeDbPath, { force: true }),
-    rm(`${smokeDbPath}-journal`, { force: true }),
-    rm(`${smokeDbPath}-shm`, { force: true }),
-    rm(`${smokeDbPath}-wal`, { force: true }),
-  ]);
+  await cleanupSmokeDatabase();
   await copyFile(sourceDbPath, smokeDbPath);
+}
+
+async function cleanupSmokeDatabase() {
+  const paths = [
+    smokeDbPath,
+    `${smokeDbPath}-journal`,
+    `${smokeDbPath}-shm`,
+    `${smokeDbPath}-wal`,
+  ];
+
+  for (const targetPath of paths) {
+    for (let attempt = 1; attempt <= 20; attempt += 1) {
+      try {
+        await rm(targetPath, { force: true });
+        break;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+
+        if ((code !== "EBUSY" && code !== "EPERM") || attempt === 20) {
+          throw error;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+  }
 }
 
 async function seedCatalog(): Promise<SeededCatalog> {
@@ -176,12 +197,12 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
   page.setDefaultTimeout(15_000);
   const owner: SmokeUser = {
     duelistId: `SMOKE-${Date.now()}`,
-    password: "Smoke123",
+    password: "Smoke12345",
     displayName: "Smoke Runner",
   };
   const friend: SmokeUser = {
     duelistId: `PAL-${Date.now()}`,
-    password: "Smoke123",
+    password: "Smoke12345",
     displayName: "Smoke Friend",
   };
 
@@ -200,17 +221,30 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
     await page.getByLabel("Passwort").fill(owner.password);
     await page.locator("form").getByRole("button", { name: "Account anlegen" }).click();
 
-    await page.waitForURL(`${baseUrl}/`, { timeout: 20_000 });
-    console.log("[e2e] Verifying dashboard");
+    await page.waitForURL(`${baseUrl}/campaigns`, { timeout: 20_000 });
     await assertVisible(page.getByText(owner.displayName).first(), "smoke user");
+
+    console.log("[e2e] Creating the initial campaign");
+    await apiJson(page, "/api/v1/runs", "POST", {
+      name: "Smoke Progression",
+      startingCredits: 2400,
+      defaultPackPrice: 100,
+      initialSetUnlockCount: 100,
+    });
+
+    console.log("[e2e] Verifying dashboard");
+    await page.goto(`${baseUrl}/`);
     await assertVisible(
-      page.getByRole("link", { name: /Booster öffnen/i }),
-      "booster link",
+      page.locator('a[href="/packs"]').first(),
+      "packs link",
     );
 
     console.log("[e2e] Verifying packs page");
     await page.goto(`${baseUrl}/packs`);
-    await assertVisible(page.getByText("Booster kaufen").first(), "packs page");
+    await assertVisible(
+      page.getByText("Nächster chronologischer Booster").first(),
+      "packs page",
+    );
     const hasSeededSet = await page.evaluate(async (setId) => {
       const response = await fetch("/api/pack-openings");
       const body = await response.json();
@@ -257,7 +291,7 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
     await assertVisible(page.getByText("Karten").first(), "collection page");
     await assertCollectionEntries(owner.duelistId, 3);
 
-    console.log("[e2e] Creating a deck and EDOPro export through app-origin API");
+    console.log("[e2e] Creating a deck and validating draft export protection");
     const deck = await apiJson<{ deck: { id: string; name: string } }>(
       page,
       "/api/decks",
@@ -275,15 +309,28 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
         quantity: 1,
       },
     );
-    const deckExport = await apiJson<{ export: { id: string; fileName: string } }>(
-      page,
-      `/api/decks/${deck.deck.id}/export`,
-      "POST",
-      { fileName: "smoke-deck.ydk" },
-    );
+    const deckExportAttempt = await page.evaluate(async (deckId) => {
+      const response = await fetch(`/api/decks/${deckId}/export`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ fileName: "smoke-deck.ydk" }),
+      });
 
-    if (!deckExport.export.fileName.endsWith(".ydk")) {
-      throw new Error("Deck export did not produce an EDOPro .ydk file name.");
+      return {
+        status: response.status,
+        body: await response.json(),
+      };
+    }, deck.deck.id);
+
+    if (
+      deckExportAttempt.status !== 409 ||
+      deckExportAttempt.body.errorDetail?.code !== "deck_not_playable"
+    ) {
+      throw new Error(
+        `Draft export was not rejected as expected: ${JSON.stringify(deckExportAttempt)}`,
+      );
     }
 
     console.log("[e2e] Registering a friend and joining the run");
@@ -331,7 +378,10 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
 
     console.log("[e2e] Verifying duel page");
     await page.goto(`${baseUrl}/duels`);
-    await assertVisible(page.getByText("EDOPro").first(), "duels page");
+    await assertVisible(
+      page.getByText("Duellanfrage senden").first(),
+      "duels page",
+    );
 
     console.log("[e2e] Verifying tournament page");
     await page.goto(`${baseUrl}/tournaments`);
@@ -359,6 +409,7 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
     const winnerId = match.playerOneId;
 
     await apiJson(page, `/api/tournaments/matches/${match.id}`, "PATCH", {
+      action: "adminConfirm",
       playerOneScore: 2,
       playerTwoScore: 0,
       winnerId,
@@ -752,6 +803,7 @@ async function main() {
     throw error;
   } finally {
     await stopDevServer(server);
+    await cleanupSmokeDatabase();
   }
 }
 

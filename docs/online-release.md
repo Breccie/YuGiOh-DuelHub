@@ -19,10 +19,18 @@ Schema-Ziel ist [apps/api/prisma/schema.prisma](/C:/Users/Emil/Documents/Yu-Gi-O
 ```bash
 npm run db:generate
 npm run db:migrate
-npm run db:seed:base
 ```
 
 `npm run db:migrate` nutzt `prisma migrate deploy`, damit lokale Smoke-Runs und Render/Supabase-Deployments ohne interaktive Prompts laufen. Fuer neue lokale Migrationen gibt es `npm run db:migrate:dev`.
+
+`db:seed:base` ist ein destruktiver Demo-Seed: Er löscht Anwendungsdaten und ist in
+`production` technisch gesperrt. Er gehört niemals in einen Release- oder
+Wiederanlaufpfad. Für eine ausdrücklich entbehrliche lokale Datenbank kann er mit
+`cross-env ALLOW_DESTRUCTIVE_BASE_SEED=1 npm run db:seed:base` gestartet werden.
+
+Ein Kartenkatalog wird unabhängig von Benutzerdaten mit `npm run import:ygo`
+importiert beziehungsweise aktualisiert. Diesen Datenimport zuerst in einer
+Staging-Datenbank prüfen und vor dem ersten Produktionslauf ein Backup anlegen.
 
 ## 2. Render API deployen
 

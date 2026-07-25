@@ -59,3 +59,15 @@ export function writeCachedDashboardSummary(
     // Cache writes are best-effort; dashboard freshness must not block the app.
   }
 }
+
+export function clearCachedDashboardSummary(
+  storage: Storage | undefined | null =
+    typeof window === "undefined" ? null : window.localStorage,
+) {
+  if (!canUseStorage(storage)) return;
+  try {
+    storage.removeItem(DASHBOARD_SUMMARY_CACHE_KEY);
+  } catch {
+    // Cache invalidation is best-effort.
+  }
+}
