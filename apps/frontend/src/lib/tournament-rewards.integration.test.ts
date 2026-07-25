@@ -982,7 +982,7 @@ describe("tournament rewards and progression", () => {
       ).resolves.toEqual(expect.objectContaining({ promoSourceId: promoSource.id }));
     } finally {
       if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+        await deleteRunFixture(prisma, createdIds.runId);
       }
       if (createdIds.promoSourceIds.length > 0) {
         await prisma.promoSource.deleteMany({
