@@ -9,6 +9,7 @@ import {
   completeTournament,
   recordTournamentMatchResult,
 } from "@/lib/tournament-service";
+import { deleteRunFixture } from "@/test-support/run-fixture-cleanup";
 
 const prisma = new PrismaClient();
 
@@ -154,7 +155,7 @@ describe("tournament rewards and progression", () => {
       );
     } finally {
       if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+        await deleteRunFixture(prisma, createdIds.runId);
       }
       if (createdIds.ownerId || createdIds.playerId) {
         await prisma.user.deleteMany({
@@ -689,7 +690,7 @@ describe("tournament rewards and progression", () => {
       ).resolves.toEqual(expect.objectContaining({ amount: -run.defaultPackPrice }));
     } finally {
       if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+        await deleteRunFixture(prisma, createdIds.runId);
       }
       if (createdIds.ownerId || createdIds.playerId) {
         await prisma.user.deleteMany({

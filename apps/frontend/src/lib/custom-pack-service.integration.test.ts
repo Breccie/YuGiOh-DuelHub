@@ -6,6 +6,7 @@ import {
   publishCustomPackVersion,
   updateCustomPackDraft,
 } from "@/lib/custom-pack-service";
+import { deleteRunFixture } from "@/test-support/run-fixture-cleanup";
 
 const prisma = new PrismaClient();
 
@@ -117,7 +118,7 @@ describe("custom pack publishing and opening", () => {
       expect(wallet.balance).toBe(800);
       expect(purchases).toBe(2);
     } finally {
-      if (runId) await prisma.playGroupRun.deleteMany({ where: { id: runId } });
+      if (runId) await deleteRunFixture(prisma, runId);
       if (generatedSetId) await prisma.cardSet.deleteMany({ where: { id: generatedSetId } });
       if (cardIds.length > 0) await prisma.card.deleteMany({ where: { id: { in: cardIds } } });
       if (userId) await prisma.user.deleteMany({ where: { id: userId } });
