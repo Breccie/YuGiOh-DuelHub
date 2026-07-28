@@ -29,12 +29,16 @@ async function debitWalletAtomically(
   walletId: string,
   cost: number,
 ) {
-  const debit = await tx.creditWallet.updateMany({
+  const [updatedWallet] = await tx.creditWallet.updateManyAndReturn({
     where: { id: walletId, balance: { gte: cost } },
     data: { balance: { decrement: cost } },
+    select: { balance: true },
   });
-  const wallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: walletId } });
-  if (debit.count !== 1) {
+  if (!updatedWallet) {
+    const wallet = await tx.creditWallet.findUniqueOrThrow({
+      where: { id: walletId },
+      select: { balance: true },
+    });
     throw new DomainError({
       code: "insufficient_credits",
       message: "Nicht genug Credits für diesen Kauf.",
@@ -42,7 +46,7 @@ async function debitWalletAtomically(
       details: { balance: wallet.balance, cost },
     });
   }
-  return wallet.balance;
+  return updatedWallet.balance;
 }
 
 export type PackDashboardSnapshot = {
@@ -125,6 +129,7 @@ type CachedPackCatalogSet = {
 
 const INTERNAL_SAMPLE_SET_CODES = new Set(["SMP-START"]);
 const PACK_CATALOG_CACHE_TTL_MS = 1000 * 60 * 15;
+const PACK_COLLATION_CACHE_TTL_MS = 1000 * 60 * 15;
 
 let packCatalogCache:
   | {
@@ -133,6 +138,28 @@ let packCatalogCache:
     }
   | null = null;
 let pendingPackCatalogLoad: Promise<CachedPackCatalogSet[]> | null = null;
+
+type LoadedPackSetRecord = Prisma.CardSetGetPayload<{
+  include: {
+    setCards: {
+      include: {
+        card: true;
+      };
+    };
+  };
+}>;
+
+const packCollationCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    set: LoadedPackSetRecord;
+  }
+>();
+const pendingPackCollationLoads = new Map<
+  string,
+  Promise<LoadedPackSetRecord | null>
+>();
 
 function isInternalSampleSet(set: { code: string }) {
   return INTERNAL_SAMPLE_SET_CODES.has(set.code.toUpperCase());
@@ -217,21 +244,74 @@ async function loadStandardPackCatalog(
 
 type PackOpeningPrisma = PrismaClient | Prisma.TransactionClient;
 
-async function loadSetOrThrow(prisma: PackOpeningPrisma, setId?: string) {
+async function loadCachedPackSet(
+  prisma: PrismaClient,
+  setId: string,
+): Promise<LoadedPackSetRecord | null> {
+  const now = Date.now();
+  const cached = packCollationCache.get(setId);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.set;
+  }
+
+  const pending = pendingPackCollationLoads.get(setId);
+  if (pending) {
+    return pending;
+  }
+
+  const load = prisma.cardSet
+    .findUnique({
+      where: {
+        id: setId,
+      },
+      include: {
+        setCards: {
+          include: {
+            card: true,
+          },
+        },
+      },
+    })
+    .then((set) => {
+      if (set) {
+        packCollationCache.set(setId, {
+          expiresAt: Date.now() + PACK_COLLATION_CACHE_TTL_MS,
+          set,
+        });
+      }
+
+      return set;
+    })
+    .finally(() => {
+      pendingPackCollationLoads.delete(setId);
+    });
+
+  pendingPackCollationLoads.set(setId, load);
+  return load;
+}
+
+async function loadSetOrThrow(
+  prisma: PackOpeningPrisma,
+  setId?: string,
+  options: { cacheCollation?: boolean } = {},
+) {
   const candidateSets = setId
     ? [
-        await prisma.cardSet.findUnique({
-          where: {
-            id: setId,
-          },
-          include: {
-            setCards: {
-              include: {
-                card: true,
+        options.cacheCollation
+          ? await loadCachedPackSet(prisma as PrismaClient, setId)
+          : await prisma.cardSet.findUnique({
+              where: {
+                id: setId,
               },
-            },
-          },
-        }),
+              include: {
+                setCards: {
+                  include: {
+                    card: true,
+                  },
+                },
+              },
+            }),
       ].filter((entry): entry is NonNullable<typeof entry> => entry !== null)
     : await prisma.cardSet.findMany({
         orderBy: {
@@ -1217,7 +1297,7 @@ export async function openPack(
           id: options.viewerId,
         },
       }),
-      loadSetOrThrow(prisma, options.setId),
+      loadSetOrThrow(prisma, options.setId, { cacheCollation: true }),
       runId ? getActiveCampaignRuleVersionId(prisma, runId) : null,
       runId
         ? prisma.creditWallet.findUnique({
