@@ -1129,12 +1129,12 @@ textarea {
 
 .opening-card-stack {
   position: absolute;
-  z-index: 6;
-  top: 0.4rem;
+  z-index: 12;
+  top: 42%;
   left: 50%;
   width: clamp(8.9rem, 12vw, 10.7rem);
   aspect-ratio: 59 / 86;
-  transform: translateX(-50%);
+  transform: translate(-50%, -42%);
   pointer-events: none;
 }
 
@@ -1434,12 +1434,12 @@ textarea {
 @keyframes openingStackEnter {
   from {
     opacity: 0;
-    transform: translate(-50%, -56px) scale(0.82) rotate(-4deg);
+    transform: translate(-50%, calc(-42% - 56px)) scale(0.82) rotate(-4deg);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1) rotate(0deg);
+    transform: translate(-50%, -42%) scale(1) rotate(0deg);
   }
 }
 
@@ -1456,12 +1456,12 @@ textarea {
 @keyframes openingStackRetract {
   from {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(-50%, -42%) scale(1);
   }
 
   to {
     opacity: 0;
-    transform: translate(-50%, -42px) scale(0.86);
+    transform: translate(-50%, calc(-42% - 42px)) scale(0.86);
   }
 }
 
