@@ -36,8 +36,8 @@ export const PACK_OPENING_TIMING = {
   tearDurationMs: 1_120,
   stackEntranceMs: 280,
   stackSettleMs: 180,
-  cardIntervalMs: 460,
-  cardFlightMs: 420,
+  cardIntervalMs: 430,
+  cardFlightMs: 660,
 } as const;
 
 export const initialOpeningFlowState: OpeningFlowState = {

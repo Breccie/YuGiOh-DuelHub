@@ -57,6 +57,7 @@ type ArrivalLayout = {
   top: number;
   width: number;
   height: number;
+  sourceScale: number;
 };
 
 type HoverCardState = {
@@ -98,12 +99,20 @@ function getArrivalStyle(
 ) {
   const stackDepth = index;
   const speedScale = 1 / speed;
+  const sourceX = arrivalLayout.x + stackDepth * 0.8;
+  const sourceY = arrivalLayout.y + stackDepth * 1.2;
+  const arcLift = Math.min(72, Math.max(34, arrivalLayout.width * 0.26));
+  const midScale = ((arrivalLayout.sourceScale + 1) / 2) * 1.015;
 
   return {
-    "--arrival-x": `${arrivalLayout.x + stackDepth * 1.15}px`,
-    "--arrival-y": `${arrivalLayout.y + stackDepth * 2}px`,
-    "--arrival-rotate": `${-2.2 + stackDepth * -0.32}deg`,
-    "--arrival-source-scale": "1",
+    "--arrival-x": `${sourceX}px`,
+    "--arrival-y": `${sourceY}px`,
+    "--arrival-mid-x": `${sourceX * 0.46}px`,
+    "--arrival-mid-y": `${sourceY * 0.52 - arcLift}px`,
+    "--arrival-rotate": `${-2 + stackDepth * -0.18}deg`,
+    "--arrival-mid-rotate": `${1.4 - (index % 3) * 0.35}deg`,
+    "--arrival-source-scale": String(arrivalLayout.sourceScale),
+    "--arrival-mid-scale": String(midScale),
     "--arrival-delay": `${index * PACK_OPENING_TIMING.cardIntervalMs * speedScale}ms`,
     "--arrival-duration": `${PACK_OPENING_TIMING.cardFlightMs * speedScale}ms`,
     "--arrival-z": String(pullCount - index),
@@ -363,7 +372,7 @@ export function PackOpeningStation({
       const trayRect = trayNode.getBoundingClientRect();
       const origin = {
         x: originRect.left + originRect.width * 0.5,
-        y: originRect.top + originRect.height * 0.42,
+        y: originRect.top + originRect.height * 0.5,
       };
       const nextLayouts: Record<string, ArrivalLayout> = {};
 
@@ -387,6 +396,10 @@ export function PackOpeningStation({
           top: Math.round(slotRect.top - trayRect.top),
           width: Math.round(slotRect.width),
           height: Math.round(slotRect.height),
+          sourceScale: Math.min(
+            4.5,
+            Math.max(0.9, originRect.width / slotRect.width),
+          ),
         };
       }
 

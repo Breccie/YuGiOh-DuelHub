@@ -1130,11 +1130,11 @@ textarea {
 .opening-card-stack {
   position: absolute;
   z-index: 12;
-  top: 42%;
+  top: 46%;
   left: 50%;
-  width: clamp(8.9rem, 12vw, 10.7rem);
+  width: min(15rem, calc(100% - 1rem));
   aspect-ratio: 59 / 86;
-  transform: translate(-50%, -42%);
+  transform: translate(-50%, -24%);
   pointer-events: none;
 }
 
@@ -1153,10 +1153,6 @@ textarea {
 .opening-card-stack .reveal-card-shell:hover .reveal-card:not(.is-revealed),
 .opening-card-stack .reveal-card-shell:focus-visible .reveal-card:not(.is-revealed) {
   transform: none;
-}
-
-.opening-dealt-card {
-  animation: openingDealtCardSettle 180ms cubic-bezier(0.2, 0.82, 0.24, 1) both;
 }
 
 .opening-card-stack.is-retracting {
@@ -1423,6 +1419,25 @@ textarea {
     transform: translate3d(var(--arrival-x, -560px), var(--arrival-y, 80px), 24px)
       rotate(var(--arrival-rotate, 0deg))
       scale(var(--arrival-source-scale, 0.76));
+    animation-timing-function: cubic-bezier(0.2, 0.68, 0.26, 1);
+  }
+
+  58% {
+    opacity: 1;
+    transform: translate3d(
+        var(--arrival-mid-x, -260px),
+        var(--arrival-mid-y, -24px),
+        42px
+      )
+      rotate(var(--arrival-mid-rotate, 1deg))
+      scale(var(--arrival-mid-scale, 1.04));
+    animation-timing-function: cubic-bezier(0.16, 0.78, 0.22, 1);
+  }
+
+  88% {
+    opacity: 1;
+    transform: translate3d(0, -7px, 10px) rotate(0.35deg) scale(1.012);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   100% {
@@ -1434,34 +1449,24 @@ textarea {
 @keyframes openingStackEnter {
   from {
     opacity: 0;
-    transform: translate(-50%, calc(-42% - 56px)) scale(0.82) rotate(-4deg);
+    transform: translate(-50%, calc(-24% - 56px)) scale(0.82) rotate(-4deg);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, -42%) scale(1) rotate(0deg);
-  }
-}
-
-@keyframes openingDealtCardSettle {
-  from {
-    transform: translateY(-3px) scale(1.015);
-  }
-
-  to {
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, -24%) scale(1) rotate(0deg);
   }
 }
 
 @keyframes openingStackRetract {
   from {
     opacity: 1;
-    transform: translate(-50%, -42%) scale(1);
+    transform: translate(-50%, -24%) scale(1);
   }
 
   to {
     opacity: 0;
-    transform: translate(-50%, calc(-42% - 42px)) scale(0.86);
+    transform: translate(-50%, calc(-24% - 42px)) scale(0.86);
   }
 }
 

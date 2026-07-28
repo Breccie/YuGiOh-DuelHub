@@ -24,7 +24,7 @@ describe("getPackOpeningTimeline", () => {
 
       expect(timeline.completeAtMs).toBeCloseTo(5_680 / speed, 6);
       expect(timeline.cards[4]?.launchAtMs).toBeCloseTo(
-        (1_580 + 4 * 460) / speed,
+        (1_580 + 4 * 430) / speed,
         6,
       );
     },
