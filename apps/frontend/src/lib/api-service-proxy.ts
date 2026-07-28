@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getFrontendRuntimeStatus } from "@/lib/app-mode";
 
 const API_SERVICE_TIMEOUT_MS = 20_000;
+const API_SERVICE_READ_ATTEMPTS = 2;
 
 export function getApiBaseUrl() {
   const status = getFrontendRuntimeStatus();
@@ -74,27 +75,37 @@ export async function fetchApiService(
     cookie: init?.cookieHeader ?? null,
     userAgent: init?.userAgent ?? null,
   });
+  const requestMethod = (init?.method ?? "GET").toUpperCase();
+  const attemptCount =
+    !init?.signal && (requestMethod === "GET" || requestMethod === "HEAD")
+      ? API_SERVICE_READ_ATTEMPTS
+      : 1;
+  let lastError: unknown;
 
-  try {
-    return await fetch(new URL(servicePath, baseUrl), {
-      ...init,
-      headers: forwardedHeaders,
-      cache: "no-store",
-      signal: init?.signal ?? AbortSignal.timeout(API_SERVICE_TIMEOUT_MS),
-    });
-  } catch (error) {
-    const serviceError = new Error(
-      error instanceof Error
-        ? `API-Service nicht erreichbar: ${error.message}`
-        : "API-Service nicht erreichbar.",
-    );
-    (
-      serviceError as Error & {
-        status?: number;
-      }
-    ).status = 503;
-    throw serviceError;
+  for (let attempt = 0; attempt < attemptCount; attempt += 1) {
+    try {
+      return await fetch(new URL(servicePath, baseUrl), {
+        ...init,
+        headers: forwardedHeaders,
+        cache: "no-store",
+        signal: init?.signal ?? AbortSignal.timeout(API_SERVICE_TIMEOUT_MS),
+      });
+    } catch (error) {
+      lastError = error;
+    }
   }
+
+  const serviceError = new Error(
+    lastError instanceof Error
+      ? `API-Service nicht erreichbar: ${lastError.message}`
+      : "API-Service nicht erreichbar.",
+  );
+  (
+    serviceError as Error & {
+      status?: number;
+    }
+  ).status = 503;
+  throw serviceError;
 }
 
 export async function fetchApiServiceJson<T>(
