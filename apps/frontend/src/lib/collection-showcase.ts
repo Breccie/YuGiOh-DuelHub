@@ -166,6 +166,7 @@ export type CollectionBinderDto = {
   description: string;
   accentColor: string;
   isActive: boolean;
+  isShowcase: boolean;
   createdAt: string;
   updatedAt: string;
   pageCount: number;
@@ -465,7 +466,10 @@ function mapBinderPage(page: BinderPageRecord): CollectionBinderPageDto {
   };
 }
 
-function mapBinder(binder: BinderRecord): CollectionBinderDto {
+function mapBinder(
+  binder: BinderRecord,
+  showcaseBinderId: string | null = null,
+): CollectionBinderDto {
   const cover = getBinderCoverMeta(binder.coverKey);
   const pages = binder.pages.map(mapBinderPage);
 
@@ -478,6 +482,7 @@ function mapBinder(binder: BinderRecord): CollectionBinderDto {
     description: binder.description ?? cover.description,
     accentColor: binder.accentColor ?? cover.accentColor,
     isActive: binder.isActive,
+    isShowcase: showcaseBinderId === binder.id,
     createdAt: binder.createdAt.toISOString(),
     updatedAt: binder.updatedAt.toISOString(),
     pageCount: pages.length,
@@ -791,7 +796,7 @@ export async function getCollectionShowcaseSnapshot(prisma: PrismaClient, viewer
       id: viewer.id,
       displayName: viewer.displayName,
     },
-    binders: binders.map(mapBinder),
+    binders: binders.map((binder) => mapBinder(binder, viewer.showcaseBinderId)),
     presets: presets.map(mapPreset),
   };
 }
@@ -818,7 +823,7 @@ export async function getCollectionBinderEditorSnapshot(
       id: viewer.id,
       displayName: viewer.displayName,
     },
-    binder: mapBinder(binder),
+    binder: mapBinder(binder, viewer.showcaseBinderId),
     inventoryCards,
   };
 }
@@ -887,10 +892,10 @@ export async function createCollectionBinder(
     });
   });
 
-  return mapBinder(binder);
+  return mapBinder(binder, viewer.showcaseBinderId);
 }
 
-export async function deleteEmptyCollectionBinder(
+export async function deleteCollectionBinder(
   prisma: PrismaClient,
   viewerId: string,
   binderId: string,
@@ -906,48 +911,67 @@ export async function deleteEmptyCollectionBinder(
     throw new DomainError({ code: "binder_not_found", message: "Binder wurde nicht gefunden.", status: 404 });
   }
 
-  const [binderCount, filledSlotCount, showcaseCount] = await Promise.all([
-    prisma.collectionBinder.count({ where: { userId: viewer.id, runId: activeRun.id } }),
-    prisma.collectionBinderSlot.count({
-      where: {
-        page: { binderId },
-        OR: [
-          { collectionEntryId: { not: null } },
-          { entryReferenceId: { not: null } },
-          { snapshotCardId: { not: null } },
-        ],
-      },
-    }),
-    prisma.user.count({ where: { showcaseBinderId: binderId } }),
-  ]);
-
-  if (binderCount <= 1) {
-    throw new DomainError({ code: "last_binder", message: "Der letzte Binder einer Kampagne kann nicht gelöscht werden.", status: 409 });
-  }
-
-  if (filledSlotCount > 0) {
-    throw new DomainError({ code: "binder_not_empty", message: "Nur vollständig leere Binder können aufgeräumt werden.", status: 409 });
-  }
-
-  if (showcaseCount > 0) {
-    throw new DomainError({ code: "binder_is_showcase", message: "Ein veröffentlichter Showcase-Binder kann nicht gelöscht werden.", status: 409 });
-  }
-
   const nextBinder = await prisma.collectionBinder.findFirst({
     where: { userId: viewer.id, runId: activeRun.id, id: { not: binderId } },
     orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }],
     select: { id: true },
   });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.collectionBinder.delete({ where: { id: binderId } });
-    if (binder.isActive && nextBinder) {
-      await tx.collectionBinder.update({ where: { id: nextBinder.id }, data: { isActive: true } });
+  const activeBinderId = await prisma.$transaction(async (tx) => {
+    if (viewer.showcaseBinderId === binderId) {
+      await tx.user.update({
+        where: { id: viewer.id },
+        data: { showcaseBinderId: null },
+      });
+      await tx.profileShowcaseSnapshot.deleteMany({
+        where: { userId: viewer.id },
+      });
     }
+
+    await tx.collectionBinder.delete({ where: { id: binderId } });
+
+    if (!binder.isActive && nextBinder) {
+      const currentActive = await tx.collectionBinder.findFirst({
+        where: { userId: viewer.id, runId: activeRun.id, isActive: true },
+        select: { id: true },
+      });
+      return currentActive?.id ?? nextBinder.id;
+    }
+
+    if (nextBinder) {
+      await tx.collectionBinder.update({
+        where: { id: nextBinder.id },
+        data: { isActive: true },
+      });
+      return nextBinder.id;
+    }
+
+    const cover = binderCoverCatalog[0];
+    const replacement = await tx.collectionBinder.create({
+      data: {
+        userId: viewer.id,
+        runId: activeRun.id,
+        name: "Kampagnen-Binder",
+        coverKey: cover.key,
+        description: "Dein Arbeits-Binder für diese Kampagne.",
+        accentColor: cover.accentColor,
+        isActive: true,
+        pages: {
+          create: {
+            pageIndex: 0,
+            slots: { create: createEmptySlotSeed() },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return replacement.id;
   });
 
-  return { deletedBinderId: binderId, activeBinderId: binder.isActive ? nextBinder?.id ?? null : null };
+  return { deletedBinderId: binderId, activeBinderId };
 }
+
+export const deleteEmptyCollectionBinder = deleteCollectionBinder;
 
 export async function updateCollectionBinder(
   prisma: PrismaClient,
@@ -1020,7 +1044,7 @@ export async function updateCollectionBinder(
     });
   });
 
-  return mapBinder(binder);
+  return mapBinder(binder, viewer.showcaseBinderId);
 }
 
 export async function createCollectionPreset(

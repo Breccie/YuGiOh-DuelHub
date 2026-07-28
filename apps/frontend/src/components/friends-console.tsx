@@ -63,12 +63,32 @@ function sortByDisplayName(
   return left.displayName.localeCompare(right.displayName, "de");
 }
 
+function formatPresence(friend: ReturnType<typeof getOtherDuelist>, now: number) {
+  if (friend.isOnline) return "Online";
+  if (!friend.lastSeenAt) return "Zuletzt online unbekannt";
+
+  const timestamp = new Date(friend.lastSeenAt).getTime();
+  const elapsedMinutes = Math.max(1, Math.floor((now - timestamp) / 60_000));
+  if (elapsedMinutes < 60) return `Vor ${elapsedMinutes} Min. online`;
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Vor ${elapsedHours} Std. online`;
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 7) return `Vor ${elapsedDays} Tag${elapsedDays === 1 ? "" : "en"} online`;
+
+  return `Zuletzt online ${new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(timestamp))}`;
+}
+
 export function FriendsConsole() {
   const router = useRouter();
   const [payload, setPayload] = useState<FriendsPayload>(createFallbackPayload);
   const [duelistId, setDuelistId] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<FriendAction | null>(null);
+  const [presenceClock, setPresenceClock] = useState(() => Date.now());
 
   const activeRun =
     payload.runs.find((run) => run.id === payload.activeRunId) ??
@@ -138,6 +158,24 @@ export function FriendsConsole() {
       mounted = false;
     };
   }, [router]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setPresenceClock(Date.now());
+      void refresh().catch(() => undefined);
+    }, 60_000);
+
+    function handleFocus() {
+      setPresenceClock(Date.now());
+      void refresh().catch(() => undefined);
+    }
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+    };
+  });
 
   async function handleAddFriend(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -287,6 +325,22 @@ export function FriendsConsole() {
                         </p>
                         <p className="mt-1 text-sm uppercase tracking-[0.16em] text-[#9f8c77]">
                           {friend.duelistId}
+                        </p>
+                        <p
+                          className={
+                            friend.isOnline
+                              ? "mt-2 flex items-center gap-2 text-xs font-semibold text-[#72d6b6]"
+                              : "mt-2 flex items-center gap-2 text-xs text-[#a9957b]"
+                          }
+                        >
+                          <span
+                            className={
+                              friend.isOnline
+                                ? "h-2 w-2 rounded-full bg-[#55d6ab] shadow-[0_0_12px_rgba(85,214,171,0.72)]"
+                                : "h-2 w-2 rounded-full bg-[#665d53]"
+                            }
+                          />
+                          {formatPresence(friend, presenceClock)}
                         </p>
                       </div>
                       <StatusPill tone="teal">Freund</StatusPill>

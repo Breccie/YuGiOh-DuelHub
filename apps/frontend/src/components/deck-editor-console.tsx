@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import type {
+  CardCatalogSort,
   CardCatalogItem,
   CardOwnershipFilter,
+  DeckBoxKey,
   DeckSectionValue,
 } from "@ygo/contracts";
 import type { DragEvent, MouseEvent } from "react";
@@ -14,6 +16,7 @@ import { Panel, StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { deckClient } from "@/lib/deck-client";
+import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
 import type { DeckIssueType, DeckLegalitySnapshot } from "@/lib/deck-legality";
 import { wishlistClient } from "@/lib/wishlist-client";
 
@@ -593,7 +596,12 @@ export function DeckEditorConsole({
     })),
   );
   const [createDeckName, setCreateDeckName] = useState("");
+  const [createDeckBoxKey, setCreateDeckBoxKey] =
+    useState<DeckBoxKey>(defaultDeckBoxKey);
   const [activeDeckName, setActiveDeckName] = useState(activeDeck?.name ?? "");
+  const [activeDeckBoxKey, setActiveDeckBoxKey] = useState<DeckBoxKey>(
+    (activeDeck?.deckBoxKey as DeckBoxKey | undefined) ?? defaultDeckBoxKey,
+  );
   const [activeBanlistId, setActiveBanlistId] = useState(
     activeDeck?.banlistId ?? availableBanlists[0]?.id ?? "",
   );
@@ -604,6 +612,7 @@ export function DeckEditorConsole({
   const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
   const [limitFilter, setLimitFilter] = useState<LimitFilter>("ALL");
   const [rarityFilter, setRarityFilter] = useState("ALL");
+  const [catalogSort, setCatalogSort] = useState<CardCatalogSort>("NAME_ASC");
   const [ownershipFilter, setOwnershipFilter] =
     useState<CardOwnershipFilter>("ALL");
   const [catalogTotal, setCatalogTotal] = useState(initialCollectionCards.length);
@@ -616,6 +625,7 @@ export function DeckEditorConsole({
   const [catalogError, setCatalogError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingCardKeys, setPendingCardKeys] = useState<string[]>([]);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const catalogRequestRef = useRef(0);
   const deferredCardSearch = useDeferredValue(cardSearch);
@@ -637,6 +647,7 @@ export function DeckEditorConsole({
         rarity: rarityFilter === "ALL" ? undefined : rarityFilter,
         banlistId: activeBanlistId || undefined,
         banlistStatus: limitFilter,
+        sort: catalogSort,
         limit: 60,
       })
       .then((payload) => {
@@ -660,6 +671,7 @@ export function DeckEditorConsole({
   }, [
     activeBanlistId,
     catalogRevision,
+    catalogSort,
     deferredCardSearch,
     kindFilter,
     limitFilter,
@@ -789,6 +801,7 @@ export function DeckEditorConsole({
         rarity: rarityFilter === "ALL" ? undefined : rarityFilter,
         banlistId: activeBanlistId || undefined,
         banlistStatus: limitFilter,
+        sort: catalogSort,
         cursor: catalogCursor,
         limit: 60,
       });
@@ -811,6 +824,11 @@ export function DeckEditorConsole({
   async function refreshEditorSnapshot(deckId: string) {
     const payload = await deckClient.getEditorOverview(deckId);
     setActiveDeck(payload.activeDeck);
+    if (payload.activeDeck) {
+      setActiveDeckBoxKey(
+        (payload.activeDeck.deckBoxKey as DeckBoxKey) ?? defaultDeckBoxKey,
+      );
+    }
     setCatalogRevision((revision) => revision + 1);
   }
 
@@ -818,6 +836,7 @@ export function DeckEditorConsole({
     await runMutation(async () => {
       const payload = await deckClient.create({
         name: createDeckName,
+        deckBoxKey: createDeckBoxKey,
         banlistId: availableBanlists[0]?.id ?? null,
       });
 
@@ -838,6 +857,7 @@ export function DeckEditorConsole({
     await runMutation(async () => {
       const payload = await deckClient.update(activeDeck.id, {
         name: activeDeckName,
+        deckBoxKey: activeDeckBoxKey,
         banlistId: activeBanlistId || null,
         snapshotDate: activeSnapshotDate || null,
       });
@@ -861,6 +881,7 @@ export function DeckEditorConsole({
     await runMutation(async () => {
       const payload = await deckClient.update(activeDeck.id, {
         name: activeDeckName,
+        deckBoxKey: activeDeckBoxKey,
         banlistId: nextBanlistId || null,
         snapshotDate: activeSnapshotDate || null,
       });
@@ -896,14 +917,7 @@ export function DeckEditorConsole({
       return;
     }
 
-    await runMutation(async () => {
-      await deckClient.upsertCard(activeDeck.id, {
-        cardId,
-        section,
-        quantity,
-      });
-      await refreshEditorSnapshot(activeDeck.id);
-    });
+    await runCardMutation(cardId, section, quantity);
   }
 
   async function handleRemoveCard(cardId: string, section: DeckSection) {
@@ -911,13 +925,128 @@ export function DeckEditorConsole({
       return;
     }
 
-    await runMutation(async () => {
-      await deckClient.removeCard(activeDeck.id, {
-        cardId,
-        section,
-      });
-      await refreshEditorSnapshot(activeDeck.id);
+    await runCardMutation(cardId, section, 0);
+  }
+
+  async function runCardMutation(
+    cardId: string,
+    section: DeckSection,
+    quantity: number,
+  ) {
+    if (!activeDeck) return;
+    const pendingKey = `${cardId}:${section}`;
+    if (pendingCardKeys.includes(pendingKey)) return;
+
+    const previousActiveDeck = activeDeck;
+    const previousCollectionCards = collectionCards;
+    const existing = previousActiveDeck.cards.find(
+      (card) => card.cardId === cardId && card.section === section,
+    );
+    const collectionCard = previousCollectionCards.find(
+      (card) => card.cardId === cardId,
+    );
+    const previousQuantity = existing?.quantity ?? 0;
+    const delta = quantity - previousQuantity;
+
+    if (!existing && quantity > 0 && !collectionCard) return;
+
+    const nextCards =
+      quantity <= 0
+        ? previousActiveDeck.cards.filter(
+            (card) => !(card.cardId === cardId && card.section === section),
+          )
+        : existing
+          ? previousActiveDeck.cards.map((card) =>
+              card.cardId === cardId && card.section === section
+                ? { ...card, quantity }
+                : card,
+            )
+          : [
+              ...previousActiveDeck.cards,
+              {
+                cardId,
+                cardName: collectionCard!.name,
+                kind: collectionCard!.kind,
+                monsterType: collectionCard!.monsterType,
+                imageUrl: collectionCard!.imageUrl,
+                section,
+                quantity,
+                allowedCopies: collectionCard!.legalLimit,
+                pointValue: collectionCard!.pointValue,
+                availableCopies: collectionCard!.availableCopies,
+                reservedCopies: collectionCard!.reservedCopies,
+                tradedCopies: collectionCard!.tradedCopies,
+                activeTextLabel: "Aktueller Kartentext",
+                activeTextSnippet:
+                  collectionCard!.oracleText ?? "Kein Text verfügbar.",
+                errataCutoff: collectionCard!.errataCutoff,
+                issues: [],
+              },
+            ];
+    const countSection = (target: DeckSection) =>
+      nextCards
+        .filter((card) => card.section === target)
+        .reduce((sum, card) => sum + card.quantity, 0);
+
+    setPendingCardKeys((current) => [...current, pendingKey]);
+    setError("");
+    setSuccess("");
+    setActiveDeck({
+      ...previousActiveDeck,
+      cards: nextCards,
+      cardCount: nextCards.reduce((sum, card) => sum + card.quantity, 0),
+      mainCount: countSection("MAIN"),
+      extraCount: countSection("EXTRA"),
+      sideCount: countSection("SIDE"),
     });
+    setCollectionCards((current) =>
+      current.map((card) =>
+        card.cardId === cardId
+          ? {
+              ...card,
+              deckCopies: Math.max(0, card.deckCopies + delta),
+              mainCopies:
+                section === "MAIN"
+                  ? Math.max(0, card.mainCopies + delta)
+                  : card.mainCopies,
+              extraCopies:
+                section === "EXTRA"
+                  ? Math.max(0, card.extraCopies + delta)
+                  : card.extraCopies,
+              sideCopies:
+                section === "SIDE"
+                  ? Math.max(0, card.sideCopies + delta)
+                  : card.sideCopies,
+            }
+          : card,
+      ),
+    );
+
+    try {
+      if (quantity <= 0) {
+        await deckClient.removeCard(previousActiveDeck.id, { cardId, section });
+      } else {
+        await deckClient.upsertCard(previousActiveDeck.id, {
+          cardId,
+          section,
+          quantity,
+        });
+      }
+      await refreshEditorSnapshot(previousActiveDeck.id);
+    } catch (caughtError) {
+      setActiveDeck(previousActiveDeck);
+      setCollectionCards(previousCollectionCards);
+      setError(
+        getApiErrorMessage(
+          caughtError,
+          "Kartenänderung konnte nicht gespeichert werden.",
+        ),
+      );
+    } finally {
+      setPendingCardKeys((current) =>
+        current.filter((key) => key !== pendingKey),
+      );
+    }
   }
 
   function findDeckCard(cardId: string, section: DeckSection) {
@@ -927,7 +1056,11 @@ export function DeckEditorConsole({
   }
 
   async function handleAddCollectionCard(card: CollectionCard, section = getDefaultSectionForCard(card)) {
-    if (!activeDeck || isSubmitting || !canAddCollectionCard(card)) {
+    if (
+      !activeDeck ||
+      pendingCardKeys.some((key) => key.startsWith(`${card.cardId}:`)) ||
+      !canAddCollectionCard(card)
+    ) {
       return;
     }
 
@@ -951,7 +1084,7 @@ export function DeckEditorConsole({
   }
 
   async function handleRemoveOneDeckCard(card: DeckCard) {
-    if (isSubmitting) {
+    if (pendingCardKeys.includes(`${card.cardId}:${card.section}`)) {
       return;
     }
 
@@ -964,7 +1097,7 @@ export function DeckEditorConsole({
   }
 
   async function handleRemoveOneCollectionCard(card: CollectionCard) {
-    if (isSubmitting) {
+    if (pendingCardKeys.some((key) => key.startsWith(`${card.cardId}:`))) {
       return;
     }
 
@@ -1041,7 +1174,7 @@ export function DeckEditorConsole({
         title={activeDeck ? "Konfiguration" : "Neues Deck"}
       >
         {activeDeck ? (
-          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.7fr_1.05fr_auto] xl:items-end">
+          <div className="grid gap-4 xl:grid-cols-[1fr_180px_0.72fr_1fr_auto] xl:items-end">
             <label className="block space-y-2">
               <span className="text-sm font-semibold text-[#f0dfcc]">Deckname</span>
               <input
@@ -1051,6 +1184,39 @@ export function DeckEditorConsole({
                 className="ui-input"
                 disabled={isSubmitting}
               />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-semibold text-[#f0dfcc]">Deckbox</span>
+              <div className="flex items-center gap-2">
+                <div className="relative h-12 w-9 shrink-0">
+                  <Image
+                    src={
+                      deckBoxCatalog.find(
+                        (deckBox) => deckBox.key === activeDeckBoxKey,
+                      )?.imageUrl ?? deckBoxCatalog[0].imageUrl
+                    }
+                    alt="Gewählte Deckbox"
+                    fill
+                    sizes="36px"
+                    className="object-contain"
+                  />
+                </div>
+                <select
+                  value={activeDeckBoxKey}
+                  onChange={(event) =>
+                    setActiveDeckBoxKey(event.target.value as DeckBoxKey)
+                  }
+                  className="ui-input min-w-0"
+                  disabled={isSubmitting}
+                >
+                  {deckBoxCatalog.map((deckBox) => (
+                    <option key={deckBox.key} value={deckBox.key}>
+                      {deckBox.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </label>
 
             <label className="block space-y-2">
@@ -1096,7 +1262,7 @@ export function DeckEditorConsole({
             </div>
 
             {deleteConfirmationOpen ? (
-              <div role="alertdialog" aria-labelledby="delete-deck-title" aria-describedby="delete-deck-description" className="xl:col-span-4 rounded-[18px] border border-[rgba(204,97,78,0.32)] bg-[rgba(141,61,48,0.14)] px-4 py-4">
+              <div role="alertdialog" aria-labelledby="delete-deck-title" aria-describedby="delete-deck-description" className="xl:col-span-5 rounded-[18px] border border-[rgba(204,97,78,0.32)] bg-[rgba(141,61,48,0.14)] px-4 py-4">
                 <p id="delete-deck-title" className="font-semibold text-[#ffe3ca]">Deck „{activeDeck.name}“ wirklich löschen?</p>
                 <p id="delete-deck-description" className="mt-1 text-sm text-[#d8b8ac]">Diese Aktion kann nicht rückgängig gemacht werden.</p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1106,7 +1272,7 @@ export function DeckEditorConsole({
               </div>
             ) : null}
 
-            <div className="xl:col-span-4">
+            <div className="xl:col-span-5">
               <div className="flex flex-wrap gap-2">
                 <StatusPill tone={activeDeck.isLegal ? "teal" : "ember"}>
                   {activeDeck.isLegal ? "Legal" : `${activeDeck.issues.length} Probleme`}
@@ -1135,7 +1301,7 @@ export function DeckEditorConsole({
             </div>
           </div>
         ) : (
-          <div className="grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div className="grid gap-5 xl:grid-cols-[1fr_220px_auto] xl:items-end">
             <label className="block space-y-2">
               <span className="text-sm font-semibold text-[#f0dfcc]">Deckname</span>
               <input
@@ -1145,6 +1311,24 @@ export function DeckEditorConsole({
                 className="ui-input"
                 disabled={isSubmitting}
               />
+            </label>
+
+            <label className="block space-y-2">
+              <span className="text-sm font-semibold text-[#f0dfcc]">Deckbox</span>
+              <select
+                value={createDeckBoxKey}
+                onChange={(event) =>
+                  setCreateDeckBoxKey(event.target.value as DeckBoxKey)
+                }
+                className="ui-input"
+                disabled={isSubmitting}
+              >
+                {deckBoxCatalog.map((deckBox) => (
+                  <option key={deckBox.key} value={deckBox.key}>
+                    {deckBox.name}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <button
@@ -1184,11 +1368,11 @@ export function DeckEditorConsole({
         ))}
       </nav>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)] 2xl:grid-cols-[minmax(0,1.45fr)_minmax(0,0.95fr)_320px]">
+      <div className="grid gap-4 xl:grid-cols-[280px_minmax(480px,1.35fr)_minmax(340px,0.88fr)]">
         <Panel
           kicker="Sammlung"
           title="Kartenkatalog"
-          className={classes("xl:min-h-[58rem]", mobileEditorView !== "CATALOG" && "hidden xl:block")}
+          className={classes("xl:order-3 xl:min-h-[58rem]", mobileEditorView !== "CATALOG" && "hidden xl:block")}
         >
           <div className="space-y-5">
             <div className="space-y-4">
@@ -1257,6 +1441,20 @@ export function DeckEditorConsole({
                   <option value="LIMITED">Limitiert</option>
                   <option value="SEMI_LIMITED">Semi-limitiert</option>
                 </select>
+                <select
+                  value={catalogSort}
+                  onChange={(event) =>
+                    setCatalogSort(event.target.value as CardCatalogSort)
+                  }
+                  className="ui-input min-w-[170px]"
+                  aria-label="Kartenkatalog sortieren"
+                >
+                  <option value="NAME_ASC">Name A–Z</option>
+                  <option value="NAME_DESC">Name Z–A</option>
+                  <option value="OWNED_DESC">Besitzmenge</option>
+                  <option value="ATK_DESC">ATK absteigend</option>
+                  <option value="NEWEST_SET">Neueste Sets</option>
+                </select>
               </div>
             </div>
 
@@ -1276,12 +1474,17 @@ export function DeckEditorConsole({
 
             {filteredCollectionCards.length ? (
               <>
-                <div className="grid max-h-[44rem] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <div className="grid max-h-[44rem] grid-cols-2 gap-2 overflow-y-auto pr-1 2xl:grid-cols-3">
                   {filteredCollectionCards.map((card) => (
                   <CollectionBrowserCard
                     key={card.cardId}
                     card={card}
-                    disabled={isSubmitting || !activeDeck}
+                    disabled={
+                      !activeDeck ||
+                      pendingCardKeys.some((key) =>
+                        key.startsWith(`${card.cardId}:`),
+                      )
+                    }
                     usesPointLimit={usesGenesisRules}
                     selected={
                       resolvedPreview?.source === "collection" &&
@@ -1331,7 +1534,7 @@ export function DeckEditorConsole({
         <Panel
           kicker="Deckansicht"
           title="Deck"
-          className={classes("xl:min-h-[58rem]", mobileEditorView !== "DECK" && "hidden xl:block")}
+          className={classes("xl:order-2 xl:min-h-[58rem]", mobileEditorView !== "DECK" && "hidden xl:block")}
         >
           {activeDeck ? (
             <div className="space-y-5">
@@ -1416,7 +1619,7 @@ export function DeckEditorConsole({
                 section="MAIN"
                 cards={mainCards}
                 selectedTarget={previewTarget}
-                isSubmitting={isSubmitting}
+                isSubmitting={false}
                 usesPointLimit={usesGenesisRules}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
@@ -1432,7 +1635,7 @@ export function DeckEditorConsole({
                 section="EXTRA"
                 cards={extraCards}
                 selectedTarget={previewTarget}
-                isSubmitting={isSubmitting}
+                isSubmitting={false}
                 usesPointLimit={usesGenesisRules}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
@@ -1448,7 +1651,7 @@ export function DeckEditorConsole({
                 section="SIDE"
                 cards={sideCards}
                 selectedTarget={previewTarget}
-                isSubmitting={isSubmitting}
+                isSubmitting={false}
                 usesPointLimit={usesGenesisRules}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
@@ -1469,7 +1672,7 @@ export function DeckEditorConsole({
         <Panel
           kicker="Details"
           title="Karte"
-          className={classes("xl:col-span-2 2xl:col-span-1", mobileEditorView !== "DETAILS" && "hidden xl:block")}
+          className={classes("xl:order-1 xl:min-h-[58rem]", mobileEditorView !== "DETAILS" && "hidden xl:block")}
         >
           {resolvedPreview ? (
             <div className="space-y-5">

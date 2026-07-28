@@ -2,12 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { BinderCollectionEditor } from "@/components/binder-collection-editor";
 import { BinderOpenSpread } from "@/components/binder-open-spread";
 import { ConsoleBrand } from "@/components/console-brand";
+import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
 import { consoleNavItems } from "@/components/console-nav-items";
 import {
   ConsoleGlobalStatusBar,
@@ -19,7 +20,9 @@ import { binderSlotCount } from "@/lib/binder-open-layout";
 import { collectionClient } from "@/lib/collection-client";
 import {
   binderCoverCatalog,
+  getCollectionSortLabel,
   type BinderCoverKey,
+  type CollectionSortModeValue,
 } from "@/lib/collection-showcase-config";
 import type {
   CollectionBinderEditorSnapshot,
@@ -206,10 +209,12 @@ function BinderShelfCard({
   binder,
   onSelect,
   onEdit,
+  onDelete,
 }: {
   binder: CollectionBinderDto;
   onSelect: (binderId: string) => void;
   onEdit: (binderId: string) => void;
+  onDelete: (binder: CollectionBinderDto) => void;
 }) {
   const filledSlots = getBinderFilledSlots(binder);
 
@@ -262,6 +267,14 @@ function BinderShelfCard({
           aria-label={`${binder.name} bearbeiten`}
         >
           <AssetIcon name="edit" className="h-4 w-4 text-current" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(binder)}
+          className="grid h-[34px] w-[42px] place-items-center rounded-[4px] border border-[rgba(207,79,54,0.24)] bg-[rgba(151,29,20,0.1)] text-[#e9a38f] transition hover:border-[rgba(207,79,54,0.46)] hover:bg-[rgba(151,29,20,0.18)]"
+          aria-label={`${binder.name} löschen`}
+        >
+          <AssetIcon name="window-close" className="h-4 w-4 text-current" />
         </button>
       </div>
     </article>
@@ -462,6 +475,21 @@ export function CollectionBinderConsole({
   const [collectionSearch, setCollectionSearch] = useState("");
   const [collectionKind, setCollectionKind] = useState("ALL");
   const [collectionRarity, setCollectionRarity] = useState("ALL");
+  const [collectionSort, setCollectionSort] = useState<CollectionSortModeValue>(
+    () => {
+      if (typeof window === "undefined") return "MOST_COPIES";
+      const savedSort = window.localStorage.getItem("collection-sort-mode");
+      return savedSort === "MOST_COPIES" ||
+        savedSort === "NEWEST_ACQUIRED" ||
+        savedSort === "ALPHABETICAL" ||
+        savedSort === "RARITY"
+        ? savedSort
+        : "MOST_COPIES";
+    },
+  );
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] =
+    useState<CollectionBinderDto | null>(null);
   const [, startTransition] = useTransition();
 
   const editorBinderId =
@@ -476,9 +504,9 @@ export function CollectionBinderConsole({
     : null;
   const activeBinder =
     binderOptions.find((binder) => binder.isActive) ?? binderOptions[0] ?? null;
-  const emptyBinders = binderOptions.filter((binder) =>
-    binder.pages.every((page) => page.filledSlots === 0),
-  );
+  useEffect(() => {
+    window.localStorage.setItem("collection-sort-mode", collectionSort);
+  }, [collectionSort]);
   const collectionRarities = useMemo(
     () =>
       Array.from(
@@ -495,16 +523,41 @@ export function CollectionBinderConsole({
   const filteredCollectionCards = useMemo(() => {
     const search = collectionSearch.trim().toLowerCase();
 
-    return cards.filter((card) => {
-      if (collectionKind !== "ALL" && card.kind !== collectionKind) return false;
-      if (
-        collectionRarity !== "ALL" &&
-        !card.printings.some((printing) => printing.rarity === collectionRarity)
-      ) return false;
+    return cards
+      .filter((card) => {
+        if (collectionKind !== "ALL" && card.kind !== collectionKind) return false;
+        if (
+          collectionRarity !== "ALL" &&
+          !card.printings.some((printing) => printing.rarity === collectionRarity)
+        ) return false;
 
-      return !search || `${card.name} ${card.slug}`.toLowerCase().includes(search);
-    });
-  }, [cards, collectionKind, collectionRarity, collectionSearch]);
+        return !search || `${card.name} ${card.slug}`.toLowerCase().includes(search);
+      })
+      .sort((left, right) => {
+        if (collectionSort === "NEWEST_ACQUIRED") {
+          return (
+            new Date(right.latestAcquiredAt).getTime() -
+              new Date(left.latestAcquiredAt).getTime() ||
+            left.name.localeCompare(right.name, "de")
+          );
+        }
+        if (collectionSort === "ALPHABETICAL") {
+          return left.name.localeCompare(right.name, "de");
+        }
+        if (collectionSort === "RARITY") {
+          return (
+            (right.printings[0]?.rarity ?? "").localeCompare(
+              left.printings[0]?.rarity ?? "",
+              "de",
+            ) || left.name.localeCompare(right.name, "de")
+          );
+        }
+        return (
+          right.totalCopies - left.totalCopies ||
+          left.name.localeCompare(right.name, "de")
+        );
+      });
+  }, [cards, collectionKind, collectionRarity, collectionSearch, collectionSort]);
 
   function updateEditorRoute(
     nextBinderId: string | null,
@@ -623,8 +676,9 @@ export function CollectionBinderConsole({
     }
   }
 
-  async function handleDeleteEmptyBinder(binder: CollectionBinderDto) {
-    if (busyAction || !window.confirm(`Leeren Binder „${binder.name}“ wirklich löschen?`)) {
+  async function handleDeleteBinder() {
+    const binder = deleteCandidate;
+    if (busyAction || !binder) {
       return;
     }
 
@@ -633,6 +687,9 @@ export function CollectionBinderConsole({
 
     try {
       const result = await collectionClient.deleteEmptyBinder(binder.id);
+      const replacementIsNew =
+        result.activeBinderId !== null &&
+        !binderOptions.some((item) => item.id === result.activeBinderId);
       setBinderOptions((current) =>
         current
           .filter((item) => item.id !== result.deletedBinderId)
@@ -641,7 +698,15 @@ export function CollectionBinderConsole({
             isActive: result.activeBinderId ? item.id === result.activeBinderId : item.isActive,
           })),
       );
-      setFeedbackMessage(`Leerer Binder „${binder.name}“ wurde gelöscht.`);
+      setDeleteCandidate(null);
+      setFeedbackMessage(
+        `Binder „${binder.name}“ wurde gelöscht. Alle Karten bleiben in deiner Sammlung.`,
+      );
+      if (replacementIsNew) {
+        window.location.assign(pathname);
+        return;
+      }
+      router.refresh();
     } catch (error) {
       setFeedbackMessage(getApiErrorMessage(error, "Binder konnte nicht gelöscht werden."));
     } finally {
@@ -662,13 +727,15 @@ export function CollectionBinderConsole({
 
             <nav className="hidden lg:block lg:pt-2">
               {consoleNavItems.map((item) => (
-                <SidebarNavItem
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  iconName={item.iconName}
-                  active={item.href === "/collection"}
-                />
+                <div key={item.href}>
+                  <SidebarNavItem
+                    href={item.href}
+                    label={item.label}
+                    iconName={item.iconName}
+                    active={item.href === "/collection"}
+                  />
+                  {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
+                </div>
               ))}
             </nav>
 
@@ -685,6 +752,7 @@ export function CollectionBinderConsole({
                 active={item.href === "/collection"}
               />
             ))}
+            <ConsoleCollectionSubNav mobile />
           </div>
         </aside>
 
@@ -732,29 +800,6 @@ export function CollectionBinderConsole({
             {feedbackMessage ? (
               <div className="mt-5 rounded-[16px] border border-[rgba(214,164,92,0.2)] bg-[rgba(150,97,33,0.12)] px-4 py-3 text-sm text-[#f6e0bc]">
                 {feedbackMessage}
-              </div>
-            ) : null}
-
-            {binderOptions.length > 1 && emptyBinders.length > 1 ? (
-              <div className="mt-5 rounded-[16px] border border-[rgba(214,164,92,0.2)] bg-[rgba(150,97,33,0.1)] px-4 py-4 text-sm text-[#f6e0bc]">
-                <p className="font-semibold">Mehrere leere Binder erkannt</p>
-                <p className="mt-1 leading-6 text-[#cdb79c]">
-                  {emptyBinders.length} von {binderOptions.length} Bindern enthalten noch keine Karten.
-                  Gefüllte und veröffentlichte Binder bleiben geschützt.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {emptyBinders.map((binder) => (
-                    <button
-                      key={binder.id}
-                      type="button"
-                      className="ui-button-neutral"
-                      disabled={Boolean(busyAction)}
-                      onClick={() => void handleDeleteEmptyBinder(binder)}
-                    >
-                      {binder.name} löschen
-                    </button>
-                  ))}
-                </div>
               </div>
             ) : null}
 
@@ -854,6 +899,7 @@ export function CollectionBinderConsole({
                             slotIndex: null,
                           })
                         }
+                        onDelete={setDeleteCandidate}
                       />
                     ))}
                     <AddBinderTile onClick={() => setCreatorOpen(true)} />
@@ -897,7 +943,7 @@ export function CollectionBinderConsole({
                 <StatusPill tone="slate">{filteredCollectionCards.length} Karten</StatusPill>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_200px]">
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_200px_210px]">
                 <label className="flex items-center gap-3 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
                   <AssetIcon name="search" className="h-4 w-4 text-[#b9a894]" />
                   <input value={collectionSearch} onChange={(event) => setCollectionSearch(event.target.value)} className="w-full bg-transparent text-sm outline-none" placeholder="Karten suchen" />
@@ -913,11 +959,37 @@ export function CollectionBinderConsole({
                   <option value="ALL">Alle Seltenheiten</option>
                   {collectionRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
                 </select>
+                <select
+                  value={collectionSort}
+                  onChange={(event) =>
+                    setCollectionSort(event.target.value as CollectionSortModeValue)
+                  }
+                  className="ui-input"
+                  aria-label="Sammlung sortieren"
+                >
+                  {(["MOST_COPIES", "NEWEST_ACQUIRED", "ALPHABETICAL", "RARITY"] as const).map(
+                    (sortMode) => (
+                      <option key={sortMode} value={sortMode}>
+                        {getCollectionSortLabel(sortMode)}
+                      </option>
+                    ),
+                  )}
+                </select>
               </div>
 
               <div className="mt-4 grid max-h-[46rem] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-7">
                 {filteredCollectionCards.map((card) => (
                   <article key={card.cardId} className="rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-2">
+                    <button
+                      type="button"
+                      className="block w-full text-left"
+                      onClick={() =>
+                        setExpandedCardId((current) =>
+                          current === card.cardId ? null : card.cardId,
+                        )
+                      }
+                      aria-expanded={expandedCardId === card.cardId}
+                    >
                     <div className="relative aspect-[59/86] overflow-hidden rounded-[6px] bg-[#080b10]">
                       {card.imageUrl ? <Image src={card.imageUrl} alt={card.name} fill sizes="160px" className="object-contain" unoptimized /> : null}
                       <span className="absolute bottom-1 right-1 rounded-[3px] bg-[rgba(4,6,10,0.82)] px-1.5 py-0.5 text-[0.58rem] font-bold">{card.totalCopies}x</span>
@@ -932,6 +1004,25 @@ export function CollectionBinderConsole({
                         ),
                       ).join(" · ") || "Ohne Seltenheit"}
                     </p>
+                    </button>
+                    {expandedCardId === card.cardId ? (
+                      <div className="mt-2 space-y-1.5 border-t border-[rgba(255,255,255,0.08)] pt-2">
+                        {card.printings.map((printing) => (
+                          <div
+                            key={printing.key}
+                            className="rounded-[5px] bg-[rgba(255,255,255,0.035)] px-2 py-1.5"
+                          >
+                            <p className="truncate text-[0.62rem] font-semibold text-[#e9d6bf]">
+                              {printing.setLabel}
+                            </p>
+                            <p className="mt-0.5 text-[0.56rem] text-[#a9957b]">
+                              {printing.setCode ?? "Ohne Setcode"} ·{" "}
+                              {printing.rarity ?? "Ohne Seltenheit"} · {printing.copies}×
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -950,6 +1041,75 @@ export function CollectionBinderConsole({
           isOpen
           onClose={() => void handleEditorClose()}
         />
+      ) : null}
+
+      {deleteCandidate ? (
+        <div
+          className="fixed inset-0 z-[90] grid place-items-center bg-[rgba(1,2,4,0.82)] px-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target && !busyAction) {
+              setDeleteCandidate(null);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-binder-title"
+            className="w-full max-w-[520px] rounded-[22px] border border-[rgba(207,79,54,0.32)] bg-[linear-gradient(180deg,#101319,#07090d)] p-6 shadow-[0_32px_90px_rgba(0,0,0,0.62)]"
+          >
+            <p className="text-[0.68rem] uppercase tracking-[0.22em] text-[#df654d]">
+              Binder endgültig löschen
+            </p>
+            <h2
+              id="delete-binder-title"
+              className="font-display inscription-text-soft mt-2 text-3xl text-[#f5dfc0]"
+            >
+              {deleteCandidate.name}
+            </h2>
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {[
+                ["Seiten", deleteCandidate.pageCount],
+                ["Belegte Plätze", getBinderFilledSlots(deleteCandidate)],
+                ["Showcase", deleteCandidate.isShowcase ? "Ja" : "Nein"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] p-3"
+                >
+                  <p className="text-[0.58rem] uppercase tracking-[0.12em] text-[#9f8c77]">
+                    {label}
+                  </p>
+                  <p className="mt-1 font-semibold text-[#f2dfc8]">{value}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-5 text-sm leading-6 text-[#cdb9a1]">
+              Seiten und Platzierungen werden entfernt. Deine physischen Karten bleiben
+              vollständig in der Sammlung. War dies dein letzter Binder, wird automatisch
+              ein neuer leerer Standardbinder angelegt.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="ui-button-neutral"
+                disabled={Boolean(busyAction)}
+                onClick={() => setDeleteCandidate(null)}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                className="ui-button-danger"
+                disabled={Boolean(busyAction)}
+                onClick={() => void handleDeleteBinder()}
+              >
+                {busyAction ? "Wird gelöscht …" : "Binder löschen"}
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
     </div>
   );

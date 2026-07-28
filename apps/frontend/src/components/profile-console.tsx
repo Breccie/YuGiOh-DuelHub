@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AssetIcon } from "@/components/asset-icon";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel, StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -58,6 +60,24 @@ export function ProfileConsole({
     }
   }
 
+  const setupActions = isOwnProfile
+    ? [
+        !profile.bio
+          ? { label: "Bio einrichten", href: "/settings", icon: "edit" as const }
+          : null,
+        !profile.showcase.binderName
+          ? {
+              label: "Showcase-Binder wählen",
+              href: "/collection",
+              icon: "book" as const,
+            }
+          : null,
+        profile.decks.length === 0
+          ? { label: "Erstes Deck bauen", href: "/decks", icon: "nav-decks" as const }
+          : null,
+      ].filter(Boolean)
+    : [];
+
   return (
     <DuelConsoleScaffold
       activePath={`/profiles/${profile.duelistId}`}
@@ -71,133 +91,161 @@ export function ProfileConsole({
         { icon: "hourglass", label: "Ära", value: profile.favoriteEra ?? "Offen" },
       ]}
     >
-      <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
-        <Panel kicker="Duelist" title={profile.displayName}>
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <StatusPill tone="gold">{profile.duelistId}</StatusPill>
-              <StatusPill tone={profile.isPublic ? "slate" : "ember"}>
-                {profile.isPublic ? "Öffentlich" : "Privat"}
-              </StatusPill>
+      <div className="space-y-6">
+        <section className="relative overflow-hidden rounded-[28px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(120deg,rgba(16,20,28,0.96),rgba(7,9,13,0.94))] p-6 shadow-[0_34px_80px_rgba(0,0,0,0.44)] sm:p-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(207,91,66,0.18),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(214,164,92,0.12),transparent_34%)]" />
+          <div className="relative grid gap-7 lg:grid-cols-[auto_minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center">
+            <div className="grid h-28 w-28 place-items-center rounded-full border border-[rgba(214,164,92,0.32)] bg-[radial-gradient(circle,rgba(190,69,48,0.24),rgba(8,11,16,0.92)_68%)] text-[#e3bd82] shadow-[0_0_36px_rgba(190,69,48,0.18)]">
+              <AssetIcon name="profile-signet" className="h-14 w-14 text-current" />
             </div>
-
-            <p className="ui-copy-strong text-sm">
-              {profile.bio || "Dieses Profil hat noch keine Bio hinterlegt."}
-            </p>
-
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-[#d7654c]">
+                Duelist Showcase
+              </p>
+              <h1 className="font-display inscription-text mt-2 text-4xl leading-none text-[#f5dfc0] sm:text-5xl">
+                {profile.displayName}
+              </h1>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <StatusPill tone="gold">{profile.duelistId}</StatusPill>
+                <StatusPill tone={profile.isPublic ? "slate" : "ember"}>
+                  {profile.isPublic ? "Öffentlich" : "Privat"}
+                </StatusPill>
+                <StatusPill tone="slate">{profile.favoriteEra ?? "Ära offen"}</StatusPill>
+              </div>
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-[#d3c0a9]">
+                {profile.bio ||
+                  (isOwnProfile
+                    ? "Ergänze eine Bio, damit andere Duelists deinen Spielstil und deine Lieblingsära kennenlernen."
+                    : "Dieser Duelist hat noch keine Bio hinterlegt.")}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               {[
-                ["Freunde", String(profile.counts.friends)],
-                ["Decks", String(profile.counts.decks)],
-                ["Unique", String(profile.counts.uniqueCards)],
-                ["Kopien", String(profile.counts.copies)],
+                ["Freunde", profile.counts.friends],
+                ["Decks", profile.counts.decks],
+                ["Karten", profile.counts.uniqueCards],
+                ["Kopien", profile.counts.copies],
               ].map(([label, value]) => (
                 <div
                   key={label}
-                  className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4"
+                  className="rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(3,5,8,0.42)] px-4 py-4"
                 >
-                  <p className="text-[0.72rem] uppercase tracking-[0.18em] text-[#9f8c77]">
+                  <p className="text-[0.6rem] uppercase tracking-[0.16em] text-[#9f8c77]">
                     {label}
                   </p>
-                  <p className="mt-3 font-display text-[2rem] leading-none text-[#f0dcc0]">
+                  <p className="font-display mt-2 text-3xl leading-none text-[#f0dcc0]">
                     {value}
                   </p>
                 </div>
               ))}
             </div>
+          </div>
 
+          <div className="relative mt-7 flex flex-wrap gap-3 border-t border-[rgba(255,255,255,0.08)] pt-5">
             {feedback ? (
-              <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
+              <div className="mr-auto rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
                 {feedback}
               </div>
-            ) : null}
-
-            <div className="flex flex-wrap gap-3">
-              {isOwnProfile ? (
-                <button
-                  type="button"
-                  className="ui-button-primary"
-                  onClick={() => router.push("/settings")}
-                >
-                  Profil bearbeiten
+            ) : <span className="mr-auto" />}
+            {isOwnProfile ? (
+              <button type="button" className="ui-button-primary" onClick={() => router.push("/settings")}>
+                Profil bearbeiten
+              </button>
+            ) : (
+              <>
+                <button type="button" className="ui-button-primary" onClick={sendFriendRequest} disabled={busyAction !== null}>
+                  {busyAction === "friend" ? "Sende..." : "Freund hinzufügen"}
                 </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="ui-button-primary"
-                    onClick={sendFriendRequest}
-                    disabled={busyAction !== null}
-                  >
-                    {busyAction === "friend" ? "Sende..." : "Freund hinzufügen"}
-                  </button>
-                  <button
-                    type="button"
-                    className="ui-button-secondary"
-                    onClick={sendDuelRequest}
-                    disabled={busyAction !== null}
-                  >
-                    {busyAction === "duel" ? "Plane..." : "Duell anfragen"}
-                  </button>
-                </>
-              )}
-            </div>
+                <button type="button" className="ui-button-secondary" onClick={sendDuelRequest} disabled={busyAction !== null}>
+                  {busyAction === "duel" ? "Plane..." : "Duell anfragen"}
+                </button>
+              </>
+            )}
           </div>
-        </Panel>
+        </section>
 
-        <div className="space-y-6">
-          <Panel kicker="Showcase" title={profile.showcase.binderName ?? "Sammlung"}>
-            {profile.showcase.highlightedCards.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {profile.showcase.highlightedCards.map((card, index) => (
-                  <article
-                    key={`${card.collectionEntryId ?? card.cardName ?? index}`}
-                    className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4"
-                  >
-                    <p className="font-display text-[1.3rem] text-[#f0dcc0]">
-                      {card.cardName ?? "Unbekannte Karte"}
-                    </p>
-                    <p className="mt-2 text-sm text-[#baa58a]">
-                      {card.rarity ?? "Karte"}{card.setCode ? ` · ${card.setCode}` : ""}
-                    </p>
-                  </article>
-                ))}
+        {setupActions.length > 0 ? (
+          <section className="grid gap-3 sm:grid-cols-3">
+            {setupActions.map((action) =>
+              action ? (
+                <button
+                  key={action.href + action.label}
+                  type="button"
+                  onClick={() => router.push(action.href)}
+                  className="flex items-center gap-3 rounded-[16px] border border-[rgba(214,164,92,0.2)] bg-[rgba(150,97,33,0.1)] px-4 py-4 text-left text-sm font-semibold text-[#f2d9b7] transition hover:border-[rgba(214,164,92,0.36)] hover:bg-[rgba(150,97,33,0.16)]"
+                >
+                  <AssetIcon name={action.icon} className="h-5 w-5 text-current" />
+                  {action.label}
+                </button>
+              ) : null,
+            )}
+          </section>
+        ) : null}
+
+        <section className="grid gap-6 xl:grid-cols-[1.06fr_0.94fr]">
+          <Panel kicker="Showcase-Binder" title={profile.showcase.binderName ?? "Noch nicht gewählt"}>
+            {profile.showcase.binderName ? (
+              <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="relative mx-auto aspect-[62/100] w-full max-w-[180px] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[#080b10] shadow-[0_24px_44px_rgba(0,0,0,0.42)]">
+                  {profile.showcase.coverImageUrl ? (
+                    <Image src={profile.showcase.coverImageUrl} alt={profile.showcase.coverName ?? profile.showcase.binderName} fill sizes="180px" className="object-cover" />
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {profile.showcase.highlightedCards.map((card, index) => (
+                    <article key={`${card.collectionEntryId ?? card.cardName ?? index}`} className="min-w-0">
+                      <div className="relative aspect-[59/86] overflow-hidden rounded-[7px] border border-[rgba(255,255,255,0.08)] bg-[#070a0f]">
+                        {card.imageUrl ? <Image src={card.imageUrl} alt={card.cardName ?? "Showcase-Karte"} fill sizes="130px" unoptimized className="object-contain" /> : null}
+                      </div>
+                      <p className="mt-1.5 truncate text-xs font-semibold text-[#ead9c3]">{card.cardName ?? "Unbekannte Karte"}</p>
+                      <p className="mt-0.5 truncate text-[0.56rem] uppercase tracking-[0.1em] text-[#9f8c77]">
+                        {card.rarity ?? "Karte"}{card.setCode ? ` · ${card.setCode}` : ""}
+                      </p>
+                    </article>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="ui-empty rounded-[18px] px-4 py-5 text-sm">
-                Noch keine Showcase-Karten freigegeben.
+                Kein Showcase-Binder veröffentlicht.
               </div>
             )}
           </Panel>
 
-          <Panel kicker="Decks" title="Öffentliche Listen">
+          <Panel kicker="Decks" title="Duelist Arsenal">
             {profile.decks.length > 0 ? (
-              <div className="space-y-3">
+              <div className="grid gap-3">
                 {profile.decks.map((deck) => (
-                  <article
-                    key={deck.id}
-                    className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-base font-semibold text-[#f0dfcc]">{deck.name}</p>
-                        <p className="mt-1 text-sm text-[#baa58a]">
-                          {deck.cardCount} Karten · {deck.banlistName ?? "Ohne Banlist"}
-                        </p>
+                  <article key={deck.id} className="grid grid-cols-[76px_minmax(0,1fr)] gap-4 rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-3">
+                    <div className="relative aspect-[62/100] overflow-hidden rounded-[8px] bg-[rgba(255,255,255,0.02)]">
+                      <Image src={deck.deckBoxImageUrl} alt={`${deck.name} Deckbox`} fill sizes="76px" className="object-contain" />
+                    </div>
+                    <div className="min-w-0 py-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="truncate text-base font-semibold text-[#f0dfcc]">{deck.name}</p>
+                        <StatusPill tone="slate">{deck.formatName ?? "Format"}</StatusPill>
                       </div>
-                      <StatusPill tone="slate">{deck.formatName ?? "Format"}</StatusPill>
+                      <p className="mt-2 text-xs text-[#baa58a]">{deck.banlistName ?? "Ohne Bannliste"}</p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#c8b49b]">
+                        <span>Main {deck.mainCount}</span>
+                        <span>Extra {deck.extraCount}</span>
+                        <span>Side {deck.sideCount}</span>
+                      </div>
+                      <p className="mt-2 text-[0.58rem] text-[#806f5f]">
+                        Aktualisiert {new Intl.DateTimeFormat("de-DE").format(new Date(deck.updatedAt))}
+                      </p>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
               <div className="ui-empty rounded-[18px] px-4 py-5 text-sm">
-                Noch keine Decklisten veröffentlicht.
+                Noch keine Decklisten vorhanden.
               </div>
             )}
           </Panel>
-        </div>
-      </section>
+        </section>
+      </div>
     </DuelConsoleScaffold>
   );
 }

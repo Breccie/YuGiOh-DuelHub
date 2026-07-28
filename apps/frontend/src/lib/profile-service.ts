@@ -1,6 +1,9 @@
-import type { PrismaClient } from "@prisma/client";
+import { EntryLockState, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
 import type { PublicProfile } from "@/lib/app-dtos";
+import { getBinderCoverMeta } from "@/lib/collection-showcase-config";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
+import { getActiveRun } from "@/lib/run-service";
 
 export async function getPublicProfileByDuelistId(
   prisma: PrismaClient,
@@ -14,6 +17,12 @@ export async function getPublicProfileByDuelistId(
     },
     include: {
       showcaseSnapshot: true,
+      showcaseBinder: {
+        select: {
+          coverKey: true,
+          accentColor: true,
+        },
+      },
     },
   });
 
@@ -33,12 +42,46 @@ export async function getPublicProfileByDuelistId(
     });
   }
 
-  const acceptedFriendships = await prisma.friendship.count({
-    where: {
-      status: "ACCEPTED",
-      OR: [{ requesterId: user.id }, { addresseeId: user.id }],
-    },
-  });
+  const activeRun = await getActiveRun(prisma, user.id);
+  const [acceptedFriendships, decks, collectionGroups] = await Promise.all([
+    prisma.friendship.count({
+      where: {
+        status: "ACCEPTED",
+        OR: [{ requesterId: user.id }, { addresseeId: user.id }],
+      },
+    }),
+    prisma.deck.findMany({
+      where: {
+        userId: user.id,
+        runId: activeRun.id,
+      },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      include: {
+        cards: {
+          select: {
+            section: true,
+            quantity: true,
+          },
+        },
+        formatProfile: {
+          select: { name: true },
+        },
+        banlist: {
+          select: { name: true },
+        },
+      },
+    }),
+    prisma.collectionEntry.groupBy({
+      by: ["cardId"],
+      where: {
+        userId: user.id,
+        runId: activeRun.id,
+        lockState: { not: EntryLockState.TRADED },
+      },
+      _count: { _all: true },
+      orderBy: { cardId: "asc" },
+    }),
+  ]);
   const highlightedCards = Array.isArray(user.showcaseSnapshot?.highlightedCards)
     ? user.showcaseSnapshot.highlightedCards.flatMap((value) => {
         if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -53,9 +96,13 @@ export async function getPublicProfileByDuelistId(
         }];
       })
     : [];
-  const uniqueCards = new Set(
-    highlightedCards.map((card) => card.cardName).filter(Boolean),
-  ).size;
+  const copies = collectionGroups.reduce(
+    (sum, group) => sum + group._count._all,
+    0,
+  );
+  const showcaseCover = user.showcaseBinder
+    ? getBinderCoverMeta(user.showcaseBinder.coverKey)
+    : null;
 
   return {
     userId: user.id,
@@ -68,14 +115,43 @@ export async function getPublicProfileByDuelistId(
     showcaseBinderId: user.showcaseBinderId ?? null,
     counts: {
       friends: acceptedFriendships,
-      decks: 0,
-      uniqueCards,
-      copies: highlightedCards.length,
+      decks: decks.length,
+      uniqueCards: collectionGroups.length,
+      copies,
     },
     showcase: {
       binderName: user.showcaseSnapshot?.binderName ?? null,
+      coverKey: user.showcaseBinder?.coverKey ?? null,
+      coverName: showcaseCover?.name ?? null,
+      coverImageUrl: showcaseCover?.imageUrl ?? null,
+      accentColor:
+        user.showcaseBinder?.accentColor ?? showcaseCover?.accentColor ?? null,
+      publishedAt: user.showcaseSnapshot?.publishedAt.toISOString() ?? null,
       highlightedCards,
     },
-    decks: [],
+    decks: decks.map((deck) => {
+      const counts = deck.cards.reduce(
+        (summary, card) => {
+          summary.cardCount += card.quantity;
+          if (card.section === "MAIN") summary.mainCount += card.quantity;
+          if (card.section === "EXTRA") summary.extraCount += card.quantity;
+          if (card.section === "SIDE") summary.sideCount += card.quantity;
+          return summary;
+        },
+        { cardCount: 0, mainCount: 0, extraCount: 0, sideCount: 0 },
+      );
+      const deckBox = getDeckBoxMeta(deck.deckBoxKey);
+
+      return {
+        id: deck.id,
+        name: deck.name,
+        deckBoxKey: deckBox.key,
+        deckBoxImageUrl: deckBox.imageUrl,
+        updatedAt: deck.updatedAt.toISOString(),
+        ...counts,
+        formatName: deck.formatProfile?.name ?? null,
+        banlistName: deck.banlist?.name ?? null,
+      };
+    }),
   };
 }

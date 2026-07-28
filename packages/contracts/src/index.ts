@@ -41,8 +41,17 @@ export const registerRequestSchema = z.object({
 });
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 
+export const deckBoxKeySchema = z.enum([
+  "inferno-vortex",
+  "void-eye",
+  "storm-eye",
+  "golden-dragon",
+]);
+export type DeckBoxKey = z.infer<typeof deckBoxKeySchema>;
+
 export const createDeckRequestSchema = z.object({
   name: z.string().trim().min(1),
+  deckBoxKey: deckBoxKeySchema.optional(),
   banlistId: z.string().trim().min(1).nullable().optional(),
   snapshotDate: z.string().trim().min(1).nullable().optional(),
 });
@@ -378,6 +387,11 @@ export type PublicProfile = {
   };
   showcase: {
     binderName: string | null;
+    coverKey: string | null;
+    coverName: string | null;
+    coverImageUrl: string | null;
+    accentColor: string | null;
+    publishedAt: string | null;
     highlightedCards: Array<{
       collectionEntryId: string | null;
       cardName: string | null;
@@ -389,8 +403,13 @@ export type PublicProfile = {
   decks: Array<{
     id: string;
     name: string;
+    deckBoxKey: DeckBoxKey;
+    deckBoxImageUrl: string;
     updatedAt: string;
     cardCount: number;
+    mainCount: number;
+    extraCount: number;
+    sideCount: number;
     formatName: string | null;
     banlistName: string | null;
   }>;
@@ -405,11 +424,15 @@ export type FriendRequestDto = {
     userId: string;
     duelistId: string;
     displayName: string;
+    lastSeenAt: string | null;
+    isOnline: boolean;
   };
   addressee: {
     userId: string;
     duelistId: string;
     displayName: string;
+    lastSeenAt: string | null;
+    isOnline: boolean;
   };
 };
 
@@ -430,6 +453,11 @@ export const publicProfileSchema = z.object({
   }),
   showcase: z.object({
     binderName: z.string().nullable(),
+    coverKey: z.string().nullable(),
+    coverName: z.string().nullable(),
+    coverImageUrl: z.string().nullable(),
+    accentColor: z.string().nullable(),
+    publishedAt: z.string().nullable(),
     highlightedCards: z.array(
       z.object({
         collectionEntryId: z.string().nullable(),
@@ -444,8 +472,13 @@ export const publicProfileSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      deckBoxKey: deckBoxKeySchema,
+      deckBoxImageUrl: z.string(),
       updatedAt: z.string(),
       cardCount: z.number().int(),
+      mainCount: z.number().int(),
+      extraCount: z.number().int(),
+      sideCount: z.number().int(),
       formatName: z.string().nullable(),
       banlistName: z.string().nullable(),
     }),
@@ -482,11 +515,15 @@ export const friendRequestDtoSchema = z.object({
     userId: z.string(),
     duelistId: z.string(),
     displayName: z.string(),
+    lastSeenAt: z.string().nullable(),
+    isOnline: z.boolean(),
   }),
   addressee: z.object({
     userId: z.string(),
     duelistId: z.string(),
     displayName: z.string(),
+    lastSeenAt: z.string().nullable(),
+    isOnline: z.boolean(),
   }),
 });
 

@@ -79,6 +79,7 @@ export type DeckLegalitySnapshot = {
   decks: Array<{
     id: string;
     name: string;
+    deckBoxKey: string;
     snapshotDate: string | null;
     updatedAt: string;
     cardCount: number;
@@ -94,6 +95,7 @@ export type DeckLegalitySnapshot = {
   activeDeck: null | {
     id: string;
     name: string;
+    deckBoxKey: string;
     snapshotDate: string;
     updatedAt: string;
     formatName: string | null;
@@ -673,6 +675,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
     return {
       id: deck.id,
       name: deck.name,
+      deckBoxKey: deck.deckBoxKey,
       snapshotDate: deck.snapshotDate?.toISOString() ?? evaluation.snapshotDate.toISOString(),
       updatedAt: deck.updatedAt.toISOString(),
       cardCount: evaluation.counts.cardCount,
@@ -824,6 +827,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
     activeDeck: {
       id: selectedDeck.id,
       name: selectedDeck.name,
+      deckBoxKey: selectedDeck.deckBoxKey,
       snapshotDate:
         selectedDeck.snapshotDate?.toISOString() ??
         activeEvaluation.snapshotDate.toISOString(),

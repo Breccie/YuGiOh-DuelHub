@@ -7,6 +7,7 @@ import { getCardAssetUrl } from "@/lib/asset-urls";
 import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
 import { getPrisma } from "@/lib/prisma";
 import Loading from "../loading";
 
@@ -117,6 +118,7 @@ async function DecksPageContent() {
       selectedDeckId={snapshot.selectedDeckId}
       decks={deckPreviewRows.map((deck) => {
         const summary = deckSummaryById.get(deck.id);
+        const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
         return {
           id: deck.id,
@@ -130,6 +132,8 @@ async function DecksPageContent() {
           missingCardCount: summary?.missingCardCount ?? 0,
           formatName: summary?.formatName ?? null,
           banlistName: summary?.banlistName ?? null,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
           previewImageUrl: getCardAssetUrl(deck.cards[0]?.card.externalCardId ?? null),
           previewLabel: deck.cards[0]?.card.name ?? deck.name,
         };

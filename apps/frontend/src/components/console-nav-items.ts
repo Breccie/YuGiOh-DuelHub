@@ -4,7 +4,6 @@ export const consoleNavItems = [
   { href: "/", label: "Start", iconName: "nav-start" },
   { href: "/packs", label: "Packs", iconName: "nav-packs" },
   { href: "/collection", label: "Sammlung", iconName: "nav-collection" },
-  { href: "/wishlist", label: "Wünsche", iconName: "mail" },
   { href: "/decks", label: "Decks", iconName: "nav-decks" },
   { href: "/tournaments", label: "Turniere", iconName: "shield" },
   { href: "/trade", label: "Tausch", iconName: "nav-trade" },
@@ -13,6 +12,11 @@ export const consoleNavItems = [
   label: string;
   iconName: AssetIconName;
 }>;
+
+export const collectionSubNavItems = [
+  { href: "/collection", label: "Binder & Karten" },
+  { href: "/wishlist", label: "Wunschliste" },
+] as const;
 
 export function isConsoleNavActive(pathname: string, href: string) {
   return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);

@@ -19,6 +19,8 @@ type DeckMutationResponse = {
   deck: {
     id: string;
     name: string;
+    deckBoxKey: string;
+    deckBoxImageUrl: string;
   };
 };
 

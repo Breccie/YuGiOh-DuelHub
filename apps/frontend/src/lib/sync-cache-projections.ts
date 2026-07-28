@@ -7,6 +7,7 @@ import {
 } from "@/lib/collection-showcase-config";
 import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 import type { LocalSyncCache } from "@/lib/sync-cache";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
 
 type CachedRun = {
   id?: unknown;
@@ -60,6 +61,7 @@ type CachedBinder = {
 type CachedDeck = {
   id?: unknown;
   name?: unknown;
+  deckBoxKey?: unknown;
   banlistId?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
@@ -99,6 +101,8 @@ export type CachedDeckOverviewPayload = {
     missingCardCount: number;
     formatName: string | null;
     banlistName: string | null;
+    deckBoxKey: string;
+    deckBoxImageUrl: string;
     previewImageUrl: string | null;
     previewLabel: string;
   }>;
@@ -128,6 +132,7 @@ export type CachedCollectionPagePayload = {
     description: string;
     accentColor: string;
     isActive: boolean;
+    isShowcase: boolean;
     createdAt: string;
     updatedAt: string;
     pageCount: number;
@@ -474,6 +479,7 @@ export function buildCachedCollectionPagePayload(
       description: asString(binder.description) ?? cover.description,
       accentColor: cover.accentColor,
       isActive: asBoolean(binder.isActive),
+      isShowcase: false,
       createdAt,
       updatedAt,
       pageCount: 0,
@@ -561,6 +567,7 @@ export function buildCachedDeckOverviewPayload(
       const previewCard = cards.find((card) => card.card) ?? null;
       const previewExternalId = asString(previewCard?.card?.externalCardId);
       const name = asString(deck.name) ?? `Deck ${index + 1}`;
+      const deckBox = getDeckBoxMeta(asString(deck.deckBoxKey));
 
       return {
         id: asString(deck.id) ?? `cached-deck-${index}`,
@@ -578,6 +585,8 @@ export function buildCachedDeckOverviewPayload(
         missingCardCount: 0,
         formatName: null,
         banlistName: null,
+        deckBoxKey: deckBox.key,
+        deckBoxImageUrl: deckBox.imageUrl,
         previewImageUrl: previewExternalId ? getCardAssetUrl(previewExternalId) : null,
         previewLabel: asString(previewCard?.card?.name) ?? name,
       };

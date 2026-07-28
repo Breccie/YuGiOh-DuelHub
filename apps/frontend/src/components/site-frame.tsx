@@ -63,8 +63,8 @@ export function SiteFrame({
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
         <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-0 lg:py-0">
-            <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-6 lg:pb-8 lg:pt-6">
+          <div className="lg:block">
+            <div className="border-b border-[rgba(255,255,255,0.08)] px-5 py-5 lg:px-6 lg:pb-8 lg:pt-6">
               <ConsoleBrand size="sm" />
             </div>
 
