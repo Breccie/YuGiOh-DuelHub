@@ -97,25 +97,18 @@ function getArrivalStyle(
   speed: OpeningSpeed,
   arrivalLayout: ArrivalLayout,
 ) {
-  const stackDepth = index;
   const speedScale = 1 / speed;
-  const sourceX = arrivalLayout.x + stackDepth * 0.8;
-  const sourceY = arrivalLayout.y + stackDepth * 1.2;
-  const arcLift = Math.min(72, Math.max(34, arrivalLayout.width * 0.26));
-  const midScale = ((arrivalLayout.sourceScale + 1) / 2) * 1.015;
+  const sourceX = arrivalLayout.x + 3;
+  const sourceY = arrivalLayout.y - 7;
 
   return {
     "--arrival-x": `${sourceX}px`,
     "--arrival-y": `${sourceY}px`,
-    "--arrival-mid-x": `${sourceX * 0.46}px`,
-    "--arrival-mid-y": `${sourceY * 0.52 - arcLift}px`,
-    "--arrival-rotate": `${-2 + stackDepth * -0.18}deg`,
-    "--arrival-mid-rotate": `${1.4 - (index % 3) * 0.35}deg`,
+    "--arrival-rotate": "0deg",
     "--arrival-source-scale": String(arrivalLayout.sourceScale),
-    "--arrival-mid-scale": String(midScale),
     "--arrival-delay": `${index * PACK_OPENING_TIMING.cardIntervalMs * speedScale}ms`,
     "--arrival-duration": `${PACK_OPENING_TIMING.cardFlightMs * speedScale}ms`,
-    "--arrival-z": String(pullCount - index),
+    "--arrival-z": String(pullCount + index),
     left: `${arrivalLayout.left}px`,
     top: `${arrivalLayout.top}px`,
     width: `${arrivalLayout.width}px`,
