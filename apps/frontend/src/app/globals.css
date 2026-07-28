@@ -1111,9 +1111,9 @@ textarea {
 .reveal-card-shell.is-arriving {
   position: absolute;
   z-index: var(--arrival-z, 1);
-  animation: packCardLayDown var(--arrival-duration, 1050ms) cubic-bezier(0.12, 0.72, 0.22, 1) both;
+  animation: packCardLayDown var(--arrival-duration, 1050ms) cubic-bezier(0.12, 0.72, 0.22, 1) forwards;
   animation-delay: var(--arrival-delay, 0ms);
-  animation-fill-mode: both;
+  animation-fill-mode: forwards;
   opacity: 0;
   transform-origin: center center;
   will-change: transform, opacity;
