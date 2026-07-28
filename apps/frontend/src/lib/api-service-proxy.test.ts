@@ -49,4 +49,46 @@ describe("api-service-proxy", () => {
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
+
+  it("retries a transient failure for read-only upstream requests", async () => {
+    process.env.APP_MODE = "online-dev";
+    process.env.API_BASE_URL = "http://api.example.test";
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("The operation was aborted due to timeout"))
+      .mockResolvedValueOnce(Response.json({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await proxyApiRoute(
+      new Request("http://localhost/api/v1/packs/set-1"),
+      "/api/v1/packs/set-1",
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(fetchMock.mock.calls[1]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).not.toBe(
+      fetchMock.mock.calls[1]?.[1]?.signal,
+    );
+  });
+
+  it("does not retry failed write requests", async () => {
+    process.env.APP_MODE = "online-dev";
+    process.env.API_BASE_URL = "http://api.example.test";
+    const fetchMock = vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await proxyApiRoute(
+      new Request("http://localhost/api/v1/pack-openings", {
+        method: "POST",
+        body: JSON.stringify({ setId: "set-1" }),
+        headers: { "content-type": "application/json" },
+      }),
+      "/api/v1/pack-openings",
+    );
+
+    expect(response.status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
 });
