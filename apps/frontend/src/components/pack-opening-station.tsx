@@ -1078,6 +1078,43 @@ export function PackOpeningStation({
                 highlightTier={highestRarityTier}
                 onCutComplete={handlePackCutComplete}
               />
+
+              {(openingFlow.phase === "stacking" ||
+                openingFlow.phase === "dealing" ||
+                (openingFlow.phase === "error" &&
+                  openingFlow.stackWasShown)) &&
+              landedIds.length < activeSet.packSize ? (
+                <div
+                  ref={stackOriginRef}
+                  className={classes(
+                    "opening-card-stack opening-card-stack--pack",
+                    openingFlow.phase === "stacking" && "is-entering",
+                    openingFlow.phase === "error" && "is-retracting",
+                  )}
+                  style={
+                    {
+                      "--stack-entrance-duration": `${PACK_OPENING_TIMING.stackEntranceMs / openingSpeed}ms`,
+                    } as CSSProperties
+                  }
+                  aria-label={`${activeSet.packSize - landedIds.length} verdeckte Karten im Stapel`}
+                >
+                  {Array.from(
+                    {
+                      length: Math.min(
+                        5,
+                        Math.max(1, activeSet.packSize - landedIds.length),
+                      ),
+                    },
+                    (_, index) => (
+                      <OpeningVisualCardBack
+                        key={index}
+                        className="opening-card-stack-layer"
+                        style={{ "--stack-layer": index } as CSSProperties}
+                      />
+                    ),
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1168,43 +1205,6 @@ export function PackOpeningStation({
                     );
                   })}
                 </div>
-
-                {(openingFlow.phase === "stacking" ||
-                  openingFlow.phase === "dealing" ||
-                  (openingFlow.phase === "error" &&
-                    openingFlow.stackWasShown)) &&
-                landedIds.length < activeSet.packSize ? (
-                  <div
-                    ref={stackOriginRef}
-                    className={classes(
-                      "opening-card-stack",
-                      openingFlow.phase === "stacking" && "is-entering",
-                      openingFlow.phase === "error" && "is-retracting",
-                    )}
-                    style={
-                      {
-                        "--stack-entrance-duration": `${PACK_OPENING_TIMING.stackEntranceMs / openingSpeed}ms`,
-                      } as CSSProperties
-                    }
-                    aria-label={`${activeSet.packSize - landedIds.length} verdeckte Karten im Stapel`}
-                  >
-                    {Array.from(
-                      {
-                        length: Math.min(
-                          5,
-                          Math.max(1, activeSet.packSize - landedIds.length),
-                        ),
-                      },
-                      (_, index) => (
-                        <OpeningVisualCardBack
-                          key={index}
-                          className="opening-card-stack-layer"
-                          style={{ "--stack-layer": index } as CSSProperties}
-                        />
-                      ),
-                    )}
-                  </div>
-                ) : null}
 
                 <div className="opening-arrival-layer" aria-hidden="true">
                   {openingFlow.phase === "dealing"
