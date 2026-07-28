@@ -143,6 +143,20 @@ function OpeningCardBack() {
   );
 }
 
+function OpeningPendingCard({ index }: { index: number }) {
+  return (
+    <div
+      className="reveal-card-shell is-locked opening-pending-card"
+      style={{ "--pending-card-index": index } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span className="reveal-card">
+        <OpeningCardBack />
+      </span>
+    </div>
+  );
+}
+
 function OpeningRevealCard({
   pull,
   isRevealed,
@@ -663,6 +677,8 @@ export function PackOpeningStation({
       : landedIds.length > 0
         ? "Die Karten landen nacheinander in der Ablage."
         : "Das Pack entlädt gerade seinen Inhalt."
+    : isSubmitting
+      ? "Die Karten werden bereits verdeckt in die Ablage gelegt, während der Server die Öffnung sicher verbucht."
     : isDisplaySequenceActive
       ? `Pack ${displayPackNumber} von ${displayOpenings.length} liegt bereit. Schneide es links auf, dann landen die Karten hier.`
       : "Die Ablage bleibt leer, bis du das Pack öffnest.";
@@ -905,9 +921,21 @@ export function PackOpeningStation({
 
             <div className="flex flex-wrap justify-end gap-2">
               <StatusPill
-                tone={cardsHaveArrived ? "teal" : currentOpening ? "ember" : "slate"}
+                tone={
+                  cardsHaveArrived
+                    ? "teal"
+                    : currentOpening || isSubmitting
+                      ? "ember"
+                      : "slate"
+                }
               >
-                {cardsHaveArrived ? "Bereit" : currentOpening ? "Im Transfer" : "Leer"}
+                {cardsHaveArrived
+                  ? "Bereit"
+                  : currentOpening
+                    ? "Im Transfer"
+                    : isSubmitting
+                      ? "Wird gemischt"
+                      : "Leer"}
               </StatusPill>
               {currentOpening ? (
                 <StatusPill tone="gold">{currentOpening.pulls.length} Karten</StatusPill>
@@ -1008,6 +1036,16 @@ export function PackOpeningStation({
                   </div>
                 ) : null}
               </>
+            ) : isSubmitting ? (
+              <div
+                className="reveal-grid reveal-grid--tray opening-pending-grid"
+                role="status"
+                aria-label="Karten werden gemischt und verdeckt bereitgelegt"
+              >
+                {Array.from({ length: activeSet.packSize }, (_, index) => (
+                  <OpeningPendingCard key={index} index={index} />
+                ))}
+              </div>
             ) : (
               <div className="opening-tray-empty">
                 <div className="opening-tray-empty-copy">
