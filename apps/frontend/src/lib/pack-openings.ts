@@ -379,6 +379,43 @@ async function fetchOpeningSummary(prisma: PrismaClient, openingId: string) {
   return opening;
 }
 
+async function findOpeningByIdempotencyKey(
+  prisma: PrismaClient,
+  options: {
+    runId: string;
+    userId: string;
+    idempotencyKey: string;
+  },
+) {
+  const batch = await prisma.packOpeningBatch.findUnique({
+    where: {
+      runId_userId_idempotencyKey: options,
+    },
+    select: {
+      openings: {
+        orderBy: {
+          openedAt: "asc",
+        },
+        select: {
+          id: true,
+        },
+        take: 1,
+      },
+    },
+  });
+
+  return batch?.openings[0]?.id ?? null;
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2002"
+  );
+}
+
 function serializeOpening(
   opening: Awaited<ReturnType<typeof fetchOpeningSummary>>,
 ): PackOpeningSummary {
@@ -1172,172 +1209,231 @@ export async function openPack(
     chargeCredits?: boolean;
   },
 ) {
-  const [viewer, set] = await Promise.all([
-    prisma.user.findUnique({
-      where: {
-        id: options.viewerId,
-      },
-    }),
-    loadSetOrThrow(prisma, options.setId),
-  ]);
+  const runId = options.runId ?? null;
+  const [viewer, set, ruleVersionId, existingWallet, existingOpeningId] =
+    await Promise.all([
+      prisma.user.findUnique({
+        where: {
+          id: options.viewerId,
+        },
+      }),
+      loadSetOrThrow(prisma, options.setId),
+      runId ? getActiveCampaignRuleVersionId(prisma, runId) : null,
+      runId
+        ? prisma.creditWallet.findUnique({
+            where: {
+              runId_userId: {
+                runId,
+                userId: options.viewerId,
+              },
+            },
+          })
+        : null,
+      runId && options.idempotencyKey
+        ? findOpeningByIdempotencyKey(prisma, {
+            runId,
+            userId: options.viewerId,
+            idempotencyKey: options.idempotencyKey,
+          })
+        : null,
+    ]);
 
   if (!viewer) {
     throw new Error("Spielerprofil wurde nicht gefunden.");
   }
 
+  if (existingOpeningId) {
+    return serializeOpening(await fetchOpeningSummary(prisma, existingOpeningId));
+  }
+
+  const wallet =
+    runId && !existingWallet
+      ? await getOrCreateWallet(prisma, {
+          runId,
+          userId: viewer.id,
+        })
+      : existingWallet;
   const randomSeed = randomUUID();
   const openingId = randomUUID();
+  const batchId = runId ? randomUUID() : null;
   const openedAt = new Date();
   const auditHash = createHash("sha1")
     .update(`${viewer.id}:${set.id}:${randomSeed}:${Date.now()}`)
     .digest("hex");
 
   const pulls = buildPackPulls(set);
+  const nestedPulls = pulls.map((pull) => ({
+    id: pull.id,
+    cardId: pull.cardId,
+    setCardId: pull.setCardId,
+    slotIndex: pull.slotIndex,
+    rarity: pull.rarity,
+  }));
 
-  const createdOpeningId = await prisma.$transaction(async (tx) => {
-    const ruleVersionId = options.runId
-      ? await getActiveCampaignRuleVersionId(tx, options.runId)
-      : null;
-    let batchId: string | null = null;
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        let totalCost = 0;
 
-    if (options.runId) {
-      await requireRunMembership(tx, {
-        runId: options.runId,
-        userId: viewer.id,
-      });
-
-      if (options.idempotencyKey) {
-        const existingBatch = await tx.packOpeningBatch.findUnique({
-          where: {
-            runId_userId_idempotencyKey: {
-              runId: options.runId,
-              userId: viewer.id,
-              idempotencyKey: options.idempotencyKey,
-            },
-          },
-        });
-
-        if (existingBatch) {
-          const existingOpening = await tx.packOpening.findFirst({
+        if (runId) {
+          const run = await tx.playGroupRun.findUnique({
             where: {
-              batchId: existingBatch.id,
+              id: runId,
             },
-            orderBy: {
-              openedAt: "asc",
+            select: {
+              defaultPackPrice: true,
+              defaultDisplaySize: true,
+              memberships: {
+                where: {
+                  userId: viewer.id,
+                },
+                select: {
+                  id: true,
+                },
+                take: 1,
+              },
+              setUnlocks: {
+                where: {
+                  setId: set.id,
+                },
+                select: {
+                  packPrice: true,
+                  displaySize: true,
+                  rewardOnly: true,
+                },
+                take: 1,
+              },
             },
           });
 
-          if (existingOpening) {
-            return existingOpening.id;
+          if (!run || run.memberships.length === 0) {
+            throw new DomainError({
+              code: "not_run_member",
+              message: "Du bist kein Mitglied dieser Runde.",
+              status: 403,
+            });
           }
-        }
-      }
 
-      const run = await tx.playGroupRun.findUniqueOrThrow({
-        where: {
-          id: options.runId,
-        },
-      });
-      const unlock = await tx.runSetUnlock.findUnique({
-        where: {
-          runId_setId: {
-            runId: options.runId,
+          const unlock = run.setUnlocks[0] ?? null;
+          assertSetIsPurchasableInRun({
             setId: set.id,
-          },
-        },
-      });
+            setName: set.name,
+            unlock,
+          });
 
-      assertSetIsPurchasableInRun({
-        setId: set.id,
-        setName: set.name,
-        unlock,
-      });
+          const economy = normalizePackEconomy({
+            packPrice: unlock?.packPrice,
+            displaySize: unlock?.displaySize,
+            defaultPackPrice: run.defaultPackPrice,
+            defaultDisplaySize: run.defaultDisplaySize,
+          });
+          totalCost = options.chargeCredits === false ? 0 : economy.packPrice;
 
-      const economy = normalizePackEconomy({
-        packPrice: unlock?.packPrice,
-        displaySize: unlock?.displaySize,
-        defaultPackPrice: run.defaultPackPrice,
-        defaultDisplaySize: run.defaultDisplaySize,
-      });
-      const totalCost = options.chargeCredits === false ? 0 : economy.packPrice;
-      const wallet = await getOrCreateWallet(tx, {
-        runId: options.runId,
-        userId: viewer.id,
-      });
+          if (!wallet || !batchId) {
+            throw new Error("Wallet oder Pack-Batch konnte nicht vorbereitet werden.");
+          }
 
-      if (totalCost > 0) {
-        const balanceAfter = await debitWalletAtomically(tx, wallet.id, totalCost);
-        await tx.creditLedgerEntry.create({
-          data: {
-            runId: options.runId,
-            walletId: wallet.id,
+          if (totalCost > 0) {
+            const balanceAfter = await debitWalletAtomically(
+              tx,
+              wallet.id,
+              totalCost,
+            );
+            await tx.creditLedgerEntry.create({
+              data: {
+                runId,
+                walletId: wallet.id,
+                userId: viewer.id,
+                amount: -totalCost,
+                balanceAfter,
+                source: "PACK_PURCHASE",
+                referenceType: "PackOpeningBatch",
+                referenceId: batchId,
+                idempotencyKey: options.idempotencyKey ?? null,
+                note: `Pack gekauft: ${set.name}`,
+              },
+            });
+          }
+
+          await tx.packOpeningBatch.create({
+            data: {
+              id: batchId,
+              runId,
+              userId: viewer.id,
+              setId: set.id,
+              type: "SINGLE_PACK",
+              quantity: 1,
+              totalCost,
+              idempotencyKey: options.idempotencyKey ?? null,
+              ruleVersionId,
+              openings: {
+                create: {
+                  id: openingId,
+                  userId: viewer.id,
+                  setId: set.id,
+                  runId,
+                  openedAt,
+                  randomSeed,
+                  auditHash,
+                  ruleVersionId,
+                  pulls: {
+                    createMany: {
+                      data: nestedPulls,
+                    },
+                  },
+                },
+              },
+            },
+          });
+        } else {
+          await tx.packOpening.create({
+            data: {
+              id: openingId,
+              userId: viewer.id,
+              setId: set.id,
+              openedAt,
+              randomSeed,
+              auditHash,
+              pulls: {
+                createMany: {
+                  data: nestedPulls,
+                },
+              },
+            },
+          });
+        }
+
+        await tx.collectionEntry.createMany({
+          data: pulls.map((pull) => ({
             userId: viewer.id,
-            amount: -totalCost,
-            balanceAfter,
-            source: "PACK_PURCHASE",
-            referenceType: "PackOpeningBatch",
-            idempotencyKey: options.idempotencyKey ?? null,
-            note: `Pack gekauft: ${set.name}`,
-          },
+            cardId: pull.cardId,
+            setCardId: pull.setCardId,
+            runId,
+            source: OwnershipSource.PACK_OPENING,
+            sourceReferenceId: openingId,
+          })),
         });
-      }
-
-      const batch = await tx.packOpeningBatch.create({
-        data: {
-          runId: options.runId,
-          userId: viewer.id,
-          setId: set.id,
-          type: "SINGLE_PACK",
-          quantity: 1,
-          totalCost,
-          idempotencyKey: options.idempotencyKey ?? null,
-          ruleVersionId,
-        },
+      },
+      {
+        timeout: 20_000,
+      },
+    );
+  } catch (error) {
+    if (runId && options.idempotencyKey && isUniqueConstraintError(error)) {
+      const concurrentOpeningId = await findOpeningByIdempotencyKey(prisma, {
+        runId,
+        userId: viewer.id,
+        idempotencyKey: options.idempotencyKey,
       });
-      batchId = batch.id;
+
+      if (concurrentOpeningId) {
+        return serializeOpening(
+          await fetchOpeningSummary(prisma, concurrentOpeningId),
+        );
+      }
     }
 
-    const opening = await tx.packOpening.create({
-      data: {
-        id: openingId,
-        userId: viewer.id,
-        setId: set.id,
-        runId: options.runId ?? null,
-        batchId,
-        openedAt,
-        randomSeed,
-        auditHash,
-        ruleVersionId,
-      },
-    });
-
-    await tx.packPull.createMany({
-      data: pulls.map((pull) => ({
-        id: pull.id,
-        openingId: opening.id,
-        cardId: pull.cardId,
-        setCardId: pull.setCardId,
-        slotIndex: pull.slotIndex,
-        rarity: pull.rarity,
-      })),
-    });
-
-    await tx.collectionEntry.createMany({
-      data: pulls.map((pull) => ({
-        userId: viewer.id,
-        cardId: pull.cardId,
-        setCardId: pull.setCardId,
-        runId: options.runId ?? null,
-        source: OwnershipSource.PACK_OPENING,
-        sourceReferenceId: opening.id,
-      })),
-    });
-
-    return opening.id;
-  });
-
-  if (createdOpeningId !== openingId) {
-    return serializeOpening(await fetchOpeningSummary(prisma, createdOpeningId));
+    throw error;
   }
 
   return {

@@ -664,16 +664,25 @@ describe("tournament rewards and progression", () => {
       const walletBeforeShopPurchase = await prisma.creditWallet.findUniqueOrThrow({
         where: { runId_userId: { runId: run.id, userId: owner.id } },
       });
+      const shopIdempotencyKey = `shop-pack-${checkpoint.id}`;
       const shopOpening = await openPack(prisma, {
         viewerId: owner.id,
         runId: run.id,
         setId: nextSet.id,
+        idempotencyKey: shopIdempotencyKey,
+      });
+      const repeatedShopOpening = await openPack(prisma, {
+        viewerId: owner.id,
+        runId: run.id,
+        setId: nextSet.id,
+        idempotencyKey: shopIdempotencyKey,
       });
       const walletAfterShopPurchase = await prisma.creditWallet.findUniqueOrThrow({
         where: { runId_userId: { runId: run.id, userId: owner.id } },
       });
 
       expect(shopOpening.set.id).toBe(nextSet.id);
+      expect(repeatedShopOpening.id).toBe(shopOpening.id);
       expect(walletAfterShopPurchase.balance).toBe(
         walletBeforeShopPurchase.balance - run.defaultPackPrice,
       );
@@ -684,6 +693,7 @@ describe("tournament rewards and progression", () => {
             userId: owner.id,
             source: "PACK_PURCHASE",
             referenceType: "PackOpeningBatch",
+            idempotencyKey: shopIdempotencyKey,
             note: `Pack gekauft: ${nextSet.name}`,
           },
         }),

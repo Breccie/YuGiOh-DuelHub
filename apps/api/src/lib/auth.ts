@@ -20,7 +20,11 @@ type SessionRecord = Prisma.SessionGetPayload<{
   };
 }>;
 
-function toViewerSession(record: SessionRecord): ViewerSession {
+type ApiViewerSession = ViewerSession & {
+  activeRunId: string | null;
+};
+
+function toViewerSession(record: SessionRecord): ApiViewerSession {
   return {
     sessionId: record.id,
     userId: record.userId,
@@ -33,6 +37,7 @@ function toViewerSession(record: SessionRecord): ViewerSession {
     expiresAt: record.expiresAt.toISOString(),
     rememberDevice: record.rememberDevice,
     deviceLabel: record.deviceLabel ?? null,
+    activeRunId: record.user.activeRunId ?? null,
   };
 }
 

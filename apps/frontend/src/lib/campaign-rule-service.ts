@@ -446,30 +446,32 @@ export async function getActiveCampaignRuleVersionId(
   options: { checkpointId?: string; now?: Date } = {},
 ) {
   const now = options.now ?? new Date();
-  const run = await db.playGroupRun.findUnique({
-    where: { id: runId },
-    select: {
-      activeRuleVersionId: true,
-      ownerId: true,
-      activeRuleVersion: { select: { status: true } },
-    },
-  });
-  if (!run) return null;
-
   const dueConditions: Prisma.CampaignRuleVersionWhereInput[] = [
     { effectiveAt: { not: null, lte: now } },
   ];
   if (options.checkpointId) {
     dueConditions.push({ effectiveCheckpointId: options.checkpointId });
   }
-  const dueVersion = await db.campaignRuleVersion.findFirst({
-    where: {
-      runId,
-      status: "SCHEDULED",
-      OR: dueConditions,
-    },
-    orderBy: { version: "desc" },
-  });
+  const [run, dueVersion] = await Promise.all([
+    db.playGroupRun.findUnique({
+      where: { id: runId },
+      select: {
+        activeRuleVersionId: true,
+        ownerId: true,
+        activeRuleVersion: { select: { status: true } },
+      },
+    }),
+    db.campaignRuleVersion.findFirst({
+      where: {
+        runId,
+        status: "SCHEDULED",
+        OR: dueConditions,
+      },
+      orderBy: { version: "desc" },
+    }),
+  ]);
+  if (!run) return null;
+
   if (!dueVersion && run.activeRuleVersionId && run.activeRuleVersion?.status === "ACTIVE") {
     return run.activeRuleVersionId;
   }

@@ -63,14 +63,17 @@ const packsRoutes: FastifyPluginAsync = async (app) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
       const body = openPackRequestSchema.parse(request.body ?? {});
-      const activeRun = await getActiveRun(getSharedPrisma(), session.userId);
+      const activeRunId =
+        session.activeRunId ??
+        (await getActiveRun(getSharedPrisma(), session.userId)).id;
       const opening = await openPack(getSharedPrisma(), {
         viewerId: session.userId,
-        runId: activeRun.id,
+        runId: activeRunId,
         setId: body.setId,
         idempotencyKey: body.idempotencyKey,
       });
 
+      reply.header("X-Pack-Opening-Flow", "batched-v2");
       return reply.status(201).send(openPackResponseSchema.parse({ opening }));
     } catch (error) {
       return sendApiError(reply, error, "Pack konnte nicht geöffnet werden.");
@@ -81,10 +84,12 @@ const packsRoutes: FastifyPluginAsync = async (app) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
       const body = openDisplayRequestSchema.parse(request.body ?? {});
-      const activeRun = await getActiveRun(getSharedPrisma(), session.userId);
+      const activeRunId =
+        session.activeRunId ??
+        (await getActiveRun(getSharedPrisma(), session.userId)).id;
       const payload = await openDisplay(getSharedPrisma(), {
         viewerId: session.userId,
-        runId: activeRun.id,
+        runId: activeRunId,
         setId: body.setId,
         idempotencyKey: body.idempotencyKey,
       });
