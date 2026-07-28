@@ -1083,28 +1083,6 @@ textarea {
   margin-inline: auto;
 }
 
-.opening-pending-grid {
-  opacity: 0.78;
-}
-
-.opening-pending-card {
-  opacity: 0;
-  animation: pendingCardDeal 360ms cubic-bezier(0.2, 0.82, 0.24, 1) both;
-  animation-delay: calc(var(--pending-card-index, 0) * 55ms);
-}
-
-@keyframes pendingCardDeal {
-  from {
-    opacity: 0;
-    transform: translateY(-32px) scale(0.92) rotate(-2deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
-  }
-}
-
 .reveal-card-shell {
   display: block;
   width: 100%;
@@ -1147,6 +1125,46 @@ textarea {
 
 .reveal-card-shell.is-arriving .reveal-card-face {
   opacity: 1;
+}
+
+.opening-card-stack {
+  position: absolute;
+  z-index: 6;
+  top: 0.4rem;
+  left: 50%;
+  width: clamp(8.9rem, 12vw, 10.7rem);
+  aspect-ratio: 59 / 86;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.opening-card-stack.is-entering {
+  animation: openingStackEnter var(--stack-entrance-duration, 280ms) cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+.opening-card-stack-layer {
+  position: absolute;
+  inset: 0;
+  transform: translate(calc((var(--stack-layer, 0) - 2) * 1.5px), calc(var(--stack-layer, 0) * -1.8px))
+    rotate(calc((var(--stack-layer, 0) - 2) * 0.34deg));
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.34));
+}
+
+.opening-card-stack .reveal-card-shell:hover .reveal-card:not(.is-revealed),
+.opening-card-stack .reveal-card-shell:focus-visible .reveal-card:not(.is-revealed) {
+  transform: none;
+}
+
+.opening-dealt-card {
+  animation: openingDealtCardSettle 180ms cubic-bezier(0.2, 0.82, 0.24, 1) both;
+}
+
+.opening-card-stack.is-retracting {
+  animation: openingStackRetract 360ms cubic-bezier(0.4, 0, 0.8, 0.2) both;
+}
+
+.opening-dealt-card.is-retracting {
+  animation: openingDealtCardRetract 360ms cubic-bezier(0.4, 0, 0.8, 0.2) both;
 }
 
 .reveal-card {
@@ -1410,6 +1428,52 @@ textarea {
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes openingStackEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -56px) scale(0.82) rotate(-4deg);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes openingDealtCardSettle {
+  from {
+    transform: translateY(-3px) scale(1.015);
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes openingStackRetract {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, -42px) scale(0.86);
+  }
+}
+
+@keyframes openingDealtCardRetract {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.9);
   }
 }
 
@@ -1793,6 +1857,14 @@ textarea {
     transition-duration: 0ms;
   }
 
+  .reveal-card-shell.is-arriving,
+  .opening-card-stack.is-entering,
+  .opening-card-stack.is-retracting,
+  .opening-dealt-card.is-retracting,
+  .opening-dealt-card {
+    animation: none;
+  }
+
   .reveal-card-shell:hover .reveal-card:not(.is-revealed),
   .reveal-card-shell:focus-visible .reveal-card:not(.is-revealed),
   .reveal-card-shell:hover .reveal-card.is-revealed,
@@ -1813,6 +1885,7 @@ html[data-motion="reduced"] .pack-opening-image-shell,
 html[data-motion="reduced"] .binder-pocket-glint::before,
 html[data-motion="reduced"] .binder-spread-gloss::before,
 html[data-motion="reduced"] .reveal-card-shell,
+html[data-motion="reduced"] .opening-card-stack,
 html[data-motion="reduced"] .reveal-card-back-shimmer,
 html[data-motion="reduced"] .three-foil-overlay,
 html[data-motion="reduced"] .ui-button-primary,

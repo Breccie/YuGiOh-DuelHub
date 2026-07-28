@@ -5,12 +5,16 @@ import Link from "next/link";
 import {
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
   useTransition,
   type CSSProperties,
 } from "react";
-import type { OpenDisplayResponse, PackDashboardSnapshotDto } from "@ygo/contracts";
+import type {
+  OpenDisplayResponse,
+  PackDashboardSnapshotDto,
+} from "@ygo/contracts";
 import {
   getPackOpeningVariant,
   PackOpeningActor,
@@ -18,6 +22,16 @@ import {
 } from "@/components/pack-opening-actor";
 import { StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
+import {
+  DEFAULT_OPENING_SPEED,
+  getPackOpeningTimeline,
+  hasExpectedPullSlots,
+  initialOpeningFlowState,
+  openingFlowReducer,
+  openingSpeeds,
+  PACK_OPENING_TIMING,
+  type OpeningSpeed,
+} from "@/lib/pack-opening-flow";
 import { packOpeningClient } from "@/lib/pack-opening-client";
 import { getPackRenderAssets } from "@/lib/pack-renders";
 import {
@@ -51,14 +65,6 @@ type HoverCardState = {
   top: number;
 };
 
-const openingSpeeds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
-type OpeningSpeed = (typeof openingSpeeds)[number];
-
-const cardDealBaseDelay = 90;
-const cardDealStepDelay = 60;
-const cardDealDuration = 460;
-const packFadeDuration = 260;
-
 function classes(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
 }
@@ -87,13 +93,10 @@ function formatDateTime(value: string | null) {
 function getArrivalStyle(
   index: number,
   pullCount: number,
-  tearDurationMs: number,
   speed: OpeningSpeed,
   arrivalLayout: ArrivalLayout,
 ) {
   const stackDepth = index;
-  const dealStart =
-    tearDurationMs + packFadeDuration + cardDealBaseDelay + index * cardDealStepDelay;
   const speedScale = 1 / speed;
 
   return {
@@ -101,18 +104,14 @@ function getArrivalStyle(
     "--arrival-y": `${arrivalLayout.y + stackDepth * 2}px`,
     "--arrival-rotate": `${-2.2 + stackDepth * -0.32}deg`,
     "--arrival-source-scale": "1",
-    "--arrival-delay": `${dealStart * speedScale}ms`,
-    "--arrival-duration": `${cardDealDuration * speedScale}ms`,
+    "--arrival-delay": `${index * PACK_OPENING_TIMING.cardIntervalMs * speedScale}ms`,
+    "--arrival-duration": `${PACK_OPENING_TIMING.cardFlightMs * speedScale}ms`,
     "--arrival-z": String(pullCount - index),
     left: `${arrivalLayout.left}px`,
     top: `${arrivalLayout.top}px`,
     width: `${arrivalLayout.width}px`,
     height: `${arrivalLayout.height}px`,
   } as CSSProperties;
-}
-
-function scaleDuration(durationMs: number, speed: OpeningSpeed) {
-  return durationMs / speed;
 }
 
 function addUniqueId(values: string[], nextValue: string) {
@@ -122,8 +121,6 @@ function addUniqueId(values: string[], nextValue: string) {
 function formatRemainingPacks(count: number) {
   return count === 1 ? "1 Pack übrig" : `${count} Packs übrig`;
 }
-
-function noop() {}
 
 function OpeningCardBack() {
   return (
@@ -143,11 +140,17 @@ function OpeningCardBack() {
   );
 }
 
-function OpeningPendingCard({ index }: { index: number }) {
+function OpeningVisualCardBack({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
   return (
     <div
-      className="reveal-card-shell is-locked opening-pending-card"
-      style={{ "--pending-card-index": index } as CSSProperties}
+      className={classes("reveal-card-shell is-locked", className)}
+      style={style}
       aria-hidden="true"
     >
       <span className="reveal-card">
@@ -232,59 +235,86 @@ export function PackOpeningStation({
   const openingVariant = getPackOpeningVariant("master");
 
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [currentOpening, setCurrentOpening] = useState<OpeningSummary | null>(null);
+  const [currentOpening, setCurrentOpening] = useState<OpeningSummary | null>(
+    null,
+  );
   const [revealedIds, setRevealedIds] = useState<string[]>([]);
-  const [landedIds, setLandedIds] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [batchNotice, setBatchNotice] = useState("");
-  const [displayOpenings, setDisplayOpenings] = useState<DisplayOpeningSummary[]>([]);
+  const [displayOpenings, setDisplayOpenings] = useState<
+    DisplayOpeningSummary[]
+  >([]);
   const [displayOpeningIndex, setDisplayOpeningIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [packPhase, setPackPhase] = useState<PackOpeningPhase>("idle");
-  const [openingSpeed, setOpeningSpeed] = useState<OpeningSpeed>(3);
+  const [openingFlow, dispatchOpeningFlow] = useReducer(
+    openingFlowReducer,
+    initialOpeningFlowState,
+  );
+  const [openingSpeed, setOpeningSpeed] = useState<OpeningSpeed>(
+    DEFAULT_OPENING_SPEED,
+  );
   const [hoverCard, setHoverCard] = useState<HoverCardState | null>(null);
   const timersRef = useRef<number[]>([]);
-  const packOriginRef = useRef<HTMLDivElement | null>(null);
+  const requestGuardRef = useRef(false);
+  const requestCompleteRef = useRef(false);
+  const animationCompleteRef = useRef(false);
   const trayCanvasRef = useRef<HTMLDivElement | null>(null);
+  const stackOriginRef = useRef<HTMLDivElement | null>(null);
   const arrivalSlotRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [arrivalLayouts, setArrivalLayouts] = useState<Record<string, ArrivalLayout>>({});
+  const [arrivalLayouts, setArrivalLayouts] = useState<
+    Record<string, ArrivalLayout>
+  >({});
   const [arrivalLayoutsReady, setArrivalLayoutsReady] = useState(false);
 
   const activeSet = snapshot.sets.find((set) => set.id === setId) ?? null;
   const isDisplaySequenceActive = displayOpenings.length > 0;
-  const displayPackNumber = isDisplaySequenceActive ? displayOpeningIndex + 1 : 0;
+  const displayPackNumber = isDisplaySequenceActive
+    ? displayOpeningIndex + 1
+    : 0;
   const hasNextDisplayPack =
     isDisplaySequenceActive && displayOpeningIndex < displayOpenings.length - 1;
-  const cardsHaveArrived = currentOpening
-    ? landedIds.length === currentOpening.pulls.length
-    : false;
+  const landedIds = openingFlow.landedSlots;
+  const cardsHaveArrived = landedIds.length === activeSet?.packSize;
+  const isRequestReady = openingFlow.requestStatus === "succeeded";
+  const isFlowActive =
+    openingFlow.phase === "tearing" ||
+    openingFlow.phase === "stacking" ||
+    openingFlow.phase === "dealing";
+  const packPhase: PackOpeningPhase =
+    openingFlow.phase === "tearing"
+      ? "tearing"
+      : openingFlow.phase === "stacking" || openingFlow.phase === "dealing"
+        ? "revealing"
+        : "idle";
   const displayPacksRemaining = isDisplaySequenceActive
     ? Math.max(
         0,
-        displayOpenings.length -
-          displayOpeningIndex -
-          (currentOpening ? 1 : 0),
+        displayOpenings.length - displayOpeningIndex - (currentOpening ? 1 : 0),
       )
     : 0;
   const revealedCount = currentOpening
-    ? currentOpening.pulls.filter((pull) => revealedIds.includes(pull.id)).length
+    ? currentOpening.pulls.filter((pull) => revealedIds.includes(pull.id))
+        .length
     : 0;
-  const isOpeningInProgress =
-    isSubmitting ||
-    packPhase !== "idle" ||
-    (currentOpening !== null && !cardsHaveArrived);
+  const isOpeningInProgress = isFlowActive || isSubmitting;
   const displaySequenceComplete =
-    isDisplaySequenceActive && currentOpening !== null && cardsHaveArrived && !hasNextDisplayPack;
+    isDisplaySequenceActive &&
+    currentOpening !== null &&
+    openingFlow.phase === "ready" &&
+    !hasNextDisplayPack;
   const canInteractWithPack =
-    !isSubmitting &&
+    openingFlow.requestStatus !== "pending" &&
+    !isFlowActive &&
     !isPending &&
     Boolean(activeSet?.canBuy) &&
-    (!isDisplaySequenceActive || currentOpening === null);
+    (!isDisplaySequenceActive || openingFlow.phase === "idle");
   const sliderProgress = `${((openingSpeed - 1) / (openingSpeeds.length - 1)) * 100}%`;
   const highestRarityTier = useMemo(
     () =>
-      getHighestRarityTier(currentOpening?.pulls.map((pull) => pull.rarity) ?? []),
+      getHighestRarityTier(
+        currentOpening?.pulls.map((pull) => pull.rarity) ?? [],
+      ),
     [currentOpening],
   );
 
@@ -293,6 +323,14 @@ export function PackOpeningStation({
   const hoveredPullIsRevealed = hoveredPull
     ? revealedIds.includes(hoveredPull.id)
     : false;
+  const pullsBySlot = useMemo(
+    () =>
+      new Map(
+        currentOpening?.pulls.map((pull) => [pull.slotIndex, pull] as const) ??
+          [],
+      ),
+    [currentOpening],
+  );
 
   useEffect(() => {
     return () => {
@@ -303,7 +341,10 @@ export function PackOpeningStation({
   }, []);
 
   useEffect(() => {
-    if (!currentOpening || cardsHaveArrived) {
+    if (
+      (openingFlow.phase !== "stacking" && openingFlow.phase !== "dealing") ||
+      cardsHaveArrived
+    ) {
       return;
     }
 
@@ -311,10 +352,10 @@ export function PackOpeningStation({
     let measureAttempts = 0;
 
     function measureArrivalLayouts() {
-      const originNode = packOriginRef.current;
+      const originNode = stackOriginRef.current;
       const trayNode = trayCanvasRef.current;
 
-      if (!originNode || !trayNode || !currentOpening) {
+      if (!originNode || !trayNode || !activeSet) {
         return;
       }
 
@@ -326,8 +367,8 @@ export function PackOpeningStation({
       };
       const nextLayouts: Record<string, ArrivalLayout> = {};
 
-      for (const pull of currentOpening.pulls) {
-        const slotNode = arrivalSlotRefs.current[pull.id];
+      for (let slotIndex = 1; slotIndex <= activeSet.packSize; slotIndex += 1) {
+        const slotNode = arrivalSlotRefs.current[String(slotIndex)];
 
         if (!slotNode) {
           continue;
@@ -339,7 +380,7 @@ export function PackOpeningStation({
           y: slotRect.top + slotRect.height * 0.5,
         };
 
-        nextLayouts[pull.id] = {
+        nextLayouts[String(slotIndex)] = {
           x: Math.round(origin.x - target.x),
           y: Math.round(origin.y - target.y),
           left: Math.round(slotRect.left - trayRect.left),
@@ -352,7 +393,7 @@ export function PackOpeningStation({
       measureAttempts += 1;
 
       if (
-        Object.keys(nextLayouts).length < currentOpening.pulls.length &&
+        Object.keys(nextLayouts).length < activeSet.packSize &&
         measureAttempts < 12
       ) {
         frameId = window.requestAnimationFrame(measureArrivalLayouts);
@@ -375,60 +416,7 @@ export function PackOpeningStation({
       window.cancelAnimationFrame(frameId);
       window.removeEventListener("resize", scheduleMeasure);
     };
-  }, [cardsHaveArrived, currentOpening]);
-
-  useEffect(() => {
-    if (!currentOpening || !arrivalLayoutsReady || cardsHaveArrived) {
-      return;
-    }
-
-    const tearDuration = scaleDuration(openingVariant.tearDurationMs, openingSpeed);
-
-    clearTimers();
-    timersRef.current.push(
-      window.setTimeout(() => {
-        setPackPhase("revealing");
-      }, tearDuration),
-    );
-
-    currentOpening.pulls.forEach((pull, index) => {
-      const arrivalStart =
-        tearDuration +
-        scaleDuration(
-          packFadeDuration + cardDealBaseDelay + index * cardDealStepDelay,
-          openingSpeed,
-        );
-      const arrivalEnd = arrivalStart + scaleDuration(cardDealDuration, openingSpeed);
-
-      timersRef.current.push(
-        window.setTimeout(() => {
-          setLandedIds((currentValue) => addUniqueId(currentValue, pull.id));
-        }, arrivalEnd),
-      );
-    });
-
-    const allCardsLandedAt =
-      tearDuration +
-      scaleDuration(
-        packFadeDuration +
-          cardDealBaseDelay +
-          (currentOpening.pulls.length - 1) * cardDealStepDelay +
-          cardDealDuration,
-        openingSpeed,
-      );
-
-    timersRef.current.push(
-      window.setTimeout(() => {
-        setPackPhase("idle");
-      }, allCardsLandedAt + scaleDuration(160, openingSpeed)),
-    );
-  }, [
-    arrivalLayoutsReady,
-    cardsHaveArrived,
-    currentOpening,
-    openingSpeed,
-    openingVariant.tearDurationMs,
-  ]);
+  }, [activeSet, cardsHaveArrived, openingFlow.phase]);
 
   function clearTimers() {
     for (const timer of timersRef.current) {
@@ -438,21 +426,100 @@ export function PackOpeningStation({
     timersRef.current = [];
   }
 
-  function resetOpeningAnimation(phase: PackOpeningPhase = "tearing") {
+  function resetOpeningAnimation() {
     clearTimers();
+    requestGuardRef.current = false;
+    requestCompleteRef.current = false;
+    animationCompleteRef.current = false;
     setCurrentOpening(null);
     setRevealedIds([]);
-    setLandedIds([]);
     setArrivalLayouts({});
     setArrivalLayoutsReady(false);
     setHoverCard(null);
     arrivalSlotRefs.current = {};
-    setPackPhase(phase);
+    dispatchOpeningFlow({ type: "reset" });
   }
 
-  function playOpening(opening: OpeningSummary | DisplayOpeningSummary) {
-    resetOpeningAnimation("tearing");
-    setCurrentOpening(opening);
+  function releaseOpeningGuardIfComplete() {
+    if (requestCompleteRef.current && animationCompleteRef.current) {
+      requestGuardRef.current = false;
+    }
+  }
+
+  function scheduleOpeningAnimation(skipTear: boolean) {
+    if (!activeSet) {
+      return;
+    }
+
+    const timeline = getPackOpeningTimeline({
+      cardCount: activeSet.packSize,
+      speed: openingSpeed,
+      skipTear,
+    });
+
+    if (!skipTear) {
+      timersRef.current.push(
+        window.setTimeout(() => {
+          dispatchOpeningFlow({ type: "show-stack" });
+        }, timeline.tearEndMs),
+      );
+    }
+
+    timersRef.current.push(
+      window.setTimeout(() => {
+        dispatchOpeningFlow({ type: "start-dealing" });
+      }, timeline.dealStartMs),
+    );
+
+    for (const card of timeline.cards) {
+      timersRef.current.push(
+        window.setTimeout(() => {
+          dispatchOpeningFlow({
+            type: "card-landed",
+            slotIndex: card.slotIndex,
+          });
+        }, card.landAtMs),
+      );
+    }
+
+    timersRef.current.push(
+      window.setTimeout(() => {
+        animationCompleteRef.current = true;
+        dispatchOpeningFlow({ type: "animation-complete" });
+        releaseOpeningGuardIfComplete();
+      }, timeline.completeAtMs),
+    );
+  }
+
+  function startOpeningFlow({
+    skipTear,
+    resolvedOpening,
+  }: {
+    skipTear: boolean;
+    resolvedOpening?: OpeningSummary | DisplayOpeningSummary;
+  }) {
+    if (!activeSet || requestGuardRef.current) {
+      return false;
+    }
+
+    requestGuardRef.current = true;
+    requestCompleteRef.current = Boolean(resolvedOpening);
+    animationCompleteRef.current = false;
+    clearTimers();
+    setCurrentOpening(resolvedOpening ?? null);
+    setRevealedIds([]);
+    setArrivalLayouts({});
+    setArrivalLayoutsReady(false);
+    setHoverCard(null);
+    arrivalSlotRefs.current = {};
+    dispatchOpeningFlow({ type: "start", skipTear });
+
+    if (resolvedOpening) {
+      dispatchOpeningFlow({ type: "request-succeeded" });
+    }
+
+    scheduleOpeningAnimation(skipTear);
+    return true;
   }
 
   function applyLocalOpeningResult(
@@ -491,36 +558,72 @@ export function PackOpeningStation({
     });
   }
 
-  async function handleOpenPack() {
-    if (!activeSet) {
-      return;
-    }
-
+  async function requestPackOpening(
+    packSetId: string,
+    expectedPullCount: number,
+    packPrice: number,
+  ) {
     try {
       setError("");
       setBatchNotice("");
       setDisplayOpenings([]);
       setDisplayOpeningIndex(0);
       setIsSubmitting(true);
-      resetOpeningAnimation("tearing");
 
       const payload = await packOpeningClient.open({
-        setId: activeSet.id,
+        setId: packSetId,
         idempotencyKey: crypto.randomUUID(),
       });
 
+      if (!hasExpectedPullSlots(payload.opening.pulls, expectedPullCount)) {
+        throw new Error(
+          `Die Packöffnung lieferte nicht genau ${expectedPullCount} eindeutige Kartenslots.`,
+        );
+      }
+
       setCurrentOpening(payload.opening);
-      applyLocalOpeningResult([payload.opening], activeSet.packPrice ?? 0);
+      requestCompleteRef.current = true;
+      dispatchOpeningFlow({ type: "request-succeeded" });
+      applyLocalOpeningResult([payload.opening], packPrice);
+      releaseOpeningGuardIfComplete();
     } catch (caughtError) {
-      setPackPhase("idle");
-      setError(getApiErrorMessage(caughtError, "Pack konnte nicht geöffnet werden."));
+      clearTimers();
+      requestGuardRef.current = false;
+      requestCompleteRef.current = false;
+      animationCompleteRef.current = false;
+      setCurrentOpening(null);
+      dispatchOpeningFlow({ type: "request-failed" });
+      setError(
+        getApiErrorMessage(caughtError, "Pack konnte nicht geöffnet werden."),
+      );
+      timersRef.current.push(
+        window.setTimeout(() => {
+          dispatchOpeningFlow({ type: "reset" });
+        }, 420),
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  function handleOpenPack() {
+    if (!activeSet || requestGuardRef.current) {
+      return;
+    }
+
+    if (!startOpeningFlow({ skipTear: false })) {
+      return;
+    }
+
+    void requestPackOpening(
+      activeSet.id,
+      activeSet.packSize,
+      activeSet.packPrice ?? 0,
+    );
+  }
+
   async function handleOpenDisplay() {
-    if (!activeSet) {
+    if (!activeSet || requestGuardRef.current) {
       return;
     }
 
@@ -530,7 +633,8 @@ export function PackOpeningStation({
       setDisplayOpenings([]);
       setDisplayOpeningIndex(0);
       setIsSubmitting(true);
-      resetOpeningAnimation("idle");
+      resetOpeningAnimation();
+      requestGuardRef.current = true;
 
       const payload = await packOpeningClient.openDisplay({
         setId: activeSet.id,
@@ -539,6 +643,16 @@ export function PackOpeningStation({
 
       if (payload.openings.length === 0) {
         throw new Error("Das Display hat keine Pack-Öffnungen erzeugt.");
+      }
+
+      if (
+        payload.openings.some(
+          (opening) => !hasExpectedPullSlots(opening.pulls, activeSet.packSize),
+        )
+      ) {
+        throw new Error(
+          `Mindestens ein Display-Pack lieferte nicht genau ${activeSet.packSize} eindeutige Kartenslots.`,
+        );
       }
 
       setBatchNotice(
@@ -551,15 +665,20 @@ export function PackOpeningStation({
         payload.wallet.balance,
       );
     } catch (caughtError) {
-      setPackPhase("idle");
-      setError(getApiErrorMessage(caughtError, "Display konnte nicht geöffnet werden."));
+      setError(
+        getApiErrorMessage(
+          caughtError,
+          "Display konnte nicht geöffnet werden.",
+        ),
+      );
     } finally {
+      requestGuardRef.current = false;
       setIsSubmitting(false);
     }
   }
 
   function handlePrepareNextDisplayPack() {
-    if (!cardsHaveArrived || !hasNextDisplayPack) {
+    if (openingFlow.phase !== "ready" || !hasNextDisplayPack) {
       return;
     }
 
@@ -571,7 +690,7 @@ export function PackOpeningStation({
 
     setError("");
     setDisplayOpeningIndex(nextIndex);
-    resetOpeningAnimation("idle");
+    resetOpeningAnimation();
   }
 
   function handlePackCutComplete() {
@@ -580,21 +699,44 @@ export function PackOpeningStation({
     }
 
     if (isDisplaySequenceActive) {
-      if (!currentOpening) {
+      if (openingFlow.phase === "idle") {
         const queuedOpening = displayOpenings[displayOpeningIndex] ?? null;
 
         if (queuedOpening) {
-          playOpening(queuedOpening);
+          startOpeningFlow({
+            skipTear: true,
+            resolvedOpening: queuedOpening,
+          });
         }
       }
       return;
     }
 
-    void handleOpenPack();
+    if (!activeSet || requestGuardRef.current) {
+      return;
+    }
+
+    if (!startOpeningFlow({ skipTear: true })) {
+      return;
+    }
+
+    void requestPackOpening(
+      activeSet.id,
+      activeSet.packSize,
+      activeSet.packPrice ?? 0,
+    );
   }
 
   function revealSingle(pullId: string) {
-    if (!landedIds.includes(pullId)) {
+    const pull = currentOpening?.pulls.find(
+      (candidate) => candidate.id === pullId,
+    );
+
+    if (
+      !pull ||
+      !landedIds.includes(pull.slotIndex) ||
+      openingFlow.phase !== "ready"
+    ) {
       return;
     }
 
@@ -602,7 +744,7 @@ export function PackOpeningStation({
   }
 
   function revealAll() {
-    if (!currentOpening || !cardsHaveArrived) {
+    if (!currentOpening || openingFlow.phase !== "ready") {
       return;
     }
 
@@ -620,8 +762,7 @@ export function PackOpeningStation({
     const elementRect = element.getBoundingClientRect();
     const tooltipWidth = 272;
     const tooltipHeight = 184;
-    const canPlaceLeft =
-      elementRect.left - trayRect.left > tooltipWidth + 24;
+    const canPlaceLeft = elementRect.left - trayRect.left > tooltipWidth + 24;
     const left = canPlaceLeft
       ? Math.max(elementRect.left - trayRect.left - tooltipWidth - 14, 8)
       : Math.min(
@@ -654,49 +795,64 @@ export function PackOpeningStation({
     );
   }
   const packPriceLabel =
-    activeSet.packPrice !== null ? `${formatNumber(activeSet.packPrice)} Credits` : "frei";
+    activeSet.packPrice !== null
+      ? `${formatNumber(activeSet.packPrice)} Credits`
+      : "frei";
   const displayCostLabel =
     activeSet.displayCost !== null
       ? `${formatNumber(activeSet.displayCost)} Credits`
       : "nach Run-Regel";
-  const walletBalanceLabel =
-    snapshot.wallet ? `${formatNumber(snapshot.wallet.balance)} Credits` : "kein Wallet";
+  const walletBalanceLabel = snapshot.wallet
+    ? `${formatNumber(snapshot.wallet.balance)} Credits`
+    : "kein Wallet";
 
   const packRenderAssets = getPackRenderAssets(
     activeSet.code,
     activeSet.name,
     activeSet.imageUrl,
   );
-  const trayCopy = currentOpening
-    ? isDisplaySequenceActive && cardsHaveArrived && hasNextDisplayPack
-      ? "Dieses Pack ist fertig. Lege als Nächstes das nächste Pack aus dem Display bereit."
-      : isDisplaySequenceActive && displaySequenceComplete
-        ? "Das komplette Display ist geöffnet. Alle Karten liegen in deiner Rundensammlung."
-        : cardsHaveArrived
-      ? "Alle Karten liegen verdeckt bereit und können einzeln aufgedeckt werden."
-      : landedIds.length > 0
-        ? "Die Karten landen nacheinander in der Ablage."
-        : "Das Pack entlädt gerade seinen Inhalt."
-    : isSubmitting
-      ? "Die Karten werden bereits verdeckt in die Ablage gelegt, während der Server die Öffnung sicher verbucht."
-    : isDisplaySequenceActive
-      ? `Pack ${displayPackNumber} von ${displayOpenings.length} liegt bereit. Schneide es links auf, dann landen die Karten hier.`
-      : "Die Ablage bleibt leer, bis du das Pack öffnest.";
-  const openingStatusLabel = isSubmitting
-    ? "Öffnung läuft"
-    : displaySequenceComplete
-      ? "Display abgeschlossen"
-      : isDisplaySequenceActive && !currentOpening
-        ? "Pack bereit zum Aufschneiden"
-        : isDisplaySequenceActive && cardsHaveArrived
-          ? "Pack fertig"
-        : isDisplaySequenceActive
-          ? `Display-Pack ${displayPackNumber}/${displayOpenings.length}`
-          : cardsHaveArrived
-            ? "Bereit zum Aufdecken"
-            : currentOpening
-              ? "Karten unterwegs"
-              : "Bereit";
+  const trayCopy =
+    openingFlow.phase === "tearing"
+      ? "Das Pack wird aufgerissen. Die Ablage bleibt bis zum Stapel leer."
+      : openingFlow.phase === "stacking"
+        ? "Der verdeckte Kartenstapel kommt direkt aus dem geöffneten Pack."
+        : openingFlow.phase === "dealing" && cardsHaveArrived && !isRequestReady
+          ? "Alle Rückseiten liegen bereit. Öffnung wird verbucht."
+          : openingFlow.phase === "dealing"
+            ? "Die Karten werden sichtbar vom Stapel in Slot-Reihenfolge ausgeteilt."
+            : openingFlow.phase === "ready" &&
+                isDisplaySequenceActive &&
+                hasNextDisplayPack
+              ? "Dieses Pack ist fertig. Lege als Nächstes das nächste Pack aus dem Display bereit."
+              : openingFlow.phase === "ready" &&
+                  isDisplaySequenceActive &&
+                  displaySequenceComplete
+                ? "Das komplette Display ist geöffnet. Alle Karten liegen in deiner Rundensammlung."
+                : openingFlow.phase === "ready"
+                  ? "Alle Karten liegen verdeckt bereit und können einzeln aufgedeckt werden."
+                  : isDisplaySequenceActive
+                    ? `Pack ${displayPackNumber} von ${displayOpenings.length} liegt bereit. Schneide es links auf, dann landen die Karten hier.`
+                    : "Die Ablage bleibt leer, bis du das Pack öffnest.";
+  const openingStatusLabel =
+    openingFlow.phase === "tearing"
+      ? "Pack wird aufgerissen"
+      : openingFlow.phase === "stacking"
+        ? "Stapel erscheint"
+        : openingFlow.phase === "dealing" && cardsHaveArrived && !isRequestReady
+          ? "Öffnung wird verbucht"
+          : openingFlow.phase === "dealing"
+            ? "Karten werden ausgeteilt"
+            : openingFlow.phase === "error"
+              ? "Öffnung fehlgeschlagen"
+              : displaySequenceComplete
+                ? "Display abgeschlossen"
+                : isDisplaySequenceActive && openingFlow.phase === "idle"
+                  ? "Pack bereit zum Aufschneiden"
+                  : isDisplaySequenceActive && openingFlow.phase === "ready"
+                    ? "Pack fertig"
+                    : openingFlow.phase === "ready"
+                      ? "Bereit zum Aufdecken"
+                      : "Bereit";
 
   return (
     <section className="panel-surface opening-workbench rounded-[30px] p-4 sm:p-5 lg:p-6">
@@ -747,7 +903,9 @@ export function PackOpeningStation({
               step={1}
               value={openingSpeed}
               onChange={(event) =>
-                setOpeningSpeed(Number(event.currentTarget.value) as OpeningSpeed)
+                setOpeningSpeed(
+                  Number(event.currentTarget.value) as OpeningSpeed,
+                )
               }
               disabled={isOpeningInProgress}
               aria-label="Öffnungstempo"
@@ -765,7 +923,11 @@ export function PackOpeningStation({
           </div>
 
           <div className="opening-toolbar-status">
-            <StatusPill tone={isSubmitting ? "ember" : cardsHaveArrived ? "teal" : "slate"}>
+            <StatusPill
+              tone={
+                isSubmitting ? "ember" : cardsHaveArrived ? "teal" : "slate"
+              }
+            >
               {openingStatusLabel}
             </StatusPill>
             <StatusPill tone="gold">
@@ -774,7 +936,9 @@ export function PackOpeningStation({
                 : `${activeSet.packSize} Karten pro Pack`}
             </StatusPill>
             {activeSet.canBuy ? (
-              <StatusPill tone="slate">Display öffnen ({displayCostLabel})</StatusPill>
+              <StatusPill tone="slate">
+                Display öffnen ({displayCostLabel})
+              </StatusPill>
             ) : null}
             <StatusPill tone="slate">
               {currentOpening
@@ -792,11 +956,12 @@ export function PackOpeningStation({
             <button
               type="button"
               onClick={() => {
-                void handleOpenPack();
+                handleOpenPack();
               }}
               disabled={
                 !activeSet.canBuy ||
-                isSubmitting ||
+                openingFlow.requestStatus === "pending" ||
+                isFlowActive ||
                 isPending ||
                 (isDisplaySequenceActive && !displaySequenceComplete)
               }
@@ -815,6 +980,7 @@ export function PackOpeningStation({
               disabled={
                 !activeSet.canBuy ||
                 isSubmitting ||
+                isFlowActive ||
                 isPending ||
                 (isDisplaySequenceActive && !displaySequenceComplete)
               }
@@ -827,7 +993,12 @@ export function PackOpeningStation({
               <button
                 type="button"
                 onClick={handlePrepareNextDisplayPack}
-                disabled={!cardsHaveArrived || !hasNextDisplayPack || isSubmitting || isPending}
+                disabled={
+                  openingFlow.phase !== "ready" ||
+                  !hasNextDisplayPack ||
+                  isSubmitting ||
+                  isPending
+                }
                 className="ui-button-primary min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {hasNextDisplayPack
@@ -840,7 +1011,7 @@ export function PackOpeningStation({
               type="button"
               onClick={revealAll}
               disabled={
-                !cardsHaveArrived ||
+                openingFlow.phase !== "ready" ||
                 !currentOpening ||
                 revealedCount === currentOpening.pulls.length
               }
@@ -879,7 +1050,9 @@ export function PackOpeningStation({
               "pack-opening-hero",
               packPhase === "tearing" && "is-tearing",
               packPhase === "revealing" && "is-revealing",
-              (isSubmitting || (currentOpening && !cardsHaveArrived)) && "is-dealing",
+              (openingFlow.phase === "stacking" ||
+                openingFlow.phase === "dealing") &&
+                "is-dealing",
               canInteractWithPack && "cursor-pointer",
             )}
           >
@@ -894,7 +1067,7 @@ export function PackOpeningStation({
               </div>
             ) : null}
 
-            <div ref={packOriginRef} className="relative z-10 w-full">
+            <div className="relative z-10 w-full">
               <PackOpeningActor
                 imageUrl={packRenderAssets.frontImageUrl}
                 label={activeSet.name}
@@ -922,86 +1095,145 @@ export function PackOpeningStation({
             <div className="flex flex-wrap justify-end gap-2">
               <StatusPill
                 tone={
-                  cardsHaveArrived
+                  openingFlow.phase === "ready"
                     ? "teal"
-                    : currentOpening || isSubmitting
+                    : isFlowActive || isSubmitting
                       ? "ember"
                       : "slate"
                 }
               >
-                {cardsHaveArrived
+                {openingFlow.phase === "ready"
                   ? "Bereit"
-                  : currentOpening
-                    ? "Im Transfer"
-                    : isSubmitting
-                      ? "Wird gemischt"
+                  : openingFlow.phase === "dealing" &&
+                      cardsHaveArrived &&
+                      !isRequestReady
+                    ? "Wird verbucht"
+                    : isFlowActive
+                      ? "In Bewegung"
                       : "Leer"}
               </StatusPill>
               {currentOpening ? (
-                <StatusPill tone="gold">{currentOpening.pulls.length} Karten</StatusPill>
+                <StatusPill tone="gold">
+                  {currentOpening.pulls.length} Karten
+                </StatusPill>
               ) : null}
             </div>
           </div>
 
           <div ref={trayCanvasRef} className="opening-tray-canvas">
-            {currentOpening ? (
+            {openingFlow.phase !== "idle" ? (
               <>
                 <div className="reveal-grid reveal-grid--tray">
-                  {currentOpening.pulls.map((pull) => {
-                    const isLanded = landedIds.includes(pull.id);
-                    const isRevealed = revealedIds.includes(pull.id);
+                  {Array.from({ length: activeSet.packSize }, (_, index) => {
+                    const slotIndex = index + 1;
+                    const pull = pullsBySlot.get(slotIndex);
+                    const isLanded = landedIds.includes(slotIndex);
+                    const isRevealed = pull
+                      ? revealedIds.includes(pull.id)
+                      : false;
 
                     return (
                       <div
-                        key={pull.id}
+                        key={slotIndex}
                         ref={(node) => {
-                          arrivalSlotRefs.current[pull.id] = node;
+                          arrivalSlotRefs.current[String(slotIndex)] = node;
                         }}
                         className="reveal-card-slot"
                       >
-                        {isLanded ? (
+                        {isLanded && pull && isRequestReady ? (
                           <OpeningRevealCard
                             pull={pull}
                             isRevealed={isRevealed}
-                            disabled={false}
+                            disabled={openingFlow.phase !== "ready"}
                             onClick={() => revealSingle(pull.id)}
-                            onHoverStart={(element) => updateHoverCard(pull.id, element)}
+                            onHoverStart={(element) =>
+                              updateHoverCard(pull.id, element)
+                            }
                             onHoverEnd={() => setHoverCard(null)}
                           />
+                        ) : isLanded ? (
+                          <OpeningVisualCardBack
+                            className={classes(
+                              "opening-dealt-card is-locked",
+                              openingFlow.phase === "error" && "is-retracting",
+                            )}
+                          />
                         ) : (
-                          <div className="reveal-card-placeholder" aria-hidden="true" />
+                          <div
+                            className="reveal-card-placeholder"
+                            aria-hidden="true"
+                          />
                         )}
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="opening-arrival-layer" aria-hidden="true">
-                  {currentOpening.pulls.map((pull, index) => {
-                    const arrivalLayout = arrivalLayouts[pull.id];
-
-                    if (landedIds.includes(pull.id) || !arrivalLayout || !arrivalLayoutsReady) {
-                      return null;
+                {(openingFlow.phase === "stacking" ||
+                  openingFlow.phase === "dealing" ||
+                  (openingFlow.phase === "error" &&
+                    openingFlow.stackWasShown)) &&
+                landedIds.length < activeSet.packSize ? (
+                  <div
+                    ref={stackOriginRef}
+                    className={classes(
+                      "opening-card-stack",
+                      openingFlow.phase === "stacking" && "is-entering",
+                      openingFlow.phase === "error" && "is-retracting",
+                    )}
+                    style={
+                      {
+                        "--stack-entrance-duration": `${PACK_OPENING_TIMING.stackEntranceMs / openingSpeed}ms`,
+                      } as CSSProperties
                     }
+                    aria-label={`${activeSet.packSize - landedIds.length} verdeckte Karten im Stapel`}
+                  >
+                    {Array.from(
+                      {
+                        length: Math.min(
+                          5,
+                          Math.max(1, activeSet.packSize - landedIds.length),
+                        ),
+                      },
+                      (_, index) => (
+                        <OpeningVisualCardBack
+                          key={index}
+                          className="opening-card-stack-layer"
+                          style={{ "--stack-layer": index } as CSSProperties}
+                        />
+                      ),
+                    )}
+                  </div>
+                ) : null}
 
-                    return (
-                      <OpeningRevealCard
-                        key={`arrival-${pull.id}`}
-                        pull={pull}
-                        isRevealed={false}
-                        disabled={true}
-                        onClick={noop}
-                        shellClassName="is-arriving is-locked"
-                        shellStyle={getArrivalStyle(
-                          index,
-                          currentOpening.pulls.length,
-                          openingVariant.tearDurationMs,
-                          openingSpeed,
-                          arrivalLayout,
-                        )}
-                      />
-                    );
-                  })}
+                <div className="opening-arrival-layer" aria-hidden="true">
+                  {openingFlow.phase === "dealing"
+                    ? Array.from({ length: activeSet.packSize }, (_, index) => {
+                        const slotIndex = index + 1;
+                        const arrivalLayout = arrivalLayouts[String(slotIndex)];
+
+                        if (
+                          landedIds.includes(slotIndex) ||
+                          !arrivalLayout ||
+                          !arrivalLayoutsReady
+                        ) {
+                          return null;
+                        }
+
+                        return (
+                          <OpeningVisualCardBack
+                            key={`arrival-${slotIndex}`}
+                            className="is-arriving is-locked"
+                            style={getArrivalStyle(
+                              index,
+                              activeSet.packSize,
+                              openingSpeed,
+                              arrivalLayout,
+                            )}
+                          />
+                        );
+                      })
+                    : null}
                 </div>
 
                 {hoveredPull && hoverCard ? (
@@ -1016,7 +1248,9 @@ export function PackOpeningStation({
                       {hoveredPullIsRevealed ? "Karteninfo" : "Verdeckte Karte"}
                     </p>
                     <h3 className="opening-card-tooltip-title">
-                      {hoveredPullIsRevealed ? hoveredPull.cardName : "Noch nicht aufgedeckt"}
+                      {hoveredPullIsRevealed
+                        ? hoveredPull.cardName
+                        : "Noch nicht aufgedeckt"}
                     </h3>
 
                     {hoveredPullIsRevealed ? (
@@ -1024,7 +1258,9 @@ export function PackOpeningStation({
                         <StatusPill tone="gold">
                           {getRarityAbbreviation(hoveredPull.rarity)}
                         </StatusPill>
-                        <StatusPill tone="slate">{hoveredPull.setCode}</StatusPill>
+                        <StatusPill tone="slate">
+                          {hoveredPull.setCode}
+                        </StatusPill>
                       </div>
                     ) : null}
 
@@ -1036,22 +1272,13 @@ export function PackOpeningStation({
                   </div>
                 ) : null}
               </>
-            ) : isSubmitting ? (
-              <div
-                className="reveal-grid reveal-grid--tray opening-pending-grid"
-                role="status"
-                aria-label="Karten werden gemischt und verdeckt bereitgelegt"
-              >
-                {Array.from({ length: activeSet.packSize }, (_, index) => (
-                  <OpeningPendingCard key={index} index={index} />
-                ))}
-              </div>
             ) : (
               <div className="opening-tray-empty">
                 <div className="opening-tray-empty-copy">
                   <p className="ui-kicker">Noch leer</p>
                   <p className="mt-3 text-base leading-7 text-[#d4c4b1]">
-                    Öffne das Pack links, dann wird die Ablage automatisch gefüllt.
+                    Öffne das Pack links, dann wird die Ablage automatisch
+                    gefüllt.
                   </p>
                 </div>
               </div>
