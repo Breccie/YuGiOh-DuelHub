@@ -34,7 +34,9 @@ Staging-Datenbank prüfen und vor dem ersten Produktionslauf ein Backup anlegen.
 
 ## 2. Render API deployen
 
-`render.yaml` enthaelt den Service-Blueprint. In Render setzen:
+`render.yaml` enthaelt den bisherigen Oregon-Service als Rollback und den neuen
+Service `yugioh-duel-hub-api-frankfurt` mit `region: frankfurt`. Beim neuen
+Service die drei geheimen Werte exakt vom Oregon-Service übernehmen:
 
 - `APP_MODE=production`
 - `NODE_ENV=production`
@@ -62,6 +64,9 @@ Wenn `/health` funktioniert, aber `/ready` `503` liefert, sind meist
 `API_DATABASE_URL`, Supabase Pooler/IPv6/IPv4 oder Migration/Seed der naechste
 Pruefpunkt.
 
+Den Oregon-Service nach dem Umzug nicht löschen. Er bleibt ungenutzt als
+Rollback-Ziel erhalten.
+
 ## 3. Vercel Frontend deployen
 
 In Vercel setzen:
@@ -69,7 +74,13 @@ In Vercel setzen:
 - `APP_MODE=production`
 - `API_BASE_URL=https://<render-api>.onrender.com`
 
-Wichtig: Im Online-Modus nutzt das Frontend die API-Proxies. Lokale SQLite-Daten sind dann keine Quelle der Wahrheit.
+`API_BASE_URL` ist im Produktionsmodus verpflichtend; es gibt keinen
+hartcodierten Oregon-Fallback. Zuerst nur die Preview-Umgebung auf die
+Frankfurter API setzen und neu deployen. Production wird erst nach erfolgreicher
+Preview-Abnahme umgestellt.
+
+Wichtig: Im Online-Modus nutzt das Frontend die API-Proxies. Lokale SQLite-Daten
+sind dann keine Quelle der Wahrheit.
 
 ## 4. Desktop online nutzen
 
@@ -101,6 +112,13 @@ Manuell gegen Deployment:
 - Mit zweitem Account Trade erstellen, akzeptieren, beidseitig bestaetigen.
 - Turnier erstellen, Teilnehmer einladen, Score melden, Gegner bestaetigt, Turnier abschliessen.
 - Credits/Rewards und naechste Freischaltungen pruefen.
+
+Für den Frankfurt-Cutover zusätzlich fünf warme Packöffnungen direkt
+hintereinander messen. Alle müssen erfolgreich sein und der p95 der
+API-Antwortzeit darf höchstens 3 Sekunden betragen. Kaltstarts nach
+Render-Inaktivität separat dokumentieren und nicht in diese Warmmessung mischen.
+Erst danach `API_BASE_URL` auch für Vercel Production umstellen und erneut
+deployen.
 
 ## Free-Tier-Hinweise
 

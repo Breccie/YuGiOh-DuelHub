@@ -21,3 +21,26 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
+  - type: web
+    name: yugioh-duel-hub-api-frankfurt
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npm run db:generate
+    startCommand: npm run db:migrate && node ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts
+    healthCheckPath: /ready
+    envVars:
+      - key: APP_MODE
+        value: production
+      - key: NODE_ENV
+        value: production
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 10000
+      - key: API_DATABASE_URL
+        sync: false
+      - key: COOKIE_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
