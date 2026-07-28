@@ -3,9 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { CardCatalogItem, CardOwnershipFilter } from "@ygo/contracts";
+import type {
+  CardCatalogItem,
+  CardCatalogSort,
+  CardOwnershipFilter,
+} from "@ygo/contracts";
 import { AssetIcon } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
+import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
 import { consoleNavItems } from "@/components/console-nav-items";
 import {
   ConsoleSidebarUtilityActions,
@@ -16,7 +21,9 @@ import { collectionClient } from "@/lib/collection-client";
 import { BinderOpenSpread, type BinderEntryDragPayload } from "@/components/binder-open-spread";
 import {
   binderCoverCatalog,
+  getCollectionSortLabel,
   type BinderCoverKey,
+  type CollectionSortModeValue,
 } from "@/lib/collection-showcase-config";
 import type {
   BinderEditorInventoryCardDto,
@@ -57,7 +64,16 @@ type InventoryTile = {
   key: string;
   payload: BinderEntryDragPayload | null;
   printing: BinderEditorPrintingDto | null;
+  printingCount: number;
 };
+
+function mapCollectionSortToCatalogSort(
+  sort: CollectionSortModeValue,
+): CardCatalogSort {
+  if (sort === "MOST_COPIES") return "OWNED_DESC";
+  if (sort === "NEWEST_ACQUIRED") return "NEWEST_SET";
+  return "NAME_ASC";
+}
 
 type BinderCollectionEditorProps = {
   binderId: string;
@@ -169,36 +185,15 @@ function findHoveredSlotIndex(clientX: number, clientY: number) {
 function getFreeEntryId(
   printing: BinderEditorPrintingDto,
   usedEntryIds: Set<string>,
-  activeSlotEntryId: string | null,
 ) {
-  return (
-    printing.selectableEntryIds.find((entryId) => {
-      if (!usedEntryIds.has(entryId)) {
-        return true;
-      }
-
-      return entryId === activeSlotEntryId;
-    }) ??
-    (activeSlotEntryId && printing.entryIds.includes(activeSlotEntryId)
-      ? activeSlotEntryId
-      : null)
-  );
+  return printing.selectableEntryIds.find((entryId) => !usedEntryIds.has(entryId)) ?? null;
 }
 
 function getAvailableCopies(
   printing: BinderEditorPrintingDto,
   usedEntryIds: Set<string>,
-  activeSlotEntryId: string | null,
 ) {
-  const selectableCount = printing.selectableEntryIds.filter(
-    (entryId) => !usedEntryIds.has(entryId) || entryId === activeSlotEntryId,
-  ).length;
-
-  if (activeSlotEntryId && printing.entryIds.includes(activeSlotEntryId)) {
-    return Math.max(1, selectableCount);
-  }
-
-  return selectableCount;
+  return printing.selectableEntryIds.filter((entryId) => !usedEntryIds.has(entryId)).length;
 }
 
 function buildDragPayload(
@@ -247,6 +242,20 @@ export function BinderCollectionEditor({
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryKind, setInventoryKind] = useState<EditorKindFilter>("ALL");
   const [inventoryRarity, setInventoryRarity] = useState<EditorRarityFilter>("ALL");
+  const [inventorySort, setInventorySort] = useState<CollectionSortModeValue>(
+    () => {
+      if (typeof window === "undefined") return "MOST_COPIES";
+      const savedSort = window.localStorage.getItem("binder-editor-sort-mode");
+      return savedSort === "MOST_COPIES" ||
+        savedSort === "NEWEST_ACQUIRED" ||
+        savedSort === "ALPHABETICAL" ||
+        savedSort === "RARITY"
+        ? savedSort
+        : "MOST_COPIES";
+    },
+  );
+  const [selectedPrintingByCardId, setSelectedPrintingByCardId] =
+    useState<Record<string, string>>({});
   const [ownershipFilter, setOwnershipFilter] = useState<CardOwnershipFilter>("ALL");
   const [catalogCards, setCatalogCards] = useState<CardCatalogItem[]>([]);
   const [catalogTotal, setCatalogTotal] = useState(0);
@@ -258,6 +267,10 @@ export function BinderCollectionEditor({
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogRevision, setCatalogRevision] = useState(0);
+
+  useEffect(() => {
+    window.localStorage.setItem("binder-editor-sort-mode", inventorySort);
+  }, [inventorySort]);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(
@@ -413,6 +426,7 @@ export function BinderCollectionEditor({
           ownership: ownershipFilter,
           kind: inventoryKind === "ALL" ? undefined : inventoryKind,
           rarity: inventoryRarity === "ALL" ? undefined : inventoryRarity,
+          sort: mapCollectionSortToCatalogSort(inventorySort),
           limit: 60,
         })
         .then((payload) => {
@@ -439,7 +453,15 @@ export function BinderCollectionEditor({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [catalogRevision, inventoryKind, inventoryRarity, inventorySearch, isOpen, ownershipFilter]);
+  }, [
+    catalogRevision,
+    inventoryKind,
+    inventoryRarity,
+    inventorySearch,
+    inventorySort,
+    isOpen,
+    ownershipFilter,
+  ]);
 
   useEffect(() => {
     if (!dragCandidate && !activeDrag) {
@@ -523,7 +545,6 @@ export function BinderCollectionEditor({
   const selectedSlot = activePage?.slots.find((slot) => slot.slotIndex === selectedSlotIndex) ?? null;
   const contextSlot =
     activePage?.slots.find((slot) => slot.slotIndex === slotContextMenu?.slotIndex) ?? null;
-  const activeSlotEntryId = selectedSlot?.collectionEntryId ?? null;
   const usedEntryIds = new Set(
     pages.flatMap((page) =>
       page.slots
@@ -987,6 +1008,7 @@ export function BinderCollectionEditor({
         ownership: ownershipFilter,
         kind: inventoryKind === "ALL" ? undefined : inventoryKind,
         rarity: inventoryRarity === "ALL" ? undefined : inventoryRarity,
+        sort: mapCollectionSortToCatalogSort(inventorySort),
         cursor: catalogCursor,
         limit: 60,
       });
@@ -1023,11 +1045,11 @@ export function BinderCollectionEditor({
         : lastSavedAt
           ? `Gespeichert · ${formatGermanDateTime(lastSavedAt)}`
           : "Bereit";
-  const inventoryTiles = catalogCards.flatMap<InventoryTile>((catalogCard) => {
+  const inventoryTiles = catalogCards.map<InventoryTile>((catalogCard) => {
     const inventoryCard = inventoryByCardId.get(catalogCard.cardId);
 
     if (!inventoryCard || inventoryCard.printings.length === 0) {
-      return [{
+      return {
         availableNow: 0,
         card: catalogCard,
         disabled: true,
@@ -1035,30 +1057,77 @@ export function BinderCollectionEditor({
         key: `${catalogCard.cardId}-unowned`,
         payload: null,
         printing: null,
-      }];
+        printingCount: 0,
+      };
     }
 
-    return inventoryCard.printings
-      .filter((printing) => inventoryRarity === "ALL" || printing.rarity === inventoryRarity)
-      .map((printing) => {
-        const freeEntryId = getFreeEntryId(printing, usedEntryIds, activeSlotEntryId);
-        const availableNow = getAvailableCopies(printing, usedEntryIds, activeSlotEntryId);
-        const payload = freeEntryId ? buildDragPayload(inventoryCard, printing, freeEntryId) : null;
+    const visiblePrintings = inventoryCard.printings.filter(
+      (printing) => inventoryRarity === "ALL" || printing.rarity === inventoryRarity,
+    );
+    const selectedPrinting =
+      visiblePrintings.find(
+        (printing) => printing.key === selectedPrintingByCardId[catalogCard.cardId],
+      ) ??
+      visiblePrintings.find(
+        (printing) =>
+          getAvailableCopies(printing, usedEntryIds) > 0,
+      ) ??
+      visiblePrintings[0] ??
+      null;
+    const freeEntryId = selectedPrinting
+      ? getFreeEntryId(selectedPrinting, usedEntryIds)
+      : null;
+    const availableNow = visiblePrintings.reduce(
+      (sum, printing) =>
+        sum + getAvailableCopies(printing, usedEntryIds),
+      0,
+    );
+    const payload =
+      selectedPrinting && freeEntryId
+        ? buildDragPayload(inventoryCard, selectedPrinting, freeEntryId)
+        : null;
 
-        return {
-          availableNow,
-          card: catalogCard,
-          disabled: !freeEntryId,
-          isSelected:
-            selectedCatalogCard?.cardId === catalogCard.cardId ||
-            (Boolean(payload) && stagedPayload?.collectionEntryId === payload?.collectionEntryId),
-          key: `${catalogCard.cardId}-${printing.key}`,
-          payload,
-          printing,
-        };
-      });
+    return {
+      availableNow,
+      card: catalogCard,
+      disabled: !payload,
+      isSelected:
+        selectedCatalogCard?.cardId === catalogCard.cardId ||
+        (Boolean(payload) && stagedPayload?.collectionEntryId === payload?.collectionEntryId),
+      key: catalogCard.cardId,
+      payload,
+      printing: selectedPrinting,
+      printingCount: visiblePrintings.length,
+    };
+  }).sort((left, right) => {
+    const leftInventory = inventoryByCardId.get(left.card.cardId);
+    const rightInventory = inventoryByCardId.get(right.card.cardId);
+    if (inventorySort === "MOST_COPIES") {
+      return right.card.totalCopies - left.card.totalCopies ||
+        left.card.name.localeCompare(right.card.name, "de");
+    }
+    if (inventorySort === "NEWEST_ACQUIRED") {
+      return (
+        new Date(rightInventory?.latestAcquiredAt ?? 0).getTime() -
+          new Date(leftInventory?.latestAcquiredAt ?? 0).getTime() ||
+        left.card.name.localeCompare(right.card.name, "de")
+      );
+    }
+    if (inventorySort === "RARITY") {
+      return (
+        (right.printing?.rarity ?? "").localeCompare(
+          left.printing?.rarity ?? "",
+          "de",
+        ) || left.card.name.localeCompare(right.card.name, "de")
+      );
+    }
+    return left.card.name.localeCompare(right.card.name, "de");
   });
   const inventoryCardCount = snapshot?.inventoryCards.length ?? 0;
+  const selectedCatalogAvailableCopies = selectedCatalogCard
+    ? inventoryTiles.find((tile) => tile.card.cardId === selectedCatalogCard.cardId)
+        ?.availableNow ?? 0
+    : 0;
   const totalOwnedCopies =
     snapshot?.inventoryCards.reduce((sum, card) => sum + card.totalCopies, 0) ?? 0;
   const totalBinderSlots = pages.length * 18;
@@ -1094,13 +1163,15 @@ export function BinderCollectionEditor({
 
           <nav className="pt-2">
             {consoleNavItems.map((item) => (
-              <EditorSidebarNavItem
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                iconName={item.iconName}
-                active={item.href === "/collection"}
-              />
+              <div key={item.href}>
+                <EditorSidebarNavItem
+                  href={item.href}
+                  label={item.label}
+                  iconName={item.iconName}
+                  active={item.href === "/collection"}
+                />
+                {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
+              </div>
             ))}
           </nav>
 
@@ -1453,7 +1524,7 @@ export function BinderCollectionEditor({
                               <p className="truncate text-sm font-semibold text-[#f2dfc8]">{selectedCatalogCard.name}</p>
                               <p className="mt-1 text-xs text-[#aa9780]">
                                 {selectedCatalogCard.owned
-                                  ? `${selectedCatalogCard.availableCopies} freie von ${selectedCatalogCard.totalCopies} Kopien`
+                                  ? `${selectedCatalogAvailableCopies} freie von ${selectedCatalogCard.totalCopies} Kopien`
                                   : "Nicht im Besitz · kann nicht in einen Binder gelegt werden"}
                               </p>
                               {!selectedCatalogCard.owned ? (
@@ -1467,6 +1538,83 @@ export function BinderCollectionEditor({
                               ) : null}
                             </div>
                           </div>
+                          {inventoryByCardId.get(selectedCatalogCard.cardId) ? (
+                            <div className="mt-3 space-y-1.5 border-t border-[rgba(255,255,255,0.08)] pt-3">
+                              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-[#a9957b]">
+                                Druckvariante wählen
+                              </p>
+                              {inventoryByCardId
+                                .get(selectedCatalogCard.cardId)!
+                                .printings.filter(
+                                  (printing) =>
+                                    inventoryRarity === "ALL" ||
+                                    printing.rarity === inventoryRarity,
+                                )
+                                .map((printing) => {
+                                  const available = getAvailableCopies(
+                                    printing,
+                                    usedEntryIds,
+                                  );
+                                  const freeEntryId = getFreeEntryId(
+                                    printing,
+                                    usedEntryIds,
+                                  );
+                                  const isSelected =
+                                    selectedPrintingByCardId[selectedCatalogCard.cardId] ===
+                                      printing.key ||
+                                    (!selectedPrintingByCardId[selectedCatalogCard.cardId] &&
+                                      inventoryTiles.find(
+                                        (tile) =>
+                                          tile.card.cardId === selectedCatalogCard.cardId,
+                                      )?.printing?.key === printing.key);
+
+                                  return (
+                                    <button
+                                      key={printing.key}
+                                      type="button"
+                                      disabled={!freeEntryId}
+                                      onClick={() => {
+                                        setSelectedPrintingByCardId((current) => ({
+                                          ...current,
+                                          [selectedCatalogCard.cardId]: printing.key,
+                                        }));
+                                        if (freeEntryId) {
+                                          setStagedPayload(
+                                            buildDragPayload(
+                                              inventoryByCardId.get(
+                                                selectedCatalogCard.cardId,
+                                              )!,
+                                              printing,
+                                              freeEntryId,
+                                            ),
+                                          );
+                                        }
+                                      }}
+                                      className={classNames(
+                                        "flex w-full items-center justify-between gap-3 rounded-[6px] border px-3 py-2 text-left transition",
+                                        isSelected
+                                          ? "border-[rgba(214,164,92,0.42)] bg-[rgba(150,97,33,0.16)]"
+                                          : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] hover:border-[rgba(214,164,92,0.24)]",
+                                        !freeEntryId && "cursor-not-allowed opacity-45",
+                                      )}
+                                    >
+                                      <span className="min-w-0">
+                                        <span className="block truncate text-[0.64rem] font-semibold text-[#ead9c3]">
+                                          {printing.setLabel}
+                                        </span>
+                                        <span className="mt-0.5 block text-[0.54rem] text-[#a9957b]">
+                                          {printing.setCode ?? "Ohne Setcode"} ·{" "}
+                                          {printing.rarity ?? "Ohne Seltenheit"}
+                                        </span>
+                                      </span>
+                                      <span className="shrink-0 text-[0.62rem] font-bold text-[#f3d5aa]">
+                                        {available} frei / {printing.copies}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          ) : null}
                           {wishlistFeedback ? <p className="mt-2 text-xs text-[#c9b79f]">{wishlistFeedback}</p> : null}
                         </div>
                       ) : null}
@@ -1558,6 +1706,29 @@ export function BinderCollectionEditor({
                               <option key={rarity} value={rarity}>{rarity}</option>
                             ))}
                           </select>
+                          <select
+                            value={inventorySort}
+                            onChange={(event) =>
+                              setInventorySort(
+                                event.target.value as CollectionSortModeValue,
+                              )
+                            }
+                            className="rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b0f15] px-3 py-2 text-xs font-semibold text-[#e8d6c0] outline-none"
+                            aria-label="Binder-Katalog sortieren"
+                          >
+                            {(
+                              [
+                                "MOST_COPIES",
+                                "NEWEST_ACQUIRED",
+                                "ALPHABETICAL",
+                                "RARITY",
+                              ] as const
+                            ).map((sortMode) => (
+                              <option key={sortMode} value={sortMode}>
+                                {getCollectionSortLabel(sortMode)}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -1629,6 +1800,11 @@ export function BinderCollectionEditor({
                                 <span className="absolute bottom-1 right-1 rounded-[3px] bg-[rgba(4,6,10,0.78)] px-1 py-0.5 text-[0.54rem] font-bold text-[#f5e1c8]">
                                   {tile.availableNow}x
                                 </span>
+                                {tile.printingCount > 1 ? (
+                                  <span className="absolute bottom-1 left-1 rounded-[3px] bg-[rgba(4,6,10,0.78)] px-1 py-0.5 text-[0.48rem] font-semibold text-[#d9c6ae]">
+                                    {tile.printingCount} Varianten
+                                  </span>
+                                ) : null}
                               </div>
                               <p className="pointer-events-none mt-1.5 line-clamp-1 text-[0.62rem] font-semibold leading-4 text-[#f1deca]">
                                 {tile.card.name}

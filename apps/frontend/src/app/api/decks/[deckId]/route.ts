@@ -5,6 +5,7 @@ import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy"
 import { requireViewerSession } from "@/lib/auth";
 import { deleteDeck, updateDeckMetadata } from "@/lib/deck-editor";
 import { getPrisma } from "@/lib/prisma";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +29,14 @@ export async function PATCH(
     const rawBody = await request.json().catch(() => ({}));
     const body = updateDeckRequestSchema.parse(rawBody);
     const deck = await updateDeckMetadata(prisma, session.userId, deckId, body);
+    const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
     return NextResponse.json({
       deck: {
         id: deck.id,
         name: deck.name,
+        deckBoxKey: deckBox.key,
+        deckBoxImageUrl: deckBox.imageUrl,
       },
     });
   } catch (error) {

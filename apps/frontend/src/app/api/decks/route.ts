@@ -6,6 +6,7 @@ import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy"
 import { requireViewerSession } from "@/lib/auth";
 import { createDeck } from "@/lib/deck-editor";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
@@ -119,6 +120,7 @@ export async function GET(request: Request) {
       selectedDeckId: snapshot.selectedDeckId,
       decks: deckPreviewRows.map((deck) => {
         const summary = deckSummaryById.get(deck.id);
+        const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
         return {
           id: deck.id,
@@ -132,6 +134,8 @@ export async function GET(request: Request) {
           missingCardCount: summary?.missingCardCount ?? 0,
           formatName: summary?.formatName ?? null,
           banlistName: summary?.banlistName ?? null,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
           previewImageUrl: getCardAssetUrl(
             deck.cards[0]?.card.externalCardId ?? null,
           ),
@@ -178,12 +182,15 @@ export async function POST(request: Request) {
     const rawBody = await request.json().catch(() => ({}));
     const body = createDeckRequestSchema.parse(rawBody);
     const deck = await createDeck(prisma, session.userId, body);
+    const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
     return NextResponse.json(
       {
         deck: {
           id: deck.id,
           name: deck.name,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
         },
       },
       { status: 201 },

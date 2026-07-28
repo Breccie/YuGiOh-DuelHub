@@ -9,6 +9,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getCardAssetUrl } from "@/lib/asset-urls";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
 import {
   createDeck,
   deleteDeck,
@@ -61,6 +62,8 @@ type DeckOverviewPayload = {
     missingCardCount: number;
     formatName: string | null;
     banlistName: string | null;
+    deckBoxKey: string;
+    deckBoxImageUrl: string;
     previewImageUrl: string | null;
     previewLabel: string;
   }>;
@@ -166,6 +169,7 @@ async function buildDeckOverviewPayload(
     selectedDeckId: snapshot.selectedDeckId,
     decks: deckPreviewRows.map((deck) => {
       const summary = deckSummaryById.get(deck.id);
+      const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
       return {
         id: deck.id,
@@ -179,6 +183,8 @@ async function buildDeckOverviewPayload(
         missingCardCount: summary?.missingCardCount ?? 0,
         formatName: summary?.formatName ?? null,
         banlistName: summary?.banlistName ?? null,
+        deckBoxKey: deckBox.key,
+        deckBoxImageUrl: deckBox.imageUrl,
         previewImageUrl: getCardAssetUrl(deck.cards[0]?.card.externalCardId ?? null),
         previewLabel: deck.cards[0]?.card.name ?? deck.name,
       };
@@ -214,11 +220,14 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
       const session = await requireViewerSession(request, getPrisma());
       const body = createDeckRequestSchema.parse(request.body ?? {});
       const deck = await createDeck(getSharedPrisma(), session.userId, body);
+      const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
       return reply.status(201).send({
         deck: {
           id: deck.id,
           name: deck.name,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
         },
       });
     } catch (error) {
@@ -237,11 +246,14 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
         deckId,
         body,
       );
+      const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
       return reply.send({
         deck: {
           id: deck.id,
           name: deck.name,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
         },
       });
     } catch (error) {
@@ -266,11 +278,14 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
       const session = await requireViewerSession(request, getPrisma());
       const { deckId } = request.params as { deckId: string };
       const deck = await duplicateDeck(getSharedPrisma(), session.userId, deckId);
+      const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
       return reply.status(201).send({
         deck: {
           id: deck.id,
           name: deck.name,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
         },
       });
     } catch (error) {

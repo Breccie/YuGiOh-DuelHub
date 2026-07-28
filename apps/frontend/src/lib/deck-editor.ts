@@ -1,6 +1,7 @@
 import { DeckSection, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
 import { getActiveRun } from "@/lib/run-service";
+import { defaultDeckBoxKey } from "@/lib/deckbox-config";
 
 const MAX_COPIES_PER_CARD_IDENTITY = 3;
 
@@ -76,6 +77,7 @@ export async function createDeck(
   viewerId: string,
   input: {
     name: string;
+    deckBoxKey?: string;
     banlistId?: string | null;
     snapshotDate?: string | null;
   },
@@ -106,6 +108,7 @@ export async function createDeck(
       userId: viewer.id,
       runId: activeRun.id,
       name,
+      deckBoxKey: input.deckBoxKey ?? defaultDeckBoxKey,
       formatProfileId: banlist?.formatProfileId ?? null,
       banlistId: banlist?.id ?? null,
       snapshotDate,
@@ -121,6 +124,7 @@ export async function updateDeckMetadata(
   deckId: string,
   input: {
     name: string;
+    deckBoxKey?: string;
     banlistId?: string | null;
     snapshotDate?: string | null;
   },
@@ -154,6 +158,7 @@ export async function updateDeckMetadata(
     },
     data: {
       name,
+      deckBoxKey: input.deckBoxKey ?? defaultDeckBoxKey,
       formatProfileId: banlist?.formatProfileId ?? null,
       banlistId: banlist?.id ?? null,
       snapshotDate,
@@ -234,6 +239,7 @@ export async function duplicateDeck(
       userId: viewer.id,
       runId: activeRun.id,
       name: `${sourceDeck.name} Kopie`,
+      deckBoxKey: sourceDeck.deckBoxKey,
       formatProfileId: sourceDeck.formatProfileId,
       banlistId: sourceDeck.banlistId,
       snapshotDate: sourceDeck.snapshotDate,

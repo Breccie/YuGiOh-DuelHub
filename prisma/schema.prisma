@@ -1054,6 +1054,7 @@ model Deck {
   formatProfileId              String?
   banlistId                    String?
   name                         String
+  deckBoxKey                   String            @default("inferno-vortex")
   snapshotDate                 DateTime?
   createdAt                    DateTime          @default(now())
   updatedAt                    DateTime          @updatedAt

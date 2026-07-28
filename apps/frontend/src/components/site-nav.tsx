@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
+import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
 import {
   consoleNavItems,
   isConsoleNavActive,
@@ -22,22 +23,24 @@ export function SiteNav() {
           const isActive = isConsoleNavActive(pathname, item.href);
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={classes(
-                "group relative flex items-center gap-4 border-y border-transparent px-6 py-8 text-sm uppercase tracking-[0.22em] transition",
-                isActive
-                  ? "border-y-[rgba(196,69,48,0.14)] bg-[linear-gradient(90deg,rgba(124,32,22,0.34),rgba(124,32,22,0.12),transparent)] text-[#f4ddc2]"
-                  : "text-[#baa58d] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f1deca]",
-              )}
-            >
-              {isActive ? (
-                <span className="absolute right-0 top-1/2 h-10 w-px -translate-y-1/2 bg-[#d04f36] shadow-[0_0_22px_rgba(208,79,54,0.95)]" />
-              ) : null}
-              <AssetIcon name={item.iconName} className="h-5 w-5 text-current" />
-              <span>{item.label}</span>
-            </Link>
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={classes(
+                  "group relative flex items-center gap-4 border-y border-transparent px-6 py-8 text-sm uppercase tracking-[0.22em] transition",
+                  isActive
+                    ? "border-y-[rgba(196,69,48,0.14)] bg-[linear-gradient(90deg,rgba(124,32,22,0.34),rgba(124,32,22,0.12),transparent)] text-[#f4ddc2]"
+                    : "text-[#baa58d] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f1deca]",
+                )}
+              >
+                {isActive ? (
+                  <span className="absolute right-0 top-1/2 h-10 w-px -translate-y-1/2 bg-[#d04f36] shadow-[0_0_22px_rgba(208,79,54,0.95)]" />
+                ) : null}
+                <AssetIcon name={item.iconName} className="h-5 w-5 text-current" />
+                <span>{item.label}</span>
+              </Link>
+              {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
+            </div>
           );
         })}
       </nav>
@@ -66,6 +69,11 @@ export function SiteNav() {
           );
         })}
       </nav>
+      {pathname === "/collection" || pathname.startsWith("/wishlist") ? (
+        <div className="lg:hidden">
+          <ConsoleCollectionSubNav mobile />
+        </div>
+      ) : null}
     </>
   );
 }

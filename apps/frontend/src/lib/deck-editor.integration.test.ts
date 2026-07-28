@@ -52,6 +52,7 @@ async function createDeckFixture(label: string): Promise<DeckFixture> {
       userId: user.id,
       runId: run.id,
       name: `${tag} deck`,
+      deckBoxKey: label === "duplicate" ? "void-eye" : "inferno-vortex",
     },
   });
 
@@ -179,6 +180,7 @@ describe("deck card copy limit", () => {
       expect(persisted.id).not.toBe(fixture.deckId);
       expect(persisted.runId).toBe(fixture.runId);
       expect(persisted.name).toMatch(/ Kopie$/);
+      expect(persisted.deckBoxKey).toBe("void-eye");
       expect(persisted.cards).toMatchObject([
         {
           cardId: fixture.cardId,

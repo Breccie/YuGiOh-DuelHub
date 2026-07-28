@@ -1,12 +1,53 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { FriendRequestDto } from "@/lib/app-dtos";
 
+const friendshipInclude = {
+  requester: {
+    include: {
+      sessions: {
+        orderBy: { lastSeenAt: "desc" as const },
+        take: 1,
+        select: { lastSeenAt: true, expiresAt: true },
+      },
+    },
+  },
+  addressee: {
+    include: {
+      sessions: {
+        orderBy: { lastSeenAt: "desc" as const },
+        take: 1,
+        select: { lastSeenAt: true, expiresAt: true },
+      },
+    },
+  },
+} satisfies Prisma.FriendshipInclude;
+
 type FriendshipRecord = Prisma.FriendshipGetPayload<{
-  include: {
-    requester: true;
-    addressee: true;
-  };
+  include: typeof friendshipInclude;
 }>;
+
+function getPresence(
+  friendship: FriendshipRecord,
+  user: FriendshipRecord["requester"],
+) {
+  if (friendship.status !== "ACCEPTED") {
+    return { lastSeenAt: null, isOnline: false };
+  }
+
+  const session = user.sessions[0];
+  const now = Date.now();
+  const lastSeenAt = session?.lastSeenAt ?? null;
+  const isOnline = Boolean(
+    session &&
+      session.expiresAt.getTime() > now &&
+      session.lastSeenAt.getTime() >= now - 5 * 60 * 1000,
+  );
+
+  return {
+    lastSeenAt: lastSeenAt?.toISOString() ?? null,
+    isOnline,
+  };
+}
 
 function toFriendRequestDto(friendship: FriendshipRecord): FriendRequestDto {
   return {
@@ -18,11 +59,13 @@ function toFriendRequestDto(friendship: FriendshipRecord): FriendRequestDto {
       userId: friendship.requester.id,
       duelistId: friendship.requester.duelistId,
       displayName: friendship.requester.displayName,
+      ...getPresence(friendship, friendship.requester),
     },
     addressee: {
       userId: friendship.addressee.id,
       duelistId: friendship.addressee.duelistId,
       displayName: friendship.addressee.displayName,
+      ...getPresence(friendship, friendship.addressee),
     },
   };
 }
@@ -35,10 +78,7 @@ export async function listFriendRequests(prisma: PrismaClient, viewerId: string)
     orderBy: {
       updatedAt: "desc",
     },
-    include: {
-      requester: true,
-      addressee: true,
-    },
+    include: friendshipInclude,
   });
 
   return friendships.map(toFriendRequestDto);
@@ -76,10 +116,7 @@ export async function createFriendRequest(
         },
       ],
     },
-    include: {
-      requester: true,
-      addressee: true,
-    },
+    include: friendshipInclude,
   });
 
   if (existingFriendship) {
@@ -92,10 +129,7 @@ export async function createFriendRequest(
       addresseeId: addressee.id,
       status: "PENDING",
     },
-    include: {
-      requester: true,
-      addressee: true,
-    },
+    include: friendshipInclude,
   });
 
   return toFriendRequestDto(friendship);
@@ -111,10 +145,7 @@ export async function respondToFriendRequest(
     where: {
       id: requestId,
     },
-    include: {
-      requester: true,
-      addressee: true,
-    },
+    include: friendshipInclude,
   });
 
   if (!friendship || friendship.addresseeId !== viewerId) {
@@ -141,10 +172,7 @@ export async function respondToFriendRequest(
     data: {
       status: nextStatus,
     },
-    include: {
-      requester: true,
-      addressee: true,
-    },
+    include: friendshipInclude,
   });
 
   return toFriendRequestDto(updated);

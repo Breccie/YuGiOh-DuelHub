@@ -64,3 +64,61 @@ routes:
 - Main-page and editor comparison images generated.
 
 final result: passed
+
+---
+
+**Design QA: Sammlung, Deckeditor, Duelist-Showcase und Freunde**
+
+source visual truth:
+
+- bestehende Duel-Console-Oberflächen, Typografie und Farbtokens
+- Master-Duel-Deckeditor als Strukturreferenz: linke Kartendetails, mittiges Deckraster, rechter Katalog
+- vorhandene Binder-Referenzen aus der vorherigen QA
+
+implementation screenshots:
+
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\collection-desktop.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\binder-editor-desktop.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\deck-editor-1600.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\deck-editor-mobile-current.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\profile-desktop.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\profile-mobile-fixed.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\friends-mobile.png`
+
+viewports:
+
+- Desktop: `1600x1000` und `1440x1000`
+- Mobile: `390x844`
+
+state:
+
+- authentifiziert als `YUGI-001`
+- Kampagne `test`
+- gefüllte Sammlung, vier Binder und ein Deck
+
+verified surfaces and interactions:
+
+- Wunschliste ist aus der Hauptnavigation entfernt und als gemeinsames Sammlung-Untermenü erreichbar.
+- Mobile Navigation hat eine eigene volle Zeile und überschneidet Marke oder Beschriftungen nicht.
+- Sammlung gruppiert identische Karten und öffnet die Druckvarianten mit Set, Setcode, Seltenheit und Bestand.
+- Binder-Löschdialog nennt Seiten, belegte Plätze, Showcase-Status und den unveränderten Kartenbestand.
+- Bindereditor verwendet beim Einlegen weitere freie physische Kopien; lokale Belegung wird sofort aus der Verfügbarkeit abgezogen.
+- Deckeditor besitzt auf Desktop die Referenzhierarchie Details, Deckraster und Katalog; auf Mobil bleiben Katalog, Deck und Details getrennt.
+- Linksklick fügt hinzu, Rechtsklick entfernt und der Deckstatus reagiert sofort.
+- Deckbox-Auswahl tauscht das echte Asset ohne Layoutsprung.
+- Profil zeigt echte Identität, Statistikwerte, Deckbereiche und Deckbox.
+- Freundesliste zeigt Präsenz nur für akzeptierte Freunde und verwendet eine lesbare Zeitdarstellung.
+- Kein horizontaler Overflow bei `390px`.
+
+assets:
+
+- vier transparente, eigenständige Deckbox-Assets mit passender Perspektive und Beleuchtung
+- keine Kartenbilder oder Platzhalter als Deckbox-Ersatz
+
+accepted drift:
+
+- Die Master-Duel-Referenz bestimmt Struktur und Informationsdichte; Schrift, Gold-/Glutpalette, Motive und technische Flächen bleiben bewusst Duel Console.
+- Der lokale Testnutzer hat keinen veröffentlichten Showcase-Binder. Der echte leere Besitzerzustand mit direkter Einrichtungsaktion wurde daher geprüft.
+- Die lokale Freundessession von Seto Kaiba enthält keinen letzten Aktivitätszeitpunkt; die sichtbare Darstellung ist korrekt „Zuletzt online unbekannt“, während Zeitgrenzen automatisiert getestet werden.
+
+final result: passed

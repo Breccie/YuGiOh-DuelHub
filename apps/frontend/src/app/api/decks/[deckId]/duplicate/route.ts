@@ -3,6 +3,7 @@ import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy"
 import { requireViewerSession } from "@/lib/auth";
 import { duplicateDeck } from "@/lib/deck-editor";
 import { getPrisma } from "@/lib/prisma";
+import { getDeckBoxMeta } from "@/lib/deckbox-config";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,15 @@ export async function POST(
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const deck = await duplicateDeck(prisma, session.userId, deckId);
+    const deckBox = getDeckBoxMeta(deck.deckBoxKey);
 
     return NextResponse.json(
       {
         deck: {
           id: deck.id,
           name: deck.name,
+          deckBoxKey: deckBox.key,
+          deckBoxImageUrl: deckBox.imageUrl,
         },
       },
       { status: 201 },

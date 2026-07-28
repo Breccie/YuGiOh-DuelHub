@@ -156,9 +156,11 @@ function buildCardWhere(
 
 function getOrderBy(query: CardCatalogQuery): Prisma.CardOrderByWithRelationInput[] {
   if (query.sort === "NAME_DESC") return [{ name: "desc" }, { id: "asc" }];
-  if (query.sort === "ATK_DESC") return [{ atk: "desc" }, { name: "asc" }];
+  if (query.sort === "ATK_DESC") {
+    return [{ atk: "desc" }, { name: "asc" }, { id: "asc" }];
+  }
   if (query.sort === "NEWEST_SET") {
-    return [{ setCards: { _count: "desc" } }, { name: "asc" }];
+    return [{ setCards: { _count: "desc" } }, { name: "asc" }, { id: "asc" }];
   }
 
   return [{ name: "asc" }, { id: "asc" }];

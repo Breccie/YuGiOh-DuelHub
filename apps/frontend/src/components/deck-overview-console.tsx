@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { DeckBoxKey } from "@ygo/contracts";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { ConsoleBrand } from "@/components/console-brand";
+import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
 import { consoleNavItems } from "@/components/console-nav-items";
 import {
   ConsoleGlobalStatusBar,
@@ -13,6 +15,7 @@ import {
 } from "@/components/console-shell-primitives";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { deckClient } from "@/lib/deck-client";
+import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
 import { DeckEditorConsole } from "@/components/deck-editor-console";
 import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 
@@ -38,6 +41,8 @@ type DeckOverviewConsoleProps = {
     missingCardCount: number;
     formatName: string | null;
     banlistName: string | null;
+    deckBoxKey: string;
+    deckBoxImageUrl: string;
     previewImageUrl: string | null;
     previewLabel: string;
   }>;
@@ -301,6 +306,8 @@ export function DeckOverviewConsole({
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [draftDeckName, setDraftDeckName] = useState("");
+  const [draftDeckBoxKey, setDraftDeckBoxKey] =
+    useState<DeckBoxKey>(defaultDeckBoxKey);
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const [creatorFeedback, setCreatorFeedback] = useState<string | null>(null);
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -315,17 +322,12 @@ export function DeckOverviewConsole({
     decks[0] ??
     null;
   const heroCard =
-    activeDeck?.cards[0]
+    selectedDeck
       ? {
-          imageUrl: activeDeck.cards[0].imageUrl,
-          name: activeDeck.cards[0].cardName,
+          imageUrl: selectedDeck.deckBoxImageUrl,
+          name: `${selectedDeck.name} Deckbox`,
         }
-      : selectedDeck
-        ? {
-            imageUrl: selectedDeck.previewImageUrl,
-            name: selectedDeck.previewLabel,
-          }
-        : null;
+      : null;
   const visibleDeckCards = activeDeck?.cards.slice(0, 10) ?? [];
   const formatOptions = useMemo(
     () =>
@@ -506,6 +508,7 @@ export function DeckOverviewConsole({
     try {
       const payload = await deckClient.create({
         name: trimmedName,
+        deckBoxKey: draftDeckBoxKey,
         banlistId: availableBanlists[0]?.id ?? null,
       });
 
@@ -537,13 +540,15 @@ export function DeckOverviewConsole({
 
             <nav className="hidden lg:block lg:pt-2">
               {consoleNavItems.map((item) => (
-                <SidebarNavItem
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  iconName={item.iconName}
-                  active={item.href === "/decks"}
-                />
+                <div key={item.href}>
+                  <SidebarNavItem
+                    href={item.href}
+                    label={item.label}
+                    iconName={item.iconName}
+                    active={item.href === "/decks"}
+                  />
+                  {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
+                </div>
               ))}
             </nav>
 
@@ -803,10 +808,10 @@ export function DeckOverviewConsole({
                       >
                         <div className="relative flex h-[150px] w-full items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2">
                           <CardArtwork
-                            src={deck.previewImageUrl}
+                            src={deck.deckBoxImageUrl}
                             alt={deck.name}
                             sizes="102px"
-                            fallbackLabel={deck.previewLabel}
+                            fallbackLabel="Deckbox"
                             objectFit="contain"
                           />
                         </div>
@@ -863,7 +868,7 @@ export function DeckOverviewConsole({
 
                 {creatorOpen ? (
                   <div className="mt-3 rounded-[18px] border border-[rgba(208,170,110,0.14)] bg-[rgba(255,255,255,0.025)] p-4">
-                    <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_auto_auto] lg:items-end">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_220px_auto_auto] lg:items-end">
                       <label className="block">
                         <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9f8c77]">
                           Deckname
@@ -875,6 +880,25 @@ export function DeckOverviewConsole({
                           placeholder="z.B. Chaos Control"
                           disabled={isCreatingDeck}
                         />
+                      </label>
+                      <label className="block">
+                        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9f8c77]">
+                          Deckbox
+                        </span>
+                        <select
+                          value={draftDeckBoxKey}
+                          onChange={(event) =>
+                            setDraftDeckBoxKey(event.target.value as DeckBoxKey)
+                          }
+                          className="ui-input mt-2"
+                          disabled={isCreatingDeck}
+                        >
+                          {deckBoxCatalog.map((deckBox) => (
+                            <option key={deckBox.key} value={deckBox.key}>
+                              {deckBox.name}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                       <button
                         type="button"
@@ -1051,21 +1075,21 @@ export function DeckOverviewConsole({
       </div>
 
       {showEditor ? (
-        <div className="fixed inset-0 z-50 bg-[rgba(4,6,10,0.74)] p-4 backdrop-blur-md sm:p-6">
+        <div className="fixed inset-0 z-50 bg-[#04060a]">
           <div
             ref={editorDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="deck-editor-dialog-title"
             onKeyDown={handleEditorKeyDown}
-            className="mx-auto flex h-full max-w-[1450px] flex-col rounded-[28px] border border-[rgba(255,255,255,0.10)] bg-[linear-gradient(180deg,rgba(10,13,18,0.94),rgba(7,9,13,0.98))] shadow-[0_34px_80px_rgba(0,0,0,0.48)]"
+            className="flex h-full w-full flex-col bg-[linear-gradient(180deg,rgba(10,13,18,0.98),rgba(5,7,10,1))]"
           >
             <div className="flex items-center justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] px-5 py-4 sm:px-6">
               <div>
                 <p className="text-[0.74rem] uppercase tracking-[0.22em] text-[#cb5c44]">
                   Editor
                 </p>
-                <h2 id="deck-editor-dialog-title" className="font-display inscription-text-soft mt-2 text-3xl leading-tight">
+                <h2 id="deck-editor-dialog-title" className="font-display inscription-text-soft mt-1 text-2xl leading-tight">
                   {activeDeck?.name ?? "Neues Deck"}
                 </h2>
               </div>
@@ -1081,7 +1105,7 @@ export function DeckOverviewConsole({
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-5">
+            <div className="min-h-0 flex-1 overflow-auto px-3 py-3 sm:px-4 sm:py-4">
               <DeckEditorConsole
                 key={activeDeck?.id ?? "new-deck"}
                 activeDeck={activeDeck}
