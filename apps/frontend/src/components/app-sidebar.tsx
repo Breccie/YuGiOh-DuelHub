@@ -34,10 +34,10 @@ export function AppSidebar() {
 
   return (
     <aside
-      className="app-sidebar lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[176px] lg:flex-col lg:border-r lg:border-r-[rgba(255,255,255,0.08)] lg:bg-[linear-gradient(180deg,rgba(8,11,15,0.94),rgba(5,7,10,0.98))] lg:shadow-[18px_0_46px_rgba(0,0,0,0.28)] lg:backdrop-blur-[18px]"
+      className="app-sidebar lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[208px] lg:flex-col lg:border-r lg:border-r-[rgba(255,255,255,0.08)] lg:bg-[linear-gradient(180deg,rgba(8,11,15,0.94),rgba(5,7,10,0.98))] lg:shadow-[18px_0_46px_rgba(0,0,0,0.28)] lg:backdrop-blur-[18px]"
       data-collapsed={collapsed}
     >
-      <div className="hidden items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-4 py-3 lg:flex lg:min-h-[72px] lg:px-5">
+      <div className="hidden items-center justify-between border-b border-[rgba(255,255,255,0.08)] px-4 py-3 lg:flex lg:min-h-[76px] lg:px-5">
         <div data-sidebar-brand>
           <ConsoleBrand size="sm" />
         </div>

@@ -556,12 +556,16 @@ function DeckZoneCompact({
               selectedTarget?.source === "deck" &&
               selectedTarget.cardId === card.cardId &&
               selectedTarget.section === card.section;
+            const ownedCopies = card.availableCopies + card.reservedCopies;
+            const isMissingCopy = copyIndex >= ownedCopies;
 
             return (
               <button
                 key={`${card.cardId}-${card.section}-${copyIndex}`}
                 type="button"
-                aria-label={`${card.cardName}, Kopie ${copyIndex + 1}`}
+                aria-label={`${card.cardName}, Kopie ${copyIndex + 1}${
+                  isMissingCopy ? ", nicht im Besitz" : ""
+                }`}
                 draggable={!isSubmitting}
                 onDragStart={(event) => {
                   const payload: DragCardPayload = {
@@ -599,7 +603,7 @@ function DeckZoneCompact({
                 }}
                 title="Rechtsklick entfernt eine Kopie."
                 className={classes(
-                  "relative rounded-[4px] border p-0.5 text-left transition",
+                  "group relative rounded-[4px] border p-0.5 text-left transition",
                   isSelected
                     ? "border-[#b8df28] bg-[rgba(184,223,40,0.08)] shadow-[0_0_0_1px_rgba(184,223,40,0.18)]"
                     : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(207,91,66,0.18)]",
@@ -613,14 +617,32 @@ function DeckZoneCompact({
                       fill
                       sizes="96px"
                       draggable={false}
-                      className="pointer-events-none select-none object-cover [-webkit-user-drag:none]"
+                      className={classes(
+                        "pointer-events-none select-none object-cover transition-opacity duration-150 [-webkit-user-drag:none]",
+                        isMissingCopy
+                          ? "opacity-[0.65] group-hover:opacity-[0.82] group-focus-visible:opacity-[0.82]"
+                          : "opacity-100",
+                      )}
                       unoptimized
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center px-2 text-center text-[0.6rem] font-semibold text-[#ead9c3]">
+                    <div
+                      className={classes(
+                        "flex h-full items-center justify-center px-2 text-center text-[0.6rem] font-semibold text-[#ead9c3] transition-opacity",
+                        isMissingCopy
+                          ? "opacity-[0.65] group-hover:opacity-[0.82] group-focus-visible:opacity-[0.82]"
+                          : "opacity-100",
+                      )}
+                    >
                       {card.cardName}
                     </div>
                   )}
+
+                  {isMissingCopy ? (
+                    <span className="absolute bottom-1 left-1 rounded-[3px] border border-[rgba(204,97,78,0.38)] bg-[rgba(102,31,24,0.88)] px-1 py-0.5 text-[0.48rem] font-bold uppercase text-[#ffd7cf]">
+                      Fehlt
+                    </span>
+                  ) : null}
 
                   <span
                     className={classes(
@@ -1556,9 +1578,30 @@ export function DeckEditorConsole({
           disabled={isSubmitting}
         />
 
+        <label className="hidden min-w-[190px] max-w-[260px] items-center gap-2 lg:flex">
+          <span className="shrink-0 text-xs font-semibold text-[#a9b6bd]">
+            Bannliste
+          </span>
+          <select
+            value={activeBanlistId}
+            onChange={(event) => {
+              void handleChangeActiveBanlist(event.target.value);
+            }}
+            className="ui-input min-w-0 flex-1"
+            disabled={isSubmitting}
+            aria-label="Bannliste in der Editor-Kopfzeile"
+          >
+            {availableBanlists.map((banlist) => (
+              <option key={banlist.id} value={banlist.id}>
+                {banlist.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <span
           className={classes(
-            "hidden items-center gap-1.5 text-[0.66rem] font-semibold sm:inline-flex",
+            "hidden items-center gap-1.5 text-xs font-semibold sm:inline-flex",
             activeDeck.isLegal ? "text-[#91d4d3]" : "text-[#efaaa0]",
           )}
         >
@@ -1571,7 +1614,7 @@ export function DeckEditorConsole({
           {activeDeck.isLegal ? "Spielbereit" : `${activeDeck.issues.length} Probleme`}
         </span>
 
-        <span className="ml-auto hidden text-[0.66rem] font-semibold tabular-nums text-[#8e9ca6] md:inline">
+        <span className="ml-auto hidden text-xs font-semibold tabular-nums text-[#9caab3] md:inline">
           {activeDeck.mainCount} / {activeDeck.extraCount} / {activeDeck.sideCount}
         </span>
 

@@ -51,11 +51,19 @@ export function PackSelectionLoader() {
   const router = useRouter();
   const [payload, setPayload] = useState<PackSelectionResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadingSlow, setLoadingSlow] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
     const cachedPayload = buildCachedPackSelectionPayload(readLocalSyncCache());
+    let hasResolvedPayload = Boolean(cachedPayload);
+    let freshErrorMessage: string | null = null;
+    const slowLoadingTimer = window.setTimeout(() => {
+      if (isMounted) {
+        setLoadingSlow(true);
+      }
+    }, 4_000);
 
     if (cachedPayload) {
       queueMicrotask(() => {
@@ -70,7 +78,10 @@ export function PackSelectionLoader() {
         const freshPayload = await syncClient.getPackSelection();
 
         if (isMounted) {
+          hasResolvedPayload = true;
           setPayload(freshPayload);
+          setErrorMessage(null);
+          setLoadingSlow(false);
         }
       } catch (error) {
         if (error instanceof ApiClientError && error.status === 401) {
@@ -84,16 +95,29 @@ export function PackSelectionLoader() {
         }
 
         if (isMounted) {
-          setErrorMessage(
-            getApiErrorMessage(error, "Der Pack-Katalog ist gerade nicht erreichbar."),
+          freshErrorMessage = getApiErrorMessage(
+            error,
+            "Der Pack-Katalog ist gerade nicht erreichbar.",
           );
         }
       }
     }
 
-    void loadFreshPackSelection();
-    void refreshLocalSyncCache({
+    const freshRequest = loadFreshPackSelection();
+    const cacheRequest = refreshLocalSyncCache({
       shouldContinue: () => isMounted,
+      onCacheUpdated: (cache) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const nextCachedPayload = buildCachedPackSelectionPayload(cache);
+        if (nextCachedPayload) {
+          hasResolvedPayload = true;
+          setPayload((currentPayload) => currentPayload ?? nextCachedPayload);
+          setLoadingSlow(false);
+        }
+      },
     })
       .then((cache) => {
         if (!isMounted) {
@@ -102,6 +126,7 @@ export function PackSelectionLoader() {
 
         const refreshedCachedPayload = buildCachedPackSelectionPayload(cache);
         if (refreshedCachedPayload) {
+          hasResolvedPayload = true;
           setPayload((currentPayload) => currentPayload ?? refreshedCachedPayload);
         }
       })
@@ -109,9 +134,15 @@ export function PackSelectionLoader() {
         // The pack endpoint above is authoritative. Cache refresh failures must not
         // block or replace the pack catalog.
       });
+    void Promise.allSettled([freshRequest, cacheRequest]).then(() => {
+      if (isMounted && !hasResolvedPayload && freshErrorMessage) {
+        setErrorMessage(freshErrorMessage);
+      }
+    });
 
     return () => {
       isMounted = false;
+      window.clearTimeout(slowLoadingTimer);
     };
   }, [retryCount, router]);
 
@@ -122,13 +153,27 @@ export function PackSelectionLoader() {
           message={errorMessage}
           onRetry={() => {
             setErrorMessage(null);
+            setLoadingSlow(false);
             setRetryCount((currentCount) => currentCount + 1);
           }}
         />
       );
     }
 
-    return <Loading />;
+    return (
+      <div className="relative">
+        <Loading />
+        {loadingSlow ? (
+          <div
+            className="fixed inset-x-4 bottom-24 z-[80] mx-auto max-w-lg rounded-[10px] border border-[rgba(88,163,169,0.3)] bg-[rgba(8,20,24,0.96)] px-4 py-3 text-center text-sm text-[#d5eeee] shadow-2xl backdrop-blur-xl lg:bottom-6"
+            role="status"
+          >
+            Der Pack-Katalog wird geladen. Ein schlafender Onlineserver kann beim
+            ersten Aufruf kurz anlaufen.
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return <PackSelectionConsole {...payload} />;

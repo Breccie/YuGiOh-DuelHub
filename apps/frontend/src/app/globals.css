@@ -116,8 +116,8 @@
   --ui-space-3: 12px;
   --ui-space-4: 16px;
   --ui-space-6: 24px;
-  --app-sidebar-width: 176px;
-  --app-sidebar-collapsed-width: 72px;
+  --app-sidebar-width: 208px;
+  --app-sidebar-collapsed-width: 76px;
   --font-geist-sans: "Geist";
   --font-geist-mono: "Geist Mono";
   --font-cinzel: "Cinzel";
@@ -761,12 +761,12 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 38px;
   border-radius: 7px;
   border: 1px solid transparent;
   padding: 0.5rem 0.875rem;
   font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 18px;
   letter-spacing: 0;
@@ -850,8 +850,8 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 
 .ui-icon-button {
   display: inline-grid;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 38px;
+  min-height: 38px;
   place-items: center;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -870,11 +870,11 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 }
 
 .ui-segment-button {
-  min-height: 34px;
+  min-height: 38px;
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
   font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 18px;
 }
@@ -889,7 +889,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   .ui-icon-button,
   .ui-segment-button,
   .ui-input {
-    min-height: 44px;
+    min-height: 46px;
   }
 }
 
@@ -2088,10 +2088,10 @@ html[data-graphics="low"] .pack-opening-image-shell {
 }
 
 .deck-editor-root .ui-input {
-  min-height: 2.4rem;
+  min-height: 2.5rem;
   border-radius: 0.38rem;
   padding: 0.5rem 0.65rem;
-  font-size: 0.76rem;
+  font-size: 0.84rem;
 }
 
 .deck-editor-panel {

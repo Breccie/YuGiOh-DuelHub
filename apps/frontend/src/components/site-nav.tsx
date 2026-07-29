@@ -39,7 +39,7 @@ export function SiteNav() {
               href={item.href}
               title={item.label}
               className={classes(
-                "group relative mx-2 flex min-h-[44px] items-center gap-3 rounded-[7px] border border-transparent px-3 text-[13px] font-semibold transition",
+                "group relative mx-2.5 flex min-h-[48px] items-center gap-3.5 rounded-[8px] border border-transparent px-3.5 text-[14px] font-semibold transition",
                 isActive
                   ? "border-[rgba(196,69,48,0.2)] bg-[linear-gradient(90deg,rgba(124,32,22,0.36),rgba(124,32,22,0.1))] text-[#f4ddc2]"
                   : "text-[#aa9983] hover:border-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.035)] hover:text-[#f1deca]",
@@ -48,7 +48,7 @@ export function SiteNav() {
               {isActive ? (
                 <span className="absolute -right-[9px] top-1/2 h-7 w-[2px] -translate-y-1/2 bg-[#d04f36] shadow-[0_0_18px_rgba(208,79,54,0.8)]" />
               ) : null}
-              <AssetIcon name={item.iconName} className="h-[18px] w-[18px] text-current" />
+              <AssetIcon name={item.iconName} className="h-5 w-5 text-current" />
               <span data-nav-label>{item.label}</span>
             </Link>
           );
@@ -67,7 +67,7 @@ export function SiteNav() {
               key={item.href}
               href={item.href}
               className={classes(
-                "flex min-h-[60px] flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-semibold transition",
+                "flex min-h-[64px] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-semibold transition",
                 isActive
                   ? "bg-[rgba(207,91,66,0.14)] text-[#f4d9c4]"
                   : "text-[#aa9983] hover:bg-[rgba(255,255,255,0.04)]",
@@ -82,7 +82,7 @@ export function SiteNav() {
           type="button"
           onClick={() => setMoreOpen((current) => !current)}
           className={classes(
-            "flex min-h-[60px] flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-semibold transition",
+            "flex min-h-[64px] flex-col items-center justify-center gap-1 px-1 py-2 text-xs font-semibold transition",
             moreOpen || moreIsActive
               ? "bg-[rgba(207,91,66,0.14)] text-[#f4d9c4]"
               : "text-[#aa9983]",
@@ -98,7 +98,7 @@ export function SiteNav() {
       {moreOpen ? (
         <div
           id="mobile-more-menu"
-          className="fixed inset-x-3 bottom-[72px] z-50 rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[rgba(8,11,15,0.98)] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:hidden"
+          className="fixed inset-x-3 bottom-[76px] z-50 rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[rgba(8,11,15,0.98)] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:hidden"
         >
           <div className="grid grid-cols-2 gap-2">
             {moreItems.map((item) => (
@@ -107,7 +107,7 @@ export function SiteNav() {
                 href={item.href}
                 onClick={() => setMoreOpen(false)}
                 className={classes(
-                  "flex items-center gap-3 rounded-[7px] border px-3 py-3 text-[13px] font-semibold",
+                  "flex items-center gap-3 rounded-[7px] border px-3 py-3.5 text-sm font-semibold",
                   isConsoleNavActive(pathname, item.href)
                     ? "border-[rgba(207,91,66,0.3)] bg-[rgba(151,29,20,0.2)] text-[#ffe3ca]"
                     : "border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.025)] text-[#c7b49d]",

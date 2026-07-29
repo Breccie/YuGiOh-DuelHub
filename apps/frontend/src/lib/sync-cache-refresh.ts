@@ -25,6 +25,10 @@ export async function refreshLocalSyncCache(options?: {
   forceFullDelta?: boolean;
   maxDeltaPages?: number;
   shouldContinue?: () => boolean;
+  onCacheUpdated?: (
+    cache: LocalSyncCache,
+    stage: "bootstrap" | "changes",
+  ) => void;
 }) {
   let cache = readLocalSyncCache();
   if (options?.forceFullDelta) {
@@ -49,6 +53,7 @@ export async function refreshLocalSyncCache(options?: {
 
   cache = applySyncBootstrap(bootstrap, cache);
   writeLocalSyncCache(cache);
+  options?.onCacheUpdated?.(cache, "bootstrap");
 
   const shouldStartFromBeginning = !hasCachedEntities(cache);
   let cursor = shouldStartFromBeginning ? null : previousCursor;
@@ -63,6 +68,7 @@ export async function refreshLocalSyncCache(options?: {
 
     cache = applySyncChanges(changes, cache);
     writeLocalSyncCache(cache);
+    options?.onCacheUpdated?.(cache, "changes");
     cursor = changes.cursor;
 
     if (!changes.hasMore) {
