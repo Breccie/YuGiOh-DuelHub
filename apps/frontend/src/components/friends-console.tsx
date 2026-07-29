@@ -89,6 +89,8 @@ export function FriendsConsole() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<FriendAction | null>(null);
   const [presenceClock, setPresenceClock] = useState(() => Date.now());
+  const [friendTab, setFriendTab] = useState<"ONLINE" | "ALL" | "PENDING">("ALL");
+  const [friendQuery, setFriendQuery] = useState("");
 
   const activeRun =
     payload.runs.find((run) => run.id === payload.activeRunId) ??
@@ -112,6 +114,18 @@ export function FriendsConsole() {
       request.status === "PENDING" &&
       request.requester.userId === payload.session.userId,
   );
+  const visibleFriends = useMemo(() => {
+    const normalizedQuery = friendQuery.trim().toLocaleLowerCase("de");
+    return acceptedFriends.filter((friend) => {
+      if (friendTab === "ONLINE" && !friend.isOnline) return false;
+      return (
+        !normalizedQuery ||
+        `${friend.displayName} ${friend.duelistId}`
+          .toLocaleLowerCase("de")
+          .includes(normalizedQuery)
+      );
+    });
+  }, [acceptedFriends, friendQuery, friendTab]);
 
   async function refresh() {
     const [sessionPayload, friendsPayload, runsPayload] = await Promise.all([
@@ -286,7 +300,142 @@ export function FriendsConsole() {
         },
       ]}
     >
-      <div className="space-y-6">
+      <div className="grid gap-3">
+        <Panel className="p-3 sm:p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-[#cb5c44]">
+                Kontakte
+              </p>
+              <h1 className="mt-1 text-xl font-semibold text-[#f1e3d2]">
+                Freunde
+              </h1>
+            </div>
+
+            <form onSubmit={handleAddFriend} className="flex min-w-0 gap-2 xl:w-[420px]">
+              <input
+                className="ui-input min-w-0 flex-1"
+                value={duelistId}
+                onChange={(event) => setDuelistId(event.target.value)}
+                placeholder="Duelist-ID hinzufügen"
+                aria-label="Duelist-ID hinzufügen"
+              />
+              <button
+                type="submit"
+                className="ui-button-primary min-h-[42px] shrink-0 px-3"
+                disabled={pendingAction === "add"}
+              >
+                {pendingAction === "add" ? "Sendet…" : "Hinzufügen"}
+              </button>
+            </form>
+          </div>
+
+          {feedback ? (
+            <div className="mt-3 rounded-[7px] border border-[rgba(208,170,110,0.18)] bg-[rgba(208,170,110,0.08)] px-3 py-2 text-xs text-[#f0dfcc]">
+              {feedback}
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex flex-col gap-2 border-t border-[rgba(255,255,255,0.08)] pt-3 lg:flex-row lg:items-center">
+            <div className="inline-flex rounded-[7px] border border-[rgba(255,255,255,0.08)] bg-[#080c12] p-1">
+              {([
+                ["ONLINE", `Online ${acceptedFriends.filter((friend) => friend.isOnline).length}`],
+                ["ALL", `Alle ${acceptedFriends.length}`],
+                ["PENDING", `Ausstehend ${incomingRequests.length + outgoingRequests.length}`],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={friendTab === value}
+                  onClick={() => setFriendTab(value)}
+                  className={
+                    friendTab === value
+                      ? "rounded-[5px] bg-[rgba(207,91,66,0.2)] px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-[#ffe2d3]"
+                      : "rounded-[5px] px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-[#9f8f7d] hover:text-[#ead9c6]"
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {friendTab !== "PENDING" ? (
+              <label className="flex min-h-[38px] min-w-0 flex-1 items-center gap-2 rounded-[6px] border border-[rgba(255,255,255,0.09)] bg-[rgba(255,255,255,0.025)] px-3 lg:ml-auto lg:max-w-[360px]">
+                <AssetIcon name="search" className="h-4 w-4 text-[#887966]" />
+                <input
+                  value={friendQuery}
+                  onChange={(event) => setFriendQuery(event.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[#786d60]"
+                  placeholder="Freunde suchen"
+                />
+              </label>
+            ) : null}
+          </div>
+        </Panel>
+
+        {friendTab === "PENDING" ? (
+          <div className="grid gap-3 xl:grid-cols-2">
+            <Panel kicker="Eingang" title={`Eingehend · ${incomingRequests.length}`} className="p-4">
+              <div className="grid gap-2">
+                {incomingRequests.map((request) => (
+                  <article key={request.id} className="flex flex-wrap items-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[#f0dfcc]">{request.requester.displayName}</p>
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#8f806e]">{request.requester.duelistId}</p>
+                    </div>
+                    <button type="button" className="ui-button-primary min-h-[36px] px-3 py-2 text-xs" onClick={() => void handleDecision(request.id, "accept")} disabled={pendingAction === `accept:${request.id}`}>Annehmen</button>
+                    <button type="button" className="ui-button-neutral min-h-[36px] px-3 py-2 text-xs" onClick={() => void handleDecision(request.id, "decline")} disabled={pendingAction === `decline:${request.id}`}>Ablehnen</button>
+                  </article>
+                ))}
+                {incomingRequests.length === 0 ? <div className="ui-empty rounded-[8px] px-4 py-6 text-sm">Keine eingehenden Anfragen.</div> : null}
+              </div>
+            </Panel>
+
+            <Panel kicker="Ausgang" title={`Gesendet · ${outgoingRequests.length}`} className="p-4">
+              <div className="grid gap-2">
+                {outgoingRequests.map((request) => (
+                  <article key={request.id} className="flex items-center justify-between gap-3 rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-[#f0dfcc]">{request.addressee.displayName}</p>
+                      <p className="text-xs uppercase tracking-[0.12em] text-[#8f806e]">{request.addressee.duelistId}</p>
+                    </div>
+                    <StatusPill tone="slate">Ausstehend</StatusPill>
+                  </article>
+                ))}
+                {outgoingRequests.length === 0 ? <div className="ui-empty rounded-[8px] px-4 py-6 text-sm">Keine gesendeten Anfragen.</div> : null}
+              </div>
+            </Panel>
+          </div>
+        ) : (
+          <Panel className="overflow-hidden p-0">
+            <div className="divide-y divide-[rgba(255,255,255,0.07)]">
+              {visibleFriends.map((friend) => (
+                <article key={friend.userId} className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className={friend.isOnline ? "h-2.5 w-2.5 shrink-0 rounded-full bg-[#55d6ab] shadow-[0_0_12px_rgba(85,214,171,0.72)]" : "h-2.5 w-2.5 shrink-0 rounded-full bg-[#665d53]"} />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-[#f0dfcc]">{friend.displayName}</p>
+                      <p className="truncate text-xs text-[#958674]">{friend.duelistId} · {formatPresence(friend, presenceClock)}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <button type="button" className="ui-button-neutral min-h-[34px] px-3 py-1.5 text-[0.66rem]" onClick={() => void inviteToCampaign(friend)} disabled={pendingAction === `invite:${friend.userId}`}>Kampagne</button>
+                    <button type="button" className="ui-button-secondary min-h-[34px] px-3 py-1.5 text-[0.66rem]" onClick={() => void createDuelInvite(friend)} disabled={pendingAction === `duel:${friend.userId}`}>Duell</button>
+                    <button type="button" className="ui-button-neutral min-h-[34px] px-3 py-1.5 text-[0.66rem]" onClick={() => openTrade(friend)}>Tauschen</button>
+                  </div>
+                </article>
+              ))}
+              {visibleFriends.length === 0 ? (
+                <div className="ui-empty m-4 rounded-[8px] px-4 py-8 text-center text-sm">
+                  {friendTab === "ONLINE" ? "Gerade ist niemand online." : "Keine Freunde gefunden."}
+                </div>
+              ) : null}
+            </div>
+          </Panel>
+        )}
+      </div>
+
+      <div className="hidden">
         <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
           <Panel kicker="Kontakte" title="Freunde">
             <form onSubmit={handleAddFriend} className="grid gap-3 md:grid-cols-[1fr_auto]">

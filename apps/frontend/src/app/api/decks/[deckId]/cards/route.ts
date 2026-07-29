@@ -7,6 +7,7 @@ import { z } from "zod";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireViewerSession } from "@/lib/auth";
 import { removeDeckCard, upsertDeckCard } from "@/lib/deck-editor";
+import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +32,16 @@ export async function POST(
     const rawBody = await request.json().catch(() => ({}));
     const body = upsertDeckCardRequestSchema.parse(rawBody);
     const deckCard = await upsertDeckCard(prisma, session.userId, deckId, body);
+    const snapshot = await getDeckLegalitySnapshot({
+      viewerId: session.userId,
+      deckId,
+    });
 
     return NextResponse.json({
       deckCard: {
         id: deckCard.id,
       },
+      activeDeck: snapshot.activeDeck,
     });
   } catch (error) {
     const status =
@@ -77,9 +83,14 @@ export async function DELETE(
     const rawBody = await request.json().catch(() => ({}));
     const body = removeDeckCardRequestSchema.parse(rawBody);
     await removeDeckCard(prisma, session.userId, deckId, body);
+    const snapshot = await getDeckLegalitySnapshot({
+      viewerId: session.userId,
+      deckId,
+    });
 
     return NextResponse.json({
       ok: true,
+      activeDeck: snapshot.activeDeck,
     });
   } catch (error) {
     const status =

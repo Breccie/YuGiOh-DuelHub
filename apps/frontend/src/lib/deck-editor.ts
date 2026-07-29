@@ -410,3 +410,121 @@ export async function removeDeckCard(
     },
   });
 }
+
+export async function moveDeckCard(
+  prisma: PrismaClient,
+  viewerId: string,
+  deckId: string,
+  input: {
+    cardId: string;
+    fromSection: DeckSection;
+    toSection: DeckSection;
+    quantity: number;
+  },
+) {
+  if (input.fromSection === input.toSection) {
+    throw new DomainError({
+      code: "deck_card_move_same_section",
+      message: "Quelle und Ziel der Kartenverschiebung sind identisch.",
+      status: 400,
+    });
+  }
+
+  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > 3) {
+    throw new DomainError({
+      code: "deck_card_move_quantity_invalid",
+      message: "Es können zwischen einer und drei Kopien verschoben werden.",
+      status: 400,
+    });
+  }
+
+  const viewer = await prisma.user.findUnique({ where: { id: viewerId } });
+  if (!viewer) {
+    throw new DomainError({
+      code: "viewer_not_found",
+      message: "Spielerprofil wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+
+  const activeRun = await getActiveRun(prisma, viewer.id);
+
+  return prisma.$transaction(async (tx) => {
+    const lockedDeck = await tx.deck.updateMany({
+      where: {
+        id: deckId,
+        userId: viewer.id,
+        runId: activeRun.id,
+      },
+      data: { updatedAt: new Date() },
+    });
+
+    if (lockedDeck.count !== 1) {
+      throw new DomainError({
+        code: "deck_not_found",
+        message: "Deck wurde nicht gefunden.",
+        status: 404,
+      });
+    }
+
+    const [source, target] = await Promise.all([
+      tx.deckCard.findUnique({
+        where: {
+          deckId_cardId_section: {
+            deckId,
+            cardId: input.cardId,
+            section: input.fromSection,
+          },
+        },
+      }),
+      tx.deckCard.findUnique({
+        where: {
+          deckId_cardId_section: {
+            deckId,
+            cardId: input.cardId,
+            section: input.toSection,
+          },
+        },
+      }),
+    ]);
+
+    if (!source || source.quantity < input.quantity) {
+      throw new DomainError({
+        code: "deck_card_move_source_missing",
+        message: "Im Quellbereich sind nicht genügend Kopien vorhanden.",
+        status: 409,
+      });
+    }
+
+    const nextTargetQuantity = (target?.quantity ?? 0) + input.quantity;
+    if (nextTargetQuantity > MAX_COPIES_PER_CARD_IDENTITY) {
+      throw deckCopyLimitError(input.cardId, nextTargetQuantity);
+    }
+
+    if (source.quantity === input.quantity) {
+      await tx.deckCard.delete({ where: { id: source.id } });
+    } else {
+      await tx.deckCard.update({
+        where: { id: source.id },
+        data: { quantity: source.quantity - input.quantity },
+      });
+    }
+
+    return tx.deckCard.upsert({
+      where: {
+        deckId_cardId_section: {
+          deckId,
+          cardId: input.cardId,
+          section: input.toSection,
+        },
+      },
+      update: { quantity: nextTargetQuantity },
+      create: {
+        deckId,
+        cardId: input.cardId,
+        section: input.toSection,
+        quantity: input.quantity,
+      },
+    });
+  });
+}

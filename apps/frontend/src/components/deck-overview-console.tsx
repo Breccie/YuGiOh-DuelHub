@@ -2,21 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DeckBoxKey } from "@ygo/contracts";
+import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
-import { ConsoleBrand } from "@/components/console-brand";
-import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
-import { consoleNavItems } from "@/components/console-nav-items";
-import {
-  ConsoleGlobalStatusBar,
-  ConsoleSidebarUtilityActions,
-} from "@/components/console-shell-primitives";
+import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { deckClient } from "@/lib/deck-client";
 import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
-import { DeckEditorConsole } from "@/components/deck-editor-console";
 import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 
 type DeckOverviewConsoleProps = {
@@ -88,36 +82,6 @@ function getErrataPolicyLabel(
   }
 
   return "Errata-Sperre";
-}
-
-function SidebarNavItem({
-  href,
-  label,
-  active,
-  iconName,
-}: {
-  href: string;
-  label: string;
-  active?: boolean;
-  iconName: AssetIconName;
-}) {
-  return (
-    <Link
-      href={href}
-      className={classes(
-        "group relative flex items-center gap-4 border-y border-transparent px-6 py-8 text-sm uppercase tracking-[0.22em] transition",
-        active
-          ? "border-y-[rgba(196,69,48,0.14)] bg-[linear-gradient(90deg,rgba(124,32,22,0.34),rgba(124,32,22,0.12),transparent)] text-[#f4ddc2]"
-          : "text-[#baa58d] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f1deca]",
-      )}
-    >
-      {active ? (
-        <span className="absolute right-0 top-1/2 h-10 w-px -translate-y-1/2 bg-[#d04f36] shadow-[0_0_22px_rgba(208,79,54,0.95)]" />
-      ) : null}
-      <AssetIcon name={iconName} className="h-5 w-5 text-current" />
-      <span>{label}</span>
-    </Link>
-  );
 }
 
 function Panel({
@@ -204,87 +168,6 @@ function DeckCount({
   );
 }
 
-function FeaturedDeckCard({
-  title,
-  previewImageUrl,
-  previewLabel,
-  legal,
-  mainCount,
-  extraCount,
-  sideCount,
-}: {
-  title: string;
-  previewImageUrl: string | null;
-  previewLabel: string;
-  legal: boolean;
-  mainCount: number;
-  extraCount: number;
-  sideCount: number;
-}) {
-  return (
-    <div className="relative mx-auto w-full max-w-[332px] xl:mx-0">
-      <div className="pointer-events-none absolute inset-x-[14%] bottom-[-12px] h-20 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(208,86,63,0.2),transparent_72%)] blur-2xl" />
-      <div className="relative overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(180deg,rgba(11,14,19,0.9),rgba(8,10,14,0.96))] p-4 shadow-[0_30px_60px_rgba(0,0,0,0.42)]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(207,91,66,0.12),transparent_42%)]" />
-        <div className="relative flex items-center justify-between gap-3 px-1 pb-3">
-          <div>
-            <p className="text-[0.66rem] uppercase tracking-[0.2em] text-[#9f8c77]">
-              Aktives Deck
-            </p>
-            <p className="mt-1 text-sm font-semibold uppercase tracking-[0.08em] text-[#f0dfcc]">
-              {title}
-            </p>
-          </div>
-          <span
-            className={classes(
-              "inline-flex items-center rounded-full border px-3 py-1 text-[0.66rem] font-semibold uppercase tracking-[0.18em]",
-              legal
-                ? "border-[rgba(88,163,169,0.22)] bg-[rgba(58,118,124,0.12)] text-[#b8e3e4]"
-                : "border-[rgba(207,91,66,0.28)] bg-[rgba(126,23,15,0.18)] text-[#ffd7c9]",
-            )}
-          >
-            {legal ? "Legal" : "Prüfen"}
-          </span>
-        </div>
-
-        <div className="relative overflow-hidden rounded-[24px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(23,29,38,0.96),rgba(11,16,22,0.98))]">
-          <div className="absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent)]" />
-          <div className="relative aspect-[61/90]">
-            <CardArtwork
-              src={previewImageUrl}
-              alt={previewLabel}
-              sizes="332px"
-              fallbackLabel={previewLabel}
-              objectFit="cover"
-            />
-          </div>
-        </div>
-
-        <div className="relative mt-4 grid grid-cols-3 gap-3">
-          <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-3 text-center">
-            <p className="text-lg font-semibold text-[#f0dfcc]">{mainCount}</p>
-            <p className="mt-1 text-[0.66rem] uppercase tracking-[0.18em] text-[#9d8a75]">
-              Main
-            </p>
-          </div>
-          <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-3 text-center">
-            <p className="text-lg font-semibold text-[#eadbff]">{extraCount}</p>
-            <p className="mt-1 text-[0.66rem] uppercase tracking-[0.18em] text-[#9d8a75]">
-              Extra
-            </p>
-          </div>
-          <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-3 text-center">
-            <p className="text-lg font-semibold text-[#d6e2ff]">{sideCount}</p>
-            <p className="mt-1 text-[0.66rem] uppercase tracking-[0.18em] text-[#9d8a75]">
-              Side
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function DeckOverviewConsole({
   viewer,
   collectionProgress,
@@ -293,14 +176,8 @@ export function DeckOverviewConsole({
   recentCollectionCards,
   activeDeck,
   availableBanlists,
-  collectionCards,
 }: DeckOverviewConsoleProps) {
   const router = useRouter();
-  const libraryRowRef = useRef<HTMLDivElement | null>(null);
-  const editorDialogRef = useRef<HTMLDivElement | null>(null);
-  const editorCloseRef = useRef<HTMLButtonElement | null>(null);
-  const editorTriggerRef = useRef<HTMLElement | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
@@ -371,54 +248,8 @@ export function DeckOverviewConsole({
     );
   }, [decks, libraryBanlist, libraryFormat, libraryQuery, librarySort, libraryStatus]);
 
-  useEffect(() => {
-    if (!showEditor) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    editorCloseRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [showEditor]);
-
-  function openEditor(event: React.MouseEvent<HTMLElement>) {
-    editorTriggerRef.current = event.currentTarget;
-    setShowEditor(true);
-  }
-
-  function closeEditor() {
-    setShowEditor(false);
-    window.setTimeout(() => editorTriggerRef.current?.focus(), 0);
-  }
-
-  function handleEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeEditor();
-      return;
-    }
-    if (event.key !== "Tab") return;
-
-    const focusable = [...(editorDialogRef.current?.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    ) ?? [])].filter((element) => !element.hasAttribute("hidden"));
-    if (focusable.length === 0) return;
-    const first = focusable[0]!;
-    const last = focusable.at(-1)!;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
-
-  function scrollLibrary(direction: "left" | "right") {
-    libraryRowRef.current?.scrollBy({
-      left: direction === "left" ? -320 : 320,
-      behavior: "smooth",
-    });
+  function openEditor() {
+    router.push(activeDeck ? `/decks/${activeDeck.id}/edit` : "/decks/new");
   }
 
   async function handleExportDeck() {
@@ -531,59 +362,14 @@ export function DeckOverviewConsole({
     <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
       <div className="app-background" />
 
-      <div className="relative z-10 flex min-h-screen flex-col lg:block" inert={showEditor} aria-hidden={showEditor}>
-        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-0 lg:py-0">
-            <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-6 lg:pb-8 lg:pt-6">
-              <ConsoleBrand size="sm" />
-            </div>
+      <div className="relative z-10 flex min-h-screen flex-col lg:block">
+        <AppSidebar />
 
-            <nav className="hidden lg:block lg:pt-2">
-              {consoleNavItems.map((item) => (
-                <div key={item.href}>
-                  <SidebarNavItem
-                    href={item.href}
-                    label={item.label}
-                    iconName={item.iconName}
-                    active={item.href === "/decks"}
-                  />
-                  {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
-                </div>
-              ))}
-            </nav>
-
-            <ConsoleSidebarUtilityActions />
-          </div>
-
-          <nav
-            className="grid border-t border-[rgba(255,255,255,0.08)] lg:hidden"
-            style={{ gridTemplateColumns: `repeat(${consoleNavItems.length}, minmax(0, 1fr))` }}
-          >
-            {consoleNavItems.map((item) => {
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={classes(
-                    "flex flex-col items-center gap-2 px-1 py-3 text-[0.58rem] uppercase tracking-[0.16em] transition",
-                    item.href === "/decks"
-                      ? "bg-[rgba(207,91,66,0.14)] text-[#f4d9c4]"
-                      : "text-[#aa9983] hover:bg-[rgba(255,255,255,0.04)]",
-                  )}
-                >
-                  <AssetIcon name={item.iconName} className="h-5 w-5 text-current" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <section className="relative xl:min-h-[420px]">
+        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
+          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
+            <section className="relative">
               <div className="relative">
-                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
                   <ConsoleGlobalStatusBar
                     viewer={{ displayName: viewer.displayName }}
                     fallback={{
@@ -593,103 +379,56 @@ export function DeckOverviewConsole({
                 </div>
               </div>
 
-              <div className="relative mt-5 grid gap-8 xl:grid-cols-[300px_520px_minmax(0,1fr)] xl:items-end">
-                <div className="xl:self-end">
-                  {heroCard ? (
-                    <FeaturedDeckCard
-                      title={activeDeck?.name ?? heroCard.name}
-                      previewImageUrl={heroCard.imageUrl}
-                      previewLabel={heroCard.name}
-                      legal={activeDeck?.isLegal ?? true}
-                      mainCount={activeDeck?.mainCount ?? selectedDeck?.mainCount ?? 0}
-                      extraCount={activeDeck?.extraCount ?? selectedDeck?.extraCount ?? 0}
-                      sideCount={activeDeck?.sideCount ?? selectedDeck?.sideCount ?? 0}
+              <div className="mt-3 flex flex-col gap-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,12,18,0.78)] p-3 sm:flex-row sm:items-center">
+                {heroCard ? (
+                  <div className="relative h-[76px] w-[58px] shrink-0 overflow-hidden rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b1119]">
+                    <CardArtwork
+                      src={heroCard.imageUrl}
+                      alt={heroCard.name}
+                      sizes="58px"
+                      fallbackLabel="Deckbox"
+                      objectFit="contain"
                     />
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
 
-                <div className="max-w-[520px]">
-                  <p className="text-[0.8rem] uppercase tracking-[0.26em] text-[#cb5c44]">
-                    Aktives Deck
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#cb5c44]">
+                    Deckbibliothek
                   </p>
-                  <h1 className="font-display inscription-text mt-3 text-4xl leading-[0.92] uppercase tracking-[0.025em] sm:text-5xl xl:text-[4rem]">
-                    {activeDeck?.name ?? "Kein Deck"}
+                  <h1 className="truncate text-xl font-semibold text-[#f2e7da] sm:text-2xl">
+                    {activeDeck?.name ?? "Deine Decks"}
                   </h1>
-
-                  <div className="mt-6 flex flex-wrap gap-7 text-sm text-[#d9c6ad]">
-                    <div className="flex items-center gap-2">
-                      <AssetIcon name="clock" className="h-4 w-4 text-[#c7ae8d]" />
-                      <span>{activeDeck ? formatGermanDateUtc(activeDeck.snapshotDate) : "—"}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <AssetIcon name="book" className="h-4 w-4 text-[#c7ae8d]" />
-                      <span>{activeDeck?.cardCount ?? 0} Karten</span>
-                    </div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#9f8f7d]">
+                    <span>{activeDeck ? formatGermanDateUtc(activeDeck.snapshotDate) : "Noch kein aktives Deck"}</span>
+                    <span>{activeDeck?.cardCount ?? 0} Karten</span>
+                    <span className={activeDeck?.isLegal ? "text-[#9cd4cf]" : "text-[#e7a08f]"}>
+                      {activeDeck?.isLegal ? "Spielbereit" : "Entwurf"}
+                    </span>
                   </div>
-
-                  <div className="mt-7 flex max-w-[320px] flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={openEditor}
-                      className="flex min-h-[56px] items-center justify-center gap-3 rounded-[4px] border border-[rgba(193,68,44,0.56)] bg-[linear-gradient(180deg,rgba(151,29,20,0.94),rgba(95,14,9,0.96))] px-5 text-base font-semibold uppercase tracking-[0.14em] text-[#fff0e1] shadow-[0_0_32px_rgba(151,29,20,0.28)] transition hover:brightness-110"
-                    >
-                      <span>Deck bearbeiten</span>
-                      <AssetIcon name="nav-packs" className="h-5 w-5 text-current" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleExportDeck}
-                      disabled={!activeDeck || !activeDeck.isLegal || isExporting}
-                      className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(88,163,169,0.26)] bg-[rgba(58,118,124,0.14)] px-5 text-sm uppercase tracking-[0.18em] text-[#c5eef0] transition hover:bg-[rgba(58,118,124,0.22)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <span>
-                        {isExporting
-                          ? "Exportiert..."
-                          : activeDeck?.isLegal
-                            ? "Als .ydk exportieren"
-                            : "Entwurf nicht exportierbar"}
-                      </span>
-                      <AssetIcon name="copy" className="h-4 w-4 text-current" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => void handleDuplicateDeck()}
-                      disabled={!activeDeck || isDuplicating}
-                      className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(208,170,110,0.24)] bg-[rgba(208,170,110,0.08)] px-5 text-sm uppercase tracking-[0.18em] text-[#ead5b8] transition hover:bg-[rgba(208,170,110,0.14)] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <span>{isDuplicating ? "Dupliziert..." : "Deck duplizieren"}</span>
-                      <AssetIcon name="copy" className="h-4 w-4 text-current" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        document.getElementById("deck-library")?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        });
-                      }}
-                      className="flex min-h-[48px] items-center justify-center gap-3 rounded-[8px] border border-[rgba(255,255,255,0.12)] bg-[rgba(13,16,21,0.88)] px-5 text-sm uppercase tracking-[0.18em] text-[#ceb99f] transition hover:border-[rgba(202,80,59,0.28)] hover:text-[#f2dfcb]"
-                    >
-                      <span>Deck wählen</span>
-                      <AssetIcon name="grid" className="h-4 w-4 text-current" />
-                    </button>
-                  </div>
-
-                  {exportFeedback ? (
-                    <div className="mt-3 max-w-[320px] rounded-[14px] border border-[rgba(207,91,66,0.24)] bg-[rgba(126,23,15,0.16)] px-4 py-3 text-sm text-[#ffd7c9]">
-                      {exportFeedback}
-                    </div>
-                  ) : null}
                 </div>
 
-                <div className="hidden xl:block" />
+                <div className="flex flex-wrap gap-2 sm:justify-end">
+                  <button type="button" onClick={openEditor} className="ui-button-primary min-h-[38px] px-3 py-2 text-[0.68rem]">
+                    {activeDeck ? "Bearbeiten" : "Neues Deck"}
+                  </button>
+                  <button type="button" onClick={() => void handleDuplicateDeck()} disabled={!activeDeck || isDuplicating} className="ui-button-neutral min-h-[38px] px-3 py-2 text-[0.68rem] disabled:opacity-50">
+                    {isDuplicating ? "Dupliziert…" : "Duplizieren"}
+                  </button>
+                  <button type="button" onClick={handleExportDeck} disabled={!activeDeck || !activeDeck.isLegal || isExporting} className="ui-button-secondary min-h-[38px] px-3 py-2 text-[0.68rem] disabled:opacity-50">
+                    {isExporting ? "Exportiert…" : "Export"}
+                  </button>
+                </div>
               </div>
+
+              {exportFeedback ? (
+                <div className="mt-2 rounded-[8px] border border-[rgba(207,91,66,0.24)] bg-[rgba(126,23,15,0.16)] px-3 py-2 text-xs text-[#ffd7c9]">
+                  {exportFeedback}
+                </div>
+              ) : null}
             </section>
 
-            <section className="mt-2 grid gap-4 xl:grid-cols-[minmax(0,1fr)_392px] xl:grid-rows-[auto_auto]">
+            <section className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1fr)_392px] xl:grid-rows-[auto_auto]">
               <Panel className="p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm uppercase tracking-[0.24em] text-[#cb5c44]">
@@ -698,24 +437,8 @@ export function DeckOverviewConsole({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => scrollLibrary("left")}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#c9b79f] transition hover:border-[rgba(207,91,66,0.26)] hover:text-[#f2dfcb]"
-                      aria-label="Deckreihe nach links scrollen"
-                    >
-                      <AssetIcon name="chevron-left" className="h-4 w-4 text-current" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollLibrary("right")}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#c9b79f] transition hover:border-[rgba(207,91,66,0.26)] hover:text-[#f2dfcb]"
-                      aria-label="Deckreihe nach rechts scrollen"
-                    >
-                      <AssetIcon name="chevron-right" className="h-4 w-4 text-current" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCreatorOpen(true)}
-                      className="ml-2 inline-flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-[#b19b84] transition hover:text-[#f0ddc8]"
+                      onClick={() => router.push("/decks/new")}
+                      className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-[#b19b84] transition hover:text-[#f0ddc8]"
                     >
                       <span>Neues Deck</span>
                       <AssetIcon name="plus" className="h-4 w-4 text-current" />
@@ -788,8 +511,7 @@ export function DeckOverviewConsole({
 
                 <div
                   id="deck-library"
-                  ref={libraryRowRef}
-                  className="no-scrollbar mt-4 flex gap-3 overflow-x-auto pb-3"
+                  className="mt-4 grid grid-cols-2 gap-2 pb-3 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-7"
                 >
                   {filteredDecks.map((deck) => {
                     const selected = deck.id === selectedDeck?.id;
@@ -800,7 +522,7 @@ export function DeckOverviewConsole({
                         type="button"
                         onClick={() => router.push(`/decks?deck=${deck.id}`)}
                         className={classes(
-                          "group relative flex w-[122px] shrink-0 flex-col rounded-[16px] border p-2 text-left transition",
+                          "group relative flex min-w-0 flex-col rounded-[10px] border p-2 text-left transition",
                           selected
                             ? "border-[rgba(207,91,66,0.48)] bg-[rgba(207,91,66,0.08)] shadow-[0_0_0_1px_rgba(207,91,66,0.16)]"
                             : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.16)]",
@@ -852,7 +574,7 @@ export function DeckOverviewConsole({
                   <button
                     type="button"
                     onClick={() => setCreatorOpen(true)}
-                    className="group relative flex w-[122px] shrink-0 flex-col items-center justify-center rounded-[16px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(255,255,255,0.025)] p-2 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
+                    className="group relative flex min-w-0 flex-col items-center justify-center rounded-[10px] border border-dashed border-[rgba(208,170,110,0.28)] bg-[rgba(255,255,255,0.025)] p-2 text-[#d9c4aa] transition hover:border-[rgba(207,91,66,0.42)] hover:bg-[rgba(207,91,66,0.08)] hover:text-[#f4dfc9]"
                     aria-label="Neues Deck erstellen"
                   >
                     <div className="flex h-[150px] w-full items-center justify-center rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.9),rgba(10,12,16,0.96))]">
@@ -1074,48 +796,6 @@ export function DeckOverviewConsole({
         </main>
       </div>
 
-      {showEditor ? (
-        <div className="fixed inset-0 z-50 bg-[#04060a]">
-          <div
-            ref={editorDialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="deck-editor-dialog-title"
-            onKeyDown={handleEditorKeyDown}
-            className="flex h-full w-full flex-col bg-[linear-gradient(180deg,rgba(10,13,18,0.98),rgba(5,7,10,1))]"
-          >
-            <div className="flex items-center justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] px-5 py-4 sm:px-6">
-              <div>
-                <p className="text-[0.74rem] uppercase tracking-[0.22em] text-[#cb5c44]">
-                  Editor
-                </p>
-                <h2 id="deck-editor-dialog-title" className="font-display inscription-text-soft mt-1 text-2xl leading-tight">
-                  {activeDeck?.name ?? "Neues Deck"}
-                </h2>
-              </div>
-
-              <button
-                ref={editorCloseRef}
-                type="button"
-                onClick={closeEditor}
-                className="grid h-10 w-10 place-items-center rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#d9c5ac] transition hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(18,22,28,0.72)]"
-                aria-label="Editor schließen"
-              >
-                <AssetIcon name="window-close" className="h-4 w-4 text-current" />
-              </button>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-auto px-3 py-3 sm:px-4 sm:py-4">
-              <DeckEditorConsole
-                key={activeDeck?.id ?? "new-deck"}
-                activeDeck={activeDeck}
-                availableBanlists={availableBanlists}
-                collectionCards={collectionCards}
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

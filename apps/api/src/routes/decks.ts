@@ -2,6 +2,7 @@ import type { PrismaClient as FrontendPrismaClient } from "@prisma/client";
 import {
   createDeckRequestSchema,
   deckExportRequestSchema,
+  moveDeckCardRequestSchema,
   removeDeckCardRequestSchema,
   updateDeckRequestSchema,
   upsertDeckCardRequestSchema,
@@ -14,6 +15,7 @@ import {
   createDeck,
   deleteDeck,
   duplicateDeck,
+  moveDeckCard,
   removeDeckCard,
   upsertDeckCard,
   updateDeckMetadata,
@@ -304,11 +306,16 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
         deckId,
         body,
       );
+      const snapshot = await getDeckLegalitySnapshot(
+        { viewerId: session.userId, deckId },
+        getSharedPrisma(),
+      );
 
       return reply.send({
         deckCard: {
           id: deckCard.id,
         },
+        activeDeck: snapshot.activeDeck,
       });
     } catch (error) {
       return sendApiError(reply, error, "Deckkarte konnte nicht gespeichert werden.");
@@ -321,10 +328,39 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
       const { deckId } = request.params as { deckId: string };
       const body = removeDeckCardRequestSchema.parse(request.body ?? {});
       await removeDeckCard(getSharedPrisma(), session.userId, deckId, body);
+      const snapshot = await getDeckLegalitySnapshot(
+        { viewerId: session.userId, deckId },
+        getSharedPrisma(),
+      );
 
-      return reply.send({ ok: true });
+      return reply.send({ ok: true, activeDeck: snapshot.activeDeck });
     } catch (error) {
       return sendApiError(reply, error, "Deckkarte konnte nicht entfernt werden.");
+    }
+  });
+
+  app.post("/:deckId/cards/move", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { deckId } = request.params as { deckId: string };
+      const body = moveDeckCardRequestSchema.parse(request.body ?? {});
+      const deckCard = await moveDeckCard(
+        getSharedPrisma(),
+        session.userId,
+        deckId,
+        body,
+      );
+      const snapshot = await getDeckLegalitySnapshot(
+        { viewerId: session.userId, deckId },
+        getSharedPrisma(),
+      );
+
+      return reply.send({
+        deckCard: { id: deckCard.id },
+        activeDeck: snapshot.activeDeck,
+      });
+    } catch (error) {
+      return sendApiError(reply, error, "Karte konnte nicht verschoben werden.");
     }
   });
 

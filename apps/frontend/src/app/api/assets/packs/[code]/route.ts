@@ -1,6 +1,5 @@
 import { getCachedRemoteAsset } from "@/lib/asset-cache";
 import {
-  createPackAssetPlaceholder,
   normalizePackImageAsset,
   resolvePackAsset,
 } from "@/lib/pack-assets";
@@ -20,6 +19,28 @@ function createImageResponse(
       ...headers,
     },
   });
+}
+
+function createFallbackResponse(
+  request: Request,
+  reason: "FALLBACK" | "ERROR",
+  error?: unknown,
+) {
+  const headers: Record<string, string> = {
+    Location: new URL("/app-assets/fallback-pack.png", request.url).toString(),
+    "Cache-Control":
+      reason === "FALLBACK"
+        ? "public, max-age=3600, stale-while-revalidate=86400"
+        : "no-store",
+    "X-Pack-Asset": reason,
+  };
+
+  if (reason === "ERROR") {
+    headers["X-Pack-Asset-Error"] =
+      error instanceof Error ? error.message : "Pack-Asset konnte nicht geladen werden.";
+  }
+
+  return new Response(null, { status: 307, headers });
 }
 
 async function loadPackMatchAsset(match: Awaited<ReturnType<typeof resolvePackAsset>>) {
@@ -109,12 +130,7 @@ export async function GET(
     const resolved = await loadPackMatchAsset(match);
 
     if (!match || !resolved) {
-      const placeholder = createPackAssetPlaceholder(code, setName);
-
-      return createImageResponse(placeholder, "image/svg+xml; charset=utf-8", {
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
-        "X-Pack-Asset": "FALLBACK",
-      });
+      return createFallbackResponse(request, "FALLBACK");
     }
 
     const headers = createPackAssetHeaders(match, resolved);
@@ -136,13 +152,6 @@ export async function GET(
       "X-Pack-Asset-Render": "RAW",
     });
   } catch (error) {
-    const placeholder = createPackAssetPlaceholder(code, setName);
-
-    return createImageResponse(placeholder, "image/svg+xml; charset=utf-8", {
-      "Cache-Control": "no-store",
-      "X-Pack-Asset": "ERROR",
-      "X-Pack-Asset-Error":
-        error instanceof Error ? error.message : "Pack-Asset konnte nicht geladen werden.",
-    });
+    return createFallbackResponse(request, "ERROR", error);
   }
 }

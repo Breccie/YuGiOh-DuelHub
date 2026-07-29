@@ -30,6 +30,73 @@ function canManageCampaign(role: PlayGroupRunDto["viewerRole"]) {
 }
 
 type BuiltInCampaignRulePreset = Exclude<CampaignRulePreset, "CUSTOM">;
+type CampaignSettingsSection =
+  | "ECONOMY"
+  | "PROGRESSION"
+  | "DECKS"
+  | "TRADES"
+  | "TOURNAMENTS"
+  | "ACTIVATION";
+
+type CampaignDraft = {
+  preset: CampaignRulePreset;
+  startingCredits: string;
+  creditLimit: string;
+  defaultPackPrice: string;
+  defaultDisplaySize: string;
+  freePacksPerSetUnlock: string;
+  initialSetUnlockCount: string;
+  setsPerProgressionStep: string;
+  separatePromoProgression: boolean;
+  allowProxies: boolean;
+  minMainDeck: string;
+  maxMainDeck: string;
+  tradesEnabled: boolean;
+  reservationMinutes: string;
+  matchMode: "SINGLE" | "BEST_OF_THREE";
+  requireResultConfirmation: boolean;
+  tournamentWinnerCredits: string;
+  tournamentRunnerUpCredits: string;
+  tournamentParticipationCredits: string;
+  activationMode: "IMMEDIATE" | "AT_DATE" | "NEXT_PROGRESSION_STEP";
+  effectiveAt: string;
+  changeReason: string;
+};
+
+function formatRuleValue(value: unknown) {
+  if (value === null || value === "") return "Kein Wert";
+  if (typeof value === "boolean") return value ? "Aktiv" : "Inaktiv";
+  return String(value);
+}
+
+function collectRuleChanges(
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>,
+  prefix = "",
+): Array<{ label: string; from: string; to: string }> {
+  return Object.keys(next).flatMap((key) => {
+    const label = prefix ? `${prefix} · ${key}` : key;
+    const fromValue = previous[key];
+    const toValue = next[key];
+    if (
+      fromValue &&
+      toValue &&
+      typeof fromValue === "object" &&
+      typeof toValue === "object" &&
+      !Array.isArray(fromValue) &&
+      !Array.isArray(toValue)
+    ) {
+      return collectRuleChanges(
+        fromValue as Record<string, unknown>,
+        toValue as Record<string, unknown>,
+        label,
+      );
+    }
+    return JSON.stringify(fromValue) === JSON.stringify(toValue)
+      ? []
+      : [{ label, from: formatRuleValue(fromValue), to: formatRuleValue(toValue) }];
+  });
+}
 
 function createPresetConfig(options: {
   startingCredits: number;
@@ -202,7 +269,6 @@ export function CampaignSettingsConsole({
   const [minMainDeck, setMinMainDeck] = useState("40");
   const [maxMainDeck, setMaxMainDeck] = useState("60");
   const [tradesEnabled, setTradesEnabled] = useState(true);
-  const [tradeCredits, setTradeCredits] = useState(false);
   const [reservationMinutes, setReservationMinutes] = useState("1440");
   const [matchMode, setMatchMode] = useState<"SINGLE" | "BEST_OF_THREE">("BEST_OF_THREE");
   const [requireResultConfirmation, setRequireResultConfirmation] = useState(true);
@@ -220,6 +286,13 @@ export function CampaignSettingsConsole({
   const [actionPending, setActionPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [campaignDataReady, setCampaignDataReady] = useState(false);
+  const [activeSection, setActiveSection] =
+    useState<CampaignSettingsSection>("ECONOMY");
+  const [baseRuleVersionId, setBaseRuleVersionId] = useState<string | null>(null);
+  const [reviewChanges, setReviewChanges] = useState<
+    Array<{ label: string; from: string; to: string }>
+  >([]);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const isManager = canManageCampaign(activeRun.viewerRole);
   const canManageRules = activeRun.viewerRole === "OWNER";
 
@@ -238,7 +311,6 @@ export function CampaignSettingsConsole({
     setMinMainDeck(String(config.decks.minMainDeck));
     setMaxMainDeck(String(config.decks.maxMainDeck));
     setTradesEnabled(config.trades.enabled);
-    setTradeCredits(false);
     setReservationMinutes(String(config.trades.reservationMinutes));
     setMatchMode(config.tournaments.matchMode);
     setRequireResultConfirmation(config.tournaments.requireResultConfirmation);
@@ -249,9 +321,35 @@ export function CampaignSettingsConsole({
   }, []);
 
   const applyActiveRuleVersion = useCallback((activeVersion: CampaignRuleVersionDto) => {
+    setBaseRuleVersionId(activeVersion.id);
     applyConfigToForm(activeVersion.config, activeVersion.preset ?? "CUSTOM");
     setEffectiveAt("");
   }, [applyConfigToForm]);
+
+  const applyDraftToForm = useCallback((draft: CampaignDraft) => {
+    setPreset(draft.preset);
+    setStartingCredits(draft.startingCredits);
+    setCreditLimit(draft.creditLimit);
+    setDefaultPackPrice(draft.defaultPackPrice);
+    setDefaultDisplaySize(draft.defaultDisplaySize);
+    setFreePacksPerSetUnlock(draft.freePacksPerSetUnlock);
+    setInitialSetUnlockCount(draft.initialSetUnlockCount);
+    setSetsPerProgressionStep(draft.setsPerProgressionStep);
+    setSeparatePromoProgression(draft.separatePromoProgression);
+    setAllowProxies(draft.allowProxies);
+    setMinMainDeck(draft.minMainDeck);
+    setMaxMainDeck(draft.maxMainDeck);
+    setTradesEnabled(draft.tradesEnabled);
+    setReservationMinutes(draft.reservationMinutes);
+    setMatchMode(draft.matchMode);
+    setRequireResultConfirmation(draft.requireResultConfirmation);
+    setTournamentWinnerCredits(draft.tournamentWinnerCredits);
+    setTournamentRunnerUpCredits(draft.tournamentRunnerUpCredits);
+    setTournamentParticipationCredits(draft.tournamentParticipationCredits);
+    setActivationMode(draft.activationMode);
+    setEffectiveAt(draft.effectiveAt);
+    setChangeReason(draft.changeReason);
+  }, []);
 
   function applyPreset(nextPreset: CampaignRulePreset) {
     if (nextPreset === "CUSTOM") {
@@ -288,6 +386,18 @@ export function CampaignSettingsConsole({
         throw new Error("Für diese Kampagne wurde keine aktive Regelversion gefunden.");
       }
       applyActiveRuleVersion(activeVersion);
+      const savedDraft = window.localStorage.getItem(
+        `campaign-rule-draft:${activeRun.id}:${activeVersion.id}`,
+      );
+      if (savedDraft) {
+        try {
+          applyDraftToForm(JSON.parse(savedDraft) as CampaignDraft);
+        } catch {
+          window.localStorage.removeItem(
+            `campaign-rule-draft:${activeRun.id}:${activeVersion.id}`,
+          );
+        }
+      }
       setCampaignDataReady(true);
     }
 
@@ -303,7 +413,66 @@ export function CampaignSettingsConsole({
     return () => {
       isMounted = false;
     };
-  }, [activeRun.id, applyActiveRuleVersion]);
+  }, [activeRun.id, applyActiveRuleVersion, applyDraftToForm]);
+
+  useEffect(() => {
+    if (!campaignDataReady || !baseRuleVersionId || !canManageRules) return;
+    const draft: CampaignDraft = {
+      preset,
+      startingCredits,
+      creditLimit,
+      defaultPackPrice,
+      defaultDisplaySize,
+      freePacksPerSetUnlock,
+      initialSetUnlockCount,
+      setsPerProgressionStep,
+      separatePromoProgression,
+      allowProxies,
+      minMainDeck,
+      maxMainDeck,
+      tradesEnabled,
+      reservationMinutes,
+      matchMode,
+      requireResultConfirmation,
+      tournamentWinnerCredits,
+      tournamentRunnerUpCredits,
+      tournamentParticipationCredits,
+      activationMode,
+      effectiveAt,
+      changeReason,
+    };
+    window.localStorage.setItem(
+      `campaign-rule-draft:${activeRun.id}:${baseRuleVersionId}`,
+      JSON.stringify(draft),
+    );
+  }, [
+    activeRun.id,
+    activationMode,
+    allowProxies,
+    baseRuleVersionId,
+    campaignDataReady,
+    canManageRules,
+    changeReason,
+    creditLimit,
+    defaultDisplaySize,
+    defaultPackPrice,
+    effectiveAt,
+    freePacksPerSetUnlock,
+    initialSetUnlockCount,
+    matchMode,
+    maxMainDeck,
+    minMainDeck,
+    preset,
+    requireResultConfirmation,
+    reservationMinutes,
+    separatePromoProgression,
+    setsPerProgressionStep,
+    startingCredits,
+    tournamentParticipationCredits,
+    tournamentRunnerUpCredits,
+    tournamentWinnerCredits,
+    tradesEnabled,
+  ]);
 
   async function refreshMembersAndProgression() {
     const [freshMembers, freshProgression] = await Promise.all([
@@ -315,9 +484,9 @@ export function CampaignSettingsConsole({
     setProgression(freshProgression);
   }
 
-  async function saveCampaignSettings() {
-    if (!isManager) {
-      setFeedback("Nur Host oder Organizer können Kampagnenregeln ändern.");
+  async function saveCampaignSettings(confirmed = false) {
+    if (!canManageRules) {
+      setFeedback("Nur der Kampagnen-Owner kann Regelversionen ändern.");
       return;
     }
     if (!campaignDataReady || !baseRuleConfig) {
@@ -357,7 +526,7 @@ export function CampaignSettingsConsole({
       parsedReservationMinutes === null
     ) {
       setSaving(false);
-      setFeedback("Bitte ganze Zahlen fuer Packpreise, Gratispacks und Turnier-Credits eingeben.");
+      setFeedback("Bitte ganze Zahlen für Packpreise, Gratispacks und Turnier-Credits eingeben.");
       return;
     }
 
@@ -392,6 +561,60 @@ export function CampaignSettingsConsole({
       return;
     }
 
+    const nextConfig: CampaignRuleConfig = {
+      economy: {
+        ...baseRuleConfig.economy,
+        startingCredits: parsedStartingCredits,
+        creditLimit: parsedCreditLimit,
+        packPrice: parsedPackPrice,
+        displaySize: parsedDisplaySize,
+      },
+      progression: {
+        ...baseRuleConfig.progression,
+        initialSetUnlockCount: parsedInitialSets,
+        setsPerStep: parsedSetsPerStep,
+        freePacksPerSetUnlock: parsedFreePacks,
+        separatePromoProgression,
+      },
+      collection: baseRuleConfig.collection,
+      decks: {
+        ...baseRuleConfig.decks,
+        allowProxies,
+        minMainDeck: parsedMinMainDeck,
+        maxMainDeck: parsedMaxMainDeck,
+      },
+      trades: {
+        ...baseRuleConfig.trades,
+        enabled: tradesEnabled,
+        allowCredits: false,
+        reservationMinutes: parsedReservationMinutes,
+      },
+      tournaments: {
+        ...baseRuleConfig.tournaments,
+        matchMode,
+        requireResultConfirmation,
+        winnerCredits: parsedWinnerCredits,
+        runnerUpCredits: parsedRunnerUpCredits,
+        participationCredits: parsedParticipationCredits,
+      },
+      audit: {
+        ...baseRuleConfig.audit,
+        activationMode,
+      },
+    };
+
+    if (!confirmed) {
+      setReviewChanges(
+        collectRuleChanges(
+          baseRuleConfig as unknown as Record<string, unknown>,
+          nextConfig as unknown as Record<string, unknown>,
+        ),
+      );
+      setReviewOpen(true);
+      setSaving(false);
+      return;
+    }
+
     try {
       const createdVersion = await campaignRuleClient.create(activeRun.id, {
         preset,
@@ -403,47 +626,7 @@ export function CampaignSettingsConsole({
         effectiveCheckpointId: activationMode === "NEXT_PROGRESSION_STEP"
           ? progression?.nextCheckpoint?.id ?? null
           : null,
-        config: {
-          economy: {
-            ...baseRuleConfig.economy,
-            startingCredits: parsedStartingCredits,
-            creditLimit: parsedCreditLimit,
-            packPrice: parsedPackPrice,
-            displaySize: parsedDisplaySize,
-          },
-          progression: {
-            ...baseRuleConfig.progression,
-            initialSetUnlockCount: parsedInitialSets,
-            setsPerStep: parsedSetsPerStep,
-            freePacksPerSetUnlock: parsedFreePacks,
-            separatePromoProgression,
-          },
-          collection: baseRuleConfig.collection,
-          decks: {
-            ...baseRuleConfig.decks,
-            allowProxies,
-            minMainDeck: parsedMinMainDeck,
-            maxMainDeck: parsedMaxMainDeck,
-          },
-          trades: {
-            ...baseRuleConfig.trades,
-            enabled: tradesEnabled,
-            allowCredits: false,
-            reservationMinutes: parsedReservationMinutes,
-          },
-          tournaments: {
-            ...baseRuleConfig.tournaments,
-            matchMode,
-            requireResultConfirmation,
-            winnerCredits: parsedWinnerCredits,
-            runnerUpCredits: parsedRunnerUpCredits,
-            participationCredits: parsedParticipationCredits,
-          },
-          audit: {
-            ...baseRuleConfig.audit,
-            activationMode,
-          },
-        },
+        config: nextConfig,
       });
       const freshRuleVersions = await campaignRuleClient.list(activeRun.id);
       const activeVersion = getActiveRuleVersion(freshRuleVersions);
@@ -452,7 +635,13 @@ export function CampaignSettingsConsole({
       }
       setRuleVersions(freshRuleVersions);
       applyActiveRuleVersion(activeVersion);
+      if (baseRuleVersionId) {
+        window.localStorage.removeItem(
+          `campaign-rule-draft:${activeRun.id}:${baseRuleVersionId}`,
+        );
+      }
       setChangeReason("");
+      setReviewOpen(false);
       setFeedback(
         createdVersion.status === "ACTIVE"
           ? `Regelversion ${createdVersion.version} ist jetzt aktiv. Bestehende Wallets wurden nicht verändert.`
@@ -470,7 +659,7 @@ export function CampaignSettingsConsole({
     event.preventDefault();
 
     if (!isManager) {
-      setFeedback("Nur Host oder Organizer koennen Spieler einladen.");
+      setFeedback("Nur Host oder Organizer können Spieler einladen.");
       return;
     }
 
@@ -491,7 +680,7 @@ export function CampaignSettingsConsole({
       });
       setInviteDuelistId("");
       await refreshMembersAndProgression();
-      setFeedback("Duelist wurde zur Kampagne hinzugefuegt.");
+      setFeedback("Duelist wurde zur Kampagne hinzugefügt.");
       startTransition(() => router.refresh());
     } catch (error) {
       setFeedback(getApiErrorMessage(error, "Duelist konnte nicht eingeladen werden."));
@@ -502,7 +691,7 @@ export function CampaignSettingsConsole({
 
   async function unlockNextProgressionStep() {
     if (!isManager) {
-      setFeedback("Nur Host oder Organizer koennen Kampagnen-Fortschritt freischalten.");
+      setFeedback("Nur Host oder Organizer können Kampagnen-Fortschritt freischalten.");
       return;
     }
 
@@ -521,7 +710,7 @@ export function CampaignSettingsConsole({
       }
 
       if (!checkpoint) {
-        throw new Error("Kein naechster Pack-Step gefunden.");
+        throw new Error("Kein nächster Pack-Schritt gefunden.");
       }
 
       const payload = await runClient.applyProgression(activeRun.id, checkpoint.id, {
@@ -533,7 +722,7 @@ export function CampaignSettingsConsole({
       );
       startTransition(() => router.refresh());
     } catch (error) {
-      setFeedback(getApiErrorMessage(error, "Naechster Pack-Step konnte nicht freigeschaltet werden."));
+      setFeedback(getApiErrorMessage(error, "Der nächste Pack-Schritt konnte nicht freigeschaltet werden."));
     } finally {
       setActionPending(false);
     }
@@ -541,7 +730,7 @@ export function CampaignSettingsConsole({
 
   async function createQuickTournament() {
     if (!isManager) {
-      setFeedback("Nur Host oder Organizer koennen Turniere starten.");
+      setFeedback("Nur Host oder Organizer können Turniere starten.");
       return;
     }
 
@@ -585,11 +774,75 @@ export function CampaignSettingsConsole({
         { icon: "package", label: "Startcredits", value: String(activeRun.startingCredits) },
       ]}
     >
+      {reviewOpen ? (
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/72 px-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="campaign-review-title"
+            className="max-h-[min(720px,90vh)] w-full max-w-2xl overflow-y-auto rounded-[10px] border border-white/12 bg-[#0b1118] p-5 shadow-2xl"
+          >
+            <p className="ui-kicker">Neue Regelversion</p>
+            <h2 id="campaign-review-title" className="mt-1 text-xl font-semibold text-[#f2eadf]">
+              Änderungen prüfen
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#9eacb5]">
+              Aktivierung:{" "}
+              {activationMode === "IMMEDIATE"
+                ? "sofort"
+                : activationMode === "AT_DATE"
+                  ? effectiveAt
+                  : "beim nächsten Progressionsschritt"}
+            </p>
+            <div className="mt-4 grid gap-2">
+              {reviewChanges.length ? (
+                reviewChanges.map((change) => (
+                  <div
+                    key={change.label}
+                    className="grid gap-1 rounded-[7px] border border-white/8 bg-white/[0.025] px-3 py-2 sm:grid-cols-[minmax(140px,0.8fr)_1fr_auto_1fr]"
+                  >
+                    <span className="text-xs font-semibold text-[#cbd4d9]">{change.label}</span>
+                    <span className="truncate text-xs text-[#a99a8c]">{change.from}</span>
+                    <span aria-hidden className="hidden text-xs text-[#6f7f89] sm:inline">→</span>
+                    <span className="truncate text-xs text-[#bce6e6]">{change.to}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="ui-empty rounded-[7px] px-3 py-4 text-sm">
+                  Es wurden keine Regelwerte geändert.
+                </p>
+              )}
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className="ui-button-neutral"
+                onClick={() => setReviewOpen(false)}
+                disabled={saving}
+              >
+                Weiter bearbeiten
+              </button>
+              <button
+                type="button"
+                className="ui-button-primary"
+                onClick={() => void saveCampaignSettings(true)}
+                disabled={saving || reviewChanges.length === 0}
+              >
+                {saving
+                  ? "Speichert…"
+                  : activationMode === "IMMEDIATE"
+                    ? "Version aktivieren"
+                    : "Version planen"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <Panel kicker="Kampagne" title={activeRun.name}>
           <div className="grid gap-4">
             <p className="text-sm leading-7 text-[#baa58a]">
-              Diese Einstellungen gelten nur fuer diese Kampagne. Profil, Desktop,
+              Diese Einstellungen gelten nur für diese Kampagne. Profil, Desktop,
               Freundesliste und Asset-Cache bleiben getrennt unter den Account-Einstellungen.
             </p>
             <div className="flex flex-wrap gap-3">
@@ -618,9 +871,11 @@ export function CampaignSettingsConsole({
               </div>
             ) : null}
             <div className="flex flex-wrap gap-3">
-              <Link className="ui-button-primary" href="/campaigns/custom-packs">
-                Custom-Pack-Studio
-              </Link>
+              {isManager ? (
+                <Link className="ui-button-primary" href="/campaigns/custom-packs">
+                  Custom-Pack-Studio
+                </Link>
+              ) : null}
               <Link className="ui-button-neutral" href="/campaigns">
                 Kampagne wechseln
               </Link>
@@ -639,11 +894,39 @@ export function CampaignSettingsConsole({
           ) : null}
           {!isManager ? (
             <p className="mb-4 text-sm leading-7 text-[#baa58a]">
-              Du siehst die aktiven Kampagnenregeln im Lesemodus. Änderungen können nur Host oder Organizer vornehmen.
+              Du siehst die aktiven Kampagnenregeln im Lesemodus.
+              Regelversionen kann ausschließlich der Kampagnen-Owner ändern.
             </p>
           ) : null}
+          <nav
+            className="mb-5 flex gap-1 overflow-x-auto rounded-[8px] border border-white/8 bg-black/20 p-1"
+            aria-label="Regelbereich"
+          >
+            {([
+              ["ECONOMY", "Wirtschaft"],
+              ["PROGRESSION", "Fortschritt"],
+              ["DECKS", "Decks"],
+              ["TRADES", "Tausch"],
+              ["TOURNAMENTS", "Turniere"],
+              ["ACTIVATION", "Aktivierung & Verlauf"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`ui-segment-button shrink-0 ${
+                  activeSection === value
+                    ? "bg-[rgba(58,118,124,0.24)] text-[#e9ffff]"
+                    : "text-[#9aa8b1] hover:bg-white/5 hover:text-white"
+                }`}
+                aria-pressed={activeSection === value}
+                onClick={() => setActiveSection(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
           <fieldset disabled={!canManageRules || !campaignDataReady || saving} className="contents disabled:opacity-70">
-          <div className="mb-5 grid gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+          <div className={activeSection === "ECONOMY" ? "mb-5 grid gap-4 md:grid-cols-[1.2fr_0.8fr_0.8fr]" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Sandbox-Preset</span>
               <select className="ui-input mt-2" value={preset} onChange={(event) => applyPreset(event.target.value as CampaignRulePreset)}>
@@ -663,7 +946,7 @@ export function CampaignSettingsConsole({
               <input className="ui-input mt-2" inputMode="numeric" value={creditLimit} onChange={(event) => { markPresetAsCustom(); setCreditLimit(event.target.value); }} placeholder="Kein Limit" />
             </label>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className={activeSection === "ECONOMY" ? "grid gap-4 md:grid-cols-3" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Packpreis</span>
               <input
@@ -674,7 +957,7 @@ export function CampaignSettingsConsole({
               />
             </label>
             <label className="block">
-              <span className="text-sm font-semibold text-[#f0dfcc]">Display-Groesse</span>
+              <span className="text-sm font-semibold text-[#f0dfcc]">Display-Größe</span>
               <input
                 className="ui-input mt-2"
                 inputMode="numeric"
@@ -692,11 +975,11 @@ export function CampaignSettingsConsole({
               />
             </label>
           </div>
-          <p className="mt-3 text-sm leading-7 text-[#baa58a]">
+          <p className={activeSection === "ECONOMY" ? "mt-3 text-sm leading-7 text-[#baa58a]" : "hidden"}>
             Beim Freischalten eines neuen Booster-Sets bekommen alle Kampagnenmitglieder
             diese Anzahl als kostenlose Reward-Packs. Standard ist ein Display.
           </p>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className={activeSection === "PROGRESSION" ? "grid gap-4 md:grid-cols-3" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Sets zum Kampagnenstart</span>
               <input className="ui-input mt-2" inputMode="numeric" value={initialSetUnlockCount} onChange={(event) => { markPresetAsCustom(); setInitialSetUnlockCount(event.target.value); }} />
@@ -710,7 +993,7 @@ export function CampaignSettingsConsole({
               <span className="text-sm font-semibold text-[#f0dfcc]">Promos getrennt freischalten</span>
             </label>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className={activeSection === "TOURNAMENTS" ? "grid gap-4 md:grid-cols-3" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Credits Platz 1</span>
               <input
@@ -739,11 +1022,11 @@ export function CampaignSettingsConsole({
               />
             </label>
           </div>
-          <p className="mt-3 text-sm leading-7 text-[#baa58a]">
+          <p className={activeSection === "TOURNAMENTS" ? "mt-3 text-sm leading-7 text-[#baa58a]" : "hidden"}>
             Diese Turnier-Credits werden in neu generierte Kampagnen-Checkpoints geschrieben
-            und dienen als Pack-Waehrung fuer den freigeschalteten Shop.
+            und dienen als Pack-Währung für den freigeschalteten Shop.
           </p>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className={activeSection === "DECKS" ? "grid gap-4 md:grid-cols-3" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Main Deck Minimum</span>
               <input className="ui-input mt-2" inputMode="numeric" value={minMainDeck} onChange={(event) => { markPresetAsCustom(); setMinMainDeck(event.target.value); }} />
@@ -757,21 +1040,17 @@ export function CampaignSettingsConsole({
               <span className="text-sm font-semibold text-[#f0dfcc]">Proxies erlauben</span>
             </label>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className={activeSection === "TRADES" ? "grid gap-4 md:grid-cols-2" : "hidden"}>
             <label className="flex items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] px-4 py-3">
               <input type="checkbox" checked={tradesEnabled} onChange={(event) => { markPresetAsCustom(); setTradesEnabled(event.target.checked); }} />
               <span className="text-sm font-semibold text-[#f0dfcc]">Tauschen aktiviert</span>
-            </label>
-            <label className="flex items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] px-4 py-3">
-              <input type="checkbox" checked={tradeCredits} disabled />
-              <span className="text-sm font-semibold text-[#f0dfcc]">Credits in Trades (noch nicht verfügbar)</span>
             </label>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Reservierung (Minuten)</span>
               <input className="ui-input mt-2" inputMode="numeric" value={reservationMinutes} onChange={(event) => { markPresetAsCustom(); setReservationMinutes(event.target.value); }} />
             </label>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <div className={activeSection === "TOURNAMENTS" ? "mt-5 grid gap-4 md:grid-cols-2" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Matchmodus</span>
               <select className="ui-input mt-2" value={matchMode} onChange={(event) => { markPresetAsCustom(); setMatchMode(event.target.value as typeof matchMode); }}>
@@ -783,7 +1062,9 @@ export function CampaignSettingsConsole({
               <input type="checkbox" checked={requireResultConfirmation} onChange={(event) => { markPresetAsCustom(); setRequireResultConfirmation(event.target.checked); }} />
               <span className="text-sm font-semibold text-[#f0dfcc]">Ergebnis bestätigen</span>
             </label>
-            <label className="block">
+          </div>
+          <div className={activeSection === "ACTIVATION" ? "grid gap-4" : "hidden"}>
+            <label className="block max-w-sm">
               <span className="text-sm font-semibold text-[#f0dfcc]">Aktivierung</span>
               <select className="ui-input mt-2" value={activationMode} onChange={(event) => { markPresetAsCustom(); setActivationMode(event.target.value as typeof activationMode); }}>
                 <option value="IMMEDIATE">Sofort</option>
@@ -791,15 +1072,14 @@ export function CampaignSettingsConsole({
                 <option value="NEXT_PROGRESSION_STEP">Nächster Progressionsschritt</option>
               </select>
             </label>
-          </div>
           {activationMode === "AT_DATE" ? (
-            <label className="mt-4 block max-w-sm">
+            <label className="block max-w-sm">
               <span className="text-sm font-semibold text-[#f0dfcc]">Aktiv ab</span>
               <input className="ui-input mt-2" type="datetime-local" value={effectiveAt} onChange={(event) => setEffectiveAt(event.target.value)} />
             </label>
           ) : null}
           {canManageRules ? (
-            <label className="mt-4 block max-w-2xl">
+            <label className="block max-w-2xl">
               <span className="text-sm font-semibold text-[#f0dfcc]">Begründung der Änderung</span>
               <textarea
                 className="ui-input mt-2 min-h-24"
@@ -809,6 +1089,7 @@ export function CampaignSettingsConsole({
               />
             </label>
           ) : null}
+          </div>
           {feedback ? (
             <div role="status" aria-live="polite" className="mt-4 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
               {feedback}
@@ -819,13 +1100,13 @@ export function CampaignSettingsConsole({
               className="ui-button-primary mt-4 disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               disabled={saving || !campaignDataReady}
-              onClick={() => void saveCampaignSettings()}
+              onClick={() => void saveCampaignSettings(false)}
             >
-              {saving ? "Speichert..." : activationMode === "IMMEDIATE" ? "Neue Regelversion aktivieren" : "Regelversion planen"}
+              {saving ? "Prüft…" : "Änderungen prüfen"}
             </button>
           ) : null}
           </fieldset>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className={activeSection === "ACTIVATION" ? "mt-5 flex flex-wrap gap-2" : "hidden"}>
             {ruleVersions.slice(0, 6).map((version) => (
               <span key={version.id} className="rounded-full border border-[rgba(208,170,110,0.2)] px-3 py-1 text-xs text-[#d8bc91]">
                 v{version.version} · {version.status} · {version.preset ?? "CUSTOM"}
@@ -868,7 +1149,7 @@ export function CampaignSettingsConsole({
                 type="submit"
                 disabled={!isManager || inviting}
               >
-                {inviting ? "Laedt ein..." : "Einladen"}
+                {inviting ? "Lädt ein…" : "Einladen"}
               </button>
             </form>
 
@@ -900,7 +1181,7 @@ export function CampaignSettingsConsole({
         <Panel kicker="Host-Aktionen" title="Kampagne steuern">
           <div className="grid gap-4">
             <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4">
-              <p className="text-sm font-semibold text-[#f0dfcc]">Naechster Pack-Step</p>
+              <p className="text-sm font-semibold text-[#f0dfcc]">Nächster Pack-Schritt</p>
               <p className="mt-2 text-sm leading-7 text-[#baa58a]">
                 {progression?.nextCheckpoint
                   ? `${progression.nextCheckpoint.title} (${progression.nextCheckpoint.status})`
@@ -917,14 +1198,14 @@ export function CampaignSettingsConsole({
                 disabled={!isManager || actionPending}
                 onClick={() => void unlockNextProgressionStep()}
               >
-                {actionPending ? "Fuehrt aus..." : "Naechstes Pack freischalten"}
+                {actionPending ? "Wird ausgeführt…" : "Nächstes Pack freischalten"}
               </button>
             </div>
 
             <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4">
               <p className="text-sm font-semibold text-[#f0dfcc]">Turnier-Schnellstart</p>
               <p className="mt-2 text-sm leading-7 text-[#baa58a]">
-                Legt ein neues Kampagnen-Turnier an und oeffnet direkt die Detailseite,
+                Legt ein neues Kampagnen-Turnier an und öffnet direkt die Detailseite,
                 damit du Teilnehmer und Runden verwalten kannst.
               </p>
               <button
@@ -933,13 +1214,13 @@ export function CampaignSettingsConsole({
                 disabled={!isManager || actionPending}
                 onClick={() => void createQuickTournament()}
               >
-                {actionPending ? "Fuehrt aus..." : "Neues Turnier starten"}
+                {actionPending ? "Wird ausgeführt…" : "Neues Turnier starten"}
               </button>
             </div>
 
             {!isManager ? (
               <div className="rounded-[18px] border border-[rgba(208,170,110,0.16)] bg-[rgba(208,170,110,0.06)] px-4 py-3 text-sm text-[#f0dfcc]">
-                Du bist in dieser Kampagne Spieler. Host-Aktionen sind nur fuer Host
+                Du bist in dieser Kampagne Spieler. Host-Aktionen sind nur für Host
                 und Organizer aktiv.
               </div>
             ) : null}

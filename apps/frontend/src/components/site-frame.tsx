@@ -1,11 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ConsoleBrand } from "@/components/console-brand";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
-  ConsoleSidebarUtilityActions,
   ConsoleWindowChromeButton,
 } from "@/components/console-shell-primitives";
-import { SiteNav } from "@/components/site-nav";
 
 function classes(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
@@ -62,21 +60,11 @@ export function SiteFrame({
       <div className="app-background" />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
-          <div className="lg:block">
-            <div className="border-b border-[rgba(255,255,255,0.08)] px-5 py-5 lg:px-6 lg:pb-8 lg:pt-6">
-              <ConsoleBrand size="sm" />
-            </div>
+        <AppSidebar />
 
-            <SiteNav />
-
-            <ConsoleSidebarUtilityActions />
-          </div>
-        </aside>
-
-        <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <div className="app-topbar flex min-h-[52px] items-center justify-between rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-4 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl">
+        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
+          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
+            <div className="app-topbar flex min-h-[52px] items-center justify-between rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl">
               {topbarContent ? (
                 <div className="flex min-w-0 flex-1 justify-end">
                   {topbarContent}

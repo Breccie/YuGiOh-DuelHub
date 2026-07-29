@@ -74,6 +74,22 @@ export const upsertDeckCardRequestSchema = removeDeckCardRequestSchema.extend({
 });
 export type UpsertDeckCardRequest = z.infer<typeof upsertDeckCardRequestSchema>;
 
+export const moveDeckCardRequestSchema = z.object({
+  cardId: z.string().trim().min(1),
+  fromSection: deckSectionSchema,
+  toSection: deckSectionSchema,
+  quantity: z.number().int().min(1).max(3).optional().default(1),
+});
+export type MoveDeckCardRequest = z.infer<typeof moveDeckCardRequestSchema>;
+
+export const deckSortModeSchema = z.enum([
+  "TYPE_LEVEL",
+  "NAME_ASC",
+  "NAME_DESC",
+  "ATK_DESC",
+]);
+export type DeckSortMode = z.infer<typeof deckSortModeSchema>;
+
 export const deckExportRequestSchema = z.object({
   exportPath: z.string().trim().min(1).nullable().optional(),
   fileName: z.string().trim().min(1).nullable().optional(),

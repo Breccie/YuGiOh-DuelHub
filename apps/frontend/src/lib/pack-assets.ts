@@ -780,42 +780,16 @@ export function createStyledPackAsset(
   setName: string | null,
   sourceImage: PackSourceImage | null = null,
 ) {
-  const safeCode = escapeSvgText(normalizeCode(code) || "PACK");
   const safeName = escapeSvgText(
     truncateSvgText(setName?.trim() || "Booster-Pack", 34),
   );
   const palette = getPackPalette(code, setName);
   const textureLayer = createSourceTextureLayer(sourceImage);
-  const hasSourceImage = Boolean(sourceImage);
-  const fallbackArtworkLayer = hasSourceImage
-    ? ""
-    : `
-        <path d="M78 124h264v286H78z" fill="url(#accent)" opacity="0.92"/>
-        <path d="M92 142h236v250H92z" fill="none" stroke="rgba(255,238,207,0.62)" stroke-width="4" stroke-dasharray="14 11" opacity="0.76"/>
-        <rect x="68" y="96" width="108" height="34" rx="2" fill="#e8efe9"/>
-        <text x="122" y="121" text-anchor="middle" fill="#d81919" font-family="Arial Black, Arial, sans-serif" font-size="24" font-weight="900">KONAMI</text>
-        <rect x="242" y="94" width="98" height="44" rx="7" fill="#b91514" stroke="#2b0b0b" stroke-width="3"/>
-        <text x="291" y="121" text-anchor="middle" fill="#fff6e6" font-family="Georgia, serif" font-size="16" font-weight="800">ENGLISH</text>
-        <text x="291" y="136" text-anchor="middle" fill="#fff6e6" font-family="Georgia, serif" font-size="12" font-weight="800">EDITION</text>
-        <circle cx="314" cy="172" r="28" fill="rgba(0,0,0,0.58)" stroke="${palette.glow}" stroke-width="2" opacity="0.9"/>
-        <text x="314" y="166" text-anchor="middle" fill="#fff7e9" font-family="Arial, sans-serif" font-size="10" font-weight="900">DUEL</text>
-        <text x="314" y="180" text-anchor="middle" fill="#fff7e9" font-family="Arial, sans-serif" font-size="10" font-weight="900">HUB</text>
-        <path d="M78 430h264l-18 82H96z" fill="rgba(0,0,0,0.68)" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-        <text x="210" y="462" text-anchor="middle" fill="#fff2df" font-family="Georgia, serif" font-size="28" font-weight="900" letter-spacing="-1">Yu-Gi-Oh!</text>
-        <text x="210" y="482" text-anchor="middle" fill="#fff2df" font-family="Arial, sans-serif" font-size="11" font-weight="800" letter-spacing="1.5">TRADING CARD GAME</text>
-        <text x="210" y="530" text-anchor="middle" fill="#f8ead7" stroke="rgba(0,0,0,0.62)" stroke-width="3" paint-order="stroke" font-family="Georgia, serif" font-size="27" font-weight="900">${safeName}</text>
-        <text x="210" y="557" text-anchor="middle" fill="#d9c2a3" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="1.3">${safeCode}</text>
-        <text x="72" y="594" fill="#f5ead8" font-family="Georgia, serif" font-size="18" font-weight="800">9 CARDS</text>
-        <text x="72" y="614" fill="#f5ead8" font-family="Georgia, serif" font-size="18" font-weight="800">PER PACK</text>
-        <text x="210" y="614" text-anchor="middle" fill="rgba(255,255,255,0.72)" font-family="Arial, sans-serif" font-size="10">© Studio Dice/SHUEISHA, TV TOKYO, KONAMI</text>
-      `.trim();
-  const sourcePolishLayer = hasSourceImage
-    ? `
+  const sourcePolishLayer = `
         <rect x="50" y="72" width="320" height="490" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
         <path d="M62 96c70-18 205-18 296-2" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
         <path d="M64 542c76 16 192 16 292-2" fill="none" stroke="rgba(0,0,0,0.26)" stroke-width="3"/>
-      `.trim()
-    : "";
+      `.trim();
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 650" role="img" aria-label="${safeName}">
       <defs>
@@ -860,7 +834,6 @@ export function createStyledPackAsset(
         <path d="M42 22h336l-8 22H50z" fill="url(#foilLines)" opacity="0.78"/>
         <path d="M50 586h320l8 38H42z" fill="url(#foilLines)" opacity="0.82"/>
         <path d="M66 94h288v352H66z" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-        ${fallbackArtworkLayer}
         ${sourcePolishLayer}
         <path d="M50 72h320v490H50z" fill="none" stroke="rgba(255,255,255,0.32)" stroke-width="1"/>
         <path d="M54 78c68 20 142 18 304-3" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
@@ -894,8 +867,4 @@ export async function normalizePackImageAsset(sourceImage: PackSourceImage) {
   return (shouldSharpen ? resized.sharpen({ sigma: 0.45 }) : resized)
     .png({ compressionLevel: 9 })
     .toBuffer();
-}
-
-export function createPackAssetPlaceholder(code: string, setName: string | null) {
-  return createStyledPackAsset(code, setName);
 }

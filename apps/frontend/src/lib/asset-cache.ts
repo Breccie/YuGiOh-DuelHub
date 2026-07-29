@@ -160,34 +160,6 @@ function writeCachedAsset(
   });
 }
 
-function createMissingCardPlaceholder(cardId: string) {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 448" role="img" aria-label="Missing card art">
-      <defs>
-        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#1a1d26"/>
-          <stop offset="100%" stop-color="#0b0d12"/>
-        </linearGradient>
-      </defs>
-      <rect width="320" height="448" rx="20" fill="url(#bg)"/>
-      <rect x="20" y="20" width="280" height="408" rx="14" fill="none" stroke="#6f7785" stroke-width="3" stroke-dasharray="10 8"/>
-      <circle cx="160" cy="164" r="52" fill="#252a35"/>
-      <path d="M160 120l17 34 38 5-28 27 7 38-34-18-34 18 7-38-28-27 38-5z" fill="#8993a4"/>
-      <text x="160" y="288" text-anchor="middle" fill="#e8edf5" font-family="Arial, sans-serif" font-size="22" font-weight="700">
-        No Card Art
-      </text>
-      <text x="160" y="320" text-anchor="middle" fill="#9aa4b5" font-family="Arial, sans-serif" font-size="14">
-        ${cardId}
-      </text>
-    </svg>
-  `.trim();
-
-  return {
-    body: Buffer.from(svg, "utf8"),
-    contentType: "image/svg+xml; charset=utf-8",
-  };
-}
-
 async function fetchUpstreamAsset(descriptor: CachedAssetDescriptor) {
   let upstreamUrl = descriptor.upstreamUrl;
   let response: Response | null = null;
@@ -310,22 +282,7 @@ async function loadOrFetchCachedAsset(descriptor: CachedAssetDescriptor) {
 }
 
 export async function getCachedCardAsset(cardId: string) {
-  const descriptor = createCardDescriptor(cardId);
-
-  try {
-    return await loadOrFetchCachedAsset(descriptor);
-  } catch {
-    const placeholder = createMissingCardPlaceholder(cardId.trim());
-
-    writeCachedAsset(descriptor, placeholder.body, placeholder.contentType);
-
-    return {
-      body: placeholder.body,
-      contentType: placeholder.contentType,
-      cacheStatus: "MISS" as const,
-      cachedAt: Date.now(),
-    };
-  }
+  return loadOrFetchCachedAsset(createCardDescriptor(cardId));
 }
 
 export async function getCachedRemoteAsset(url: string) {

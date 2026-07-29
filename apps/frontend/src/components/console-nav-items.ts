@@ -13,11 +13,6 @@ export const consoleNavItems = [
   iconName: AssetIconName;
 }>;
 
-export const collectionSubNavItems = [
-  { href: "/collection", label: "Binder & Karten" },
-  { href: "/wishlist", label: "Wunschliste" },
-] as const;
-
 export function isConsoleNavActive(pathname: string, href: string) {
   return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 }

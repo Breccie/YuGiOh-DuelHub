@@ -1,8 +1,5 @@
 import { getCachedRemoteAsset } from "@/lib/asset-cache";
-import {
-  createDisplayAssetPlaceholder,
-  resolveDisplayAsset,
-} from "@/lib/display-assets";
+import { resolveDisplayAsset } from "@/lib/display-assets";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,6 +18,30 @@ function createImageResponse(
   });
 }
 
+function createFallbackResponse(
+  request: Request,
+  reason: "FALLBACK" | "ERROR",
+  error?: unknown,
+) {
+  const headers: Record<string, string> = {
+    Location: new URL("/app-assets/fallback-display.png", request.url).toString(),
+    "Cache-Control":
+      reason === "FALLBACK"
+        ? "public, max-age=3600, stale-while-revalidate=86400"
+        : "no-store",
+    "X-Display-Asset": reason,
+  };
+
+  if (reason === "ERROR") {
+    headers["X-Display-Asset-Error"] =
+      error instanceof Error
+        ? error.message
+        : "Display-Asset konnte nicht geladen werden.";
+  }
+
+  return new Response(null, { status: 307, headers });
+}
+
 export async function GET(
   request: Request,
   context: { params: Promise<{ code: string }> },
@@ -33,12 +54,7 @@ export async function GET(
     const match = await resolveDisplayAsset(code, setName);
 
     if (!match) {
-      const placeholder = createDisplayAssetPlaceholder(code, setName);
-
-      return createImageResponse(placeholder, "image/svg+xml; charset=utf-8", {
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
-        "X-Display-Asset": "FALLBACK",
-      });
+      return createFallbackResponse(request, "FALLBACK");
     }
 
     const asset = await getCachedRemoteAsset(match.imageUrl);
@@ -51,13 +67,6 @@ export async function GET(
       "X-TCGplayer-Product-ID": String(match.productId),
     });
   } catch (error) {
-    const placeholder = createDisplayAssetPlaceholder(code, setName);
-
-    return createImageResponse(placeholder, "image/svg+xml; charset=utf-8", {
-      "Cache-Control": "no-store",
-      "X-Display-Asset": "ERROR",
-      "X-Display-Asset-Error":
-        error instanceof Error ? error.message : "Display-Asset konnte nicht geladen werden.",
-    });
+    return createFallbackResponse(request, "ERROR", error);
   }
 }

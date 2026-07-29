@@ -105,6 +105,6 @@ export async function POST(
       status: 201,
     });
   } catch (error) {
-    return toNextErrorResponse(error, "Kampagnen-Mitglied konnte nicht hinzugefuegt werden.");
+    return toNextErrorResponse(error, "Kampagnen-Mitglied konnte nicht hinzugefügt werden.");
   }
 }

@@ -971,7 +971,7 @@ export function PackOpeningStation({
                 isPending ||
                 (isDisplaySequenceActive && !displaySequenceComplete)
               }
-              className="ui-button-primary min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
+              className="ui-button-ember min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting || isPending
                 ? "Pack wird geöffnet..."
@@ -1005,7 +1005,7 @@ export function PackOpeningStation({
                   isSubmitting ||
                   isPending
                 }
-                className="ui-button-primary min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-button-ember min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {hasNextDisplayPack
                   ? `Nächstes Pack bereitlegen (${formatRemainingPacks(displayPacksRemaining)})`

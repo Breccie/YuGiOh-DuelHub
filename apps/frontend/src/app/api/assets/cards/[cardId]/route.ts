@@ -1,11 +1,24 @@
-import { NextResponse } from "next/server";
 import { getCachedCardAsset } from "@/lib/asset-cache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function createFallbackResponse(request: Request, reason: "FALLBACK" | "ERROR") {
+  return new Response(null, {
+    status: 307,
+    headers: {
+      Location: new URL("/app-assets/fallback-card.png", request.url).toString(),
+      "Cache-Control":
+        reason === "FALLBACK"
+          ? "public, max-age=3600, stale-while-revalidate=86400"
+          : "no-store",
+      "X-Asset-Cache": reason,
+    },
+  });
+}
+
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ cardId: string }> },
 ) {
   try {
@@ -20,15 +33,7 @@ export async function GET(
         "X-Asset-Cache": asset.cacheStatus,
       },
     });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Kartenbild konnte nicht geladen werden.",
-      },
-      { status: 400 },
-    );
+  } catch {
+    return createFallbackResponse(request, "FALLBACK");
   }
 }

@@ -4,20 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AssetIcon } from "@/components/asset-icon";
 import { BinderCollectionEditor } from "@/components/binder-collection-editor";
 import { BinderOpenSpread } from "@/components/binder-open-spread";
-import { ConsoleBrand } from "@/components/console-brand";
-import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
-import { consoleNavItems } from "@/components/console-nav-items";
-import {
-  ConsoleGlobalStatusBar,
-  ConsoleSidebarUtilityActions,
-} from "@/components/console-shell-primitives";
+import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { binderSlotCount } from "@/lib/binder-open-layout";
 import { collectionClient } from "@/lib/collection-client";
+import { wishlistClient } from "@/lib/wishlist-client";
 import {
   binderCoverCatalog,
   getCollectionSortLabel,
@@ -112,36 +108,6 @@ function getBinderKindCount(
       pageSum +
       page.slots.filter((slot) => slot.status === "filled" && slot.kind === kind).length,
     0,
-  );
-}
-
-function SidebarNavItem({
-  href,
-  label,
-  active,
-  iconName,
-}: {
-  href: string;
-  label: string;
-  active?: boolean;
-  iconName: AssetIconName;
-}) {
-  return (
-    <Link
-      href={href}
-      className={classes(
-        "group relative flex items-center gap-4 border-y border-transparent px-6 py-8 text-sm uppercase tracking-[0.22em] transition",
-        active
-          ? "border-y-[rgba(196,69,48,0.14)] bg-[linear-gradient(90deg,rgba(124,32,22,0.34),rgba(124,32,22,0.12),transparent)] text-[#f4ddc2]"
-          : "text-[#baa58d] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f1deca]",
-      )}
-    >
-      {active ? (
-        <span className="absolute right-0 top-1/2 h-10 w-px -translate-y-1/2 bg-[#d04f36] shadow-[0_0_22px_rgba(208,79,54,0.95)]" />
-      ) : null}
-      <AssetIcon name={iconName} className="h-5 w-5 text-current" />
-      <span>{label}</span>
-    </Link>
   );
 }
 
@@ -472,21 +438,12 @@ export function CollectionBinderConsole({
   const [activePreviewPageIndex, setActivePreviewPageIndex] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"binder" | null>(null);
+  const [collectionView, setCollectionView] = useState<"CARDS" | "BINDERS">("CARDS");
   const [collectionSearch, setCollectionSearch] = useState("");
   const [collectionKind, setCollectionKind] = useState("ALL");
   const [collectionRarity, setCollectionRarity] = useState("ALL");
-  const [collectionSort, setCollectionSort] = useState<CollectionSortModeValue>(
-    () => {
-      if (typeof window === "undefined") return "MOST_COPIES";
-      const savedSort = window.localStorage.getItem("collection-sort-mode");
-      return savedSort === "MOST_COPIES" ||
-        savedSort === "NEWEST_ACQUIRED" ||
-        savedSort === "ALPHABETICAL" ||
-        savedSort === "RARITY"
-        ? savedSort
-        : "MOST_COPIES";
-    },
-  );
+  const [collectionSort, setCollectionSort] =
+    useState<CollectionSortModeValue>("MOST_COPIES");
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<CollectionBinderDto | null>(null);
@@ -504,6 +461,25 @@ export function CollectionBinderConsole({
     : null;
   const activeBinder =
     binderOptions.find((binder) => binder.isActive) ?? binderOptions[0] ?? null;
+  useEffect(() => {
+    const savedView = window.localStorage.getItem("collection-workspace-view");
+    const savedSort = window.localStorage.getItem("collection-sort-mode");
+    const frameId = window.requestAnimationFrame(() => {
+      if (savedView === "BINDERS") {
+        setCollectionView("BINDERS");
+      }
+      if (
+        savedSort === "MOST_COPIES" ||
+        savedSort === "NEWEST_ACQUIRED" ||
+        savedSort === "ALPHABETICAL" ||
+        savedSort === "RARITY"
+      ) {
+        setCollectionSort(savedSort);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
   useEffect(() => {
     window.localStorage.setItem("collection-sort-mode", collectionSort);
   }, [collectionSort]);
@@ -714,51 +690,34 @@ export function CollectionBinderConsole({
     }
   }
 
+  async function handleAddCardToWishlist(cardId: string, cardName: string) {
+    setFeedbackMessage(null);
+
+    try {
+      await wishlistClient.upsert({
+        cardId,
+        desiredQuantity: 1,
+        priority: "NORMAL",
+        note: null,
+      });
+      setFeedbackMessage(`„${cardName}“ wurde zur Wunschliste hinzugefügt.`);
+    } catch (error) {
+      setFeedbackMessage(
+        getApiErrorMessage(error, "Karte konnte nicht zur Wunschliste hinzugefügt werden."),
+      );
+    }
+  }
+
   return (
     <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
       <div className="app-background" />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-0 lg:py-0">
-            <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-6 lg:pb-8 lg:pt-6">
-              <ConsoleBrand size="sm" />
-            </div>
+        <AppSidebar />
 
-            <nav className="hidden lg:block lg:pt-2">
-              {consoleNavItems.map((item) => (
-                <div key={item.href}>
-                  <SidebarNavItem
-                    href={item.href}
-                    label={item.label}
-                    iconName={item.iconName}
-                    active={item.href === "/collection"}
-                  />
-                  {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
-                </div>
-              ))}
-            </nav>
-
-            <ConsoleSidebarUtilityActions />
-          </div>
-
-          <div className="grid gap-2 border-t border-[rgba(255,255,255,0.08)] px-5 py-4 lg:hidden">
-            {consoleNavItems.map((item) => (
-              <SidebarNavItem
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                iconName={item.iconName}
-                active={item.href === "/collection"}
-              />
-            ))}
-            <ConsoleCollectionSubNav mobile />
-          </div>
-        </aside>
-
-        <main className="relative min-w-0 flex-1 overflow-hidden lg:ml-[196px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+        <main className="app-main relative min-w-0 flex-1 overflow-hidden lg:ml-[176px]">
+          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
+            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
               <ConsoleGlobalStatusBar
                 viewer={{ displayName: viewer.displayName }}
                 fallback={{
@@ -767,34 +726,55 @@ export function CollectionBinderConsole({
               />
             </div>
 
-            <header className="mt-8 grid gap-5 xl:grid-cols-[minmax(320px,0.72fr)_minmax(0,1fr)] xl:items-end">
-              <div>
-                <p className="text-[0.8rem] uppercase tracking-[0.26em] text-[#cb5c44]">
+            <header className="mt-3 flex flex-col gap-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,12,18,0.76)] p-3 sm:flex-row sm:items-center">
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#cb5c44]">
                   Sammlung
                 </p>
-                <h1 className="font-display inscription-text mt-3 text-4xl leading-[0.92] tracking-[0.025em] sm:text-5xl xl:text-[3.9rem]">
-                  Meine Binder
+                <h1 className="truncate text-xl font-semibold text-[#f2e7da] sm:text-2xl">
+                  {collectionView === "CARDS" ? "Kartensammlung" : "Binder"}
                 </h1>
+                <p className="mt-1 text-xs text-[#9f8f7d]">
+                  {collectionProgress.copies} Kopien · {collectionProgress.owned} Karten ·{" "}
+                  {binderOptions.length} Binder
+                </p>
               </div>
-              <div className="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
-                <div className="min-w-[150px] rounded-[10px] border border-[rgba(214,164,92,0.18)] bg-[rgba(8,10,14,0.72)] px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.22)]">
-                  <p className="text-[0.62rem] uppercase tracking-[0.2em] text-[#9f8c77]">
-                    Sammlung
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#f2dfc8]">
-                    {collectionProgress.copies} Karten
-                  </p>
-                </div>
-                <div className="min-w-[150px] rounded-[10px] border border-[rgba(214,164,92,0.18)] bg-[rgba(8,10,14,0.72)] px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.22)]">
-                  <p className="text-[0.62rem] uppercase tracking-[0.2em] text-[#9f8c77]">
-                    Drucke
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#f2dfc8]">
-                    {collectionProgress.owned}
-                  </p>
-                </div>
-                <StatusPill tone="slate">{binderOptions.length} Binder</StatusPill>
+
+              <div className="inline-flex self-start rounded-[7px] border border-[rgba(255,255,255,0.1)] bg-[#080d14] p-1 sm:self-auto">
+                {([
+                  ["CARDS", "Karten", "grid"],
+                  ["BINDERS", "Binder", "book"],
+                ] as const).map(([value, label, icon]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={collectionView === value}
+                    onClick={() => {
+                      setCollectionView(value);
+                      window.localStorage.setItem("collection-workspace-view", value);
+                    }}
+                    className={classes(
+                      "inline-flex min-h-[34px] items-center gap-2 rounded-[5px] px-3 text-[0.68rem] font-semibold uppercase tracking-[0.1em] transition",
+                      collectionView === value
+                        ? "bg-[rgba(207,91,66,0.2)] text-[#ffe3d4]"
+                        : "text-[#9f8f7d] hover:text-[#ead9c6]",
+                    )}
+                  >
+                    <AssetIcon name={icon} className="h-3.5 w-3.5 text-current" />
+                    {label}
+                  </button>
+                ))}
               </div>
+
+              {collectionView === "BINDERS" ? (
+                <button
+                  type="button"
+                  onClick={() => setCreatorOpen(true)}
+                  className="ui-button-primary min-h-[36px] px-3 py-2 text-[0.68rem]"
+                >
+                  Neuer Binder
+                </button>
+              ) : null}
             </header>
 
             {feedbackMessage ? (
@@ -803,7 +783,7 @@ export function CollectionBinderConsole({
               </div>
             ) : null}
 
-            {creatorOpen ? (
+            {collectionView === "BINDERS" && creatorOpen ? (
               <Panel className="mt-6 p-5 sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-[0.72rem] uppercase tracking-[0.22em] text-[#cb5c44]">
@@ -879,7 +859,8 @@ export function CollectionBinderConsole({
               </Panel>
             ) : null}
 
-            <div className="mt-7 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
+            {collectionView === "BINDERS" ? (
+            <div className="mt-4 grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0 space-y-5">
                 <section>
                   <div className="mb-4 flex items-center justify-between gap-3">
@@ -933,8 +914,10 @@ export function CollectionBinderConsole({
                 />
               ) : null}
             </div>
+            ) : null}
 
-            <Panel className="mt-7 p-4 sm:p-5">
+            {collectionView === "CARDS" ? (
+            <Panel className="mt-4 p-3 sm:p-4">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="text-[0.7rem] uppercase tracking-[0.22em] text-[#cb5c44]">Kartensammlung</p>
@@ -977,7 +960,7 @@ export function CollectionBinderConsole({
                 </select>
               </div>
 
-              <div className="mt-4 grid max-h-[46rem] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-7">
+              <div className="mt-4 grid max-h-[46rem] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
                 {filteredCollectionCards.map((card) => (
                   <article key={card.cardId} className="rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-2">
                     <button
@@ -1007,6 +990,35 @@ export function CollectionBinderConsole({
                     </button>
                     {expandedCardId === card.cardId ? (
                       <div className="mt-2 space-y-1.5 border-t border-[rgba(255,255,255,0.08)] pt-2">
+                        <div className="grid grid-cols-2 gap-1">
+                          <Link
+                            href="/decks"
+                            className="rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.035)] px-2 py-1.5 text-center text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-[#d7c6b1]"
+                          >
+                            Zum Deck
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => void handleAddCardToWishlist(card.cardId, card.name)}
+                            className="rounded-[4px] border border-[rgba(208,170,110,0.2)] bg-[rgba(208,170,110,0.08)] px-2 py-1.5 text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-[#f0d9b0]"
+                          >
+                            Wunschliste
+                          </button>
+                          {activeBinder ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateEditorRoute(activeBinder.id, {
+                                  pageIndex: activePreviewPageIndex,
+                                  slotIndex: null,
+                                })
+                              }
+                              className="col-span-2 rounded-[4px] border border-[rgba(88,163,169,0.2)] bg-[rgba(58,118,124,0.1)] px-2 py-1.5 text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-[#bfe5e3]"
+                            >
+                              In Binder legen
+                            </button>
+                          ) : null}
+                        </div>
                         {card.printings.map((printing) => (
                           <div
                             key={printing.key}
@@ -1027,6 +1039,7 @@ export function CollectionBinderConsole({
                 ))}
               </div>
             </Panel>
+            ) : null}
           </div>
         </main>
       </div>

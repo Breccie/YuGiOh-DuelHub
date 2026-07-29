@@ -81,6 +81,8 @@ function getPoolFromPack(
 }
 
 export function CustomPackStudio({ session, activeRun }: { session: ViewerSession; activeRun: PlayGroupRunDto }) {
+  const canEdit =
+    activeRun.viewerRole === "OWNER" || activeRun.viewerRole === "ORGANIZER";
   const [packs, setPacks] = useState<CustomPackRecord[]>([]);
   const [templates, setTemplates] = useState<CustomPackTemplateRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -100,7 +102,9 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
   const packSwitchDialogRef = useRef<HTMLDivElement | null>(null);
 
   const selected = useMemo(() => packs.find((pack) => pack.id === selectedId) ?? null, [packs, selectedId]);
-  const version = selected?.versions.find((item) => item.status === "DRAFT") ?? selected?.versions[0] ?? null;
+  const version = canEdit
+    ? selected?.versions.find((item) => item.status === "DRAFT") ?? selected?.versions[0] ?? null
+    : selected?.versions.find((item) => item.status === "PUBLISHED") ?? null;
   const savedDraftSignature = useMemo(() => {
     if (!selected || !version || version.status !== "DRAFT") return null;
     return getDraftSignature(getPoolFromPack(selected, cards), version.slots);
@@ -127,7 +131,12 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
   }
 
   async function refreshPacks(preferredSelectedId = selectedId) {
-    const data = await customPackClient.list(activeRun.id);
+    const listed = await customPackClient.list(activeRun.id);
+    const data = canEdit
+      ? listed
+      : listed.filter((pack) =>
+          pack.versions.some((item) => item.status === "PUBLISHED"),
+        );
     setPacks(data);
     const next = data.find((pack) => pack.id === preferredSelectedId) ?? data[0] ?? null;
     setSelectedId(next?.id ?? null);
@@ -143,11 +152,16 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
   useEffect(() => {
     let mounted = true;
     async function load() {
-      const [data, templateData] = await Promise.all([
+      const [listed, templateData] = await Promise.all([
         customPackClient.list(activeRun.id),
-        customPackClient.listTemplates(),
+        canEdit ? customPackClient.listTemplates() : Promise.resolve([]),
       ]);
       if (!mounted) return;
+      const data = canEdit
+        ? listed
+        : listed.filter((pack) =>
+            pack.versions.some((item) => item.status === "PUBLISHED"),
+          );
       const first = data[0] ?? null;
       setPacks(data);
       setSelectedId(first?.id ?? null);
@@ -157,9 +171,10 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
     }
     void load().catch((error) => setFeedback(getApiErrorMessage(error, "Custom Packs konnten nicht geladen werden.")));
     return () => { mounted = false; };
-  }, [activeRun.id]);
+  }, [activeRun.id, canEdit]);
 
   useEffect(() => {
+    if (!canEdit) return;
     const requestId = catalogRequestRef.current + 1;
     catalogRequestRef.current = requestId;
     const timeout = window.setTimeout(() => {
@@ -178,7 +193,7 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
       window.clearTimeout(timeout);
       if (catalogRequestRef.current === requestId) catalogRequestRef.current += 1;
     };
-  }, [activeRun.id, search]);
+  }, [activeRun.id, canEdit, search]);
 
   function requestCreatePack() {
     if (pending) return;
@@ -383,6 +398,75 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
     } finally {
       setPending(false);
     }
+  }
+
+  if (!canEdit) {
+    return (
+      <DuelConsoleScaffold
+        activePath="/packs"
+        viewer={{ displayName: session.displayName, duelistId: session.duelistId }}
+        metrics={[
+          { icon: "package", label: "Verfügbare Packs", value: String(packs.length) },
+          { icon: "shield", label: "Kampagne", value: activeRun.name },
+        ]}
+      >
+        <Panel kicker="Kampagnen-Packs" title="Veröffentlichte Custom Packs">
+          <p className="max-w-2xl text-sm leading-6 text-[#aab6bd]">
+            Hier siehst du nur veröffentlichte Packs. Entwürfe und
+            Bearbeitungswerkzeuge sind Ownern und Organizern vorbehalten.
+          </p>
+          {feedback ? (
+            <p role="status" className="mt-4 rounded-[7px] border border-white/10 bg-white/[0.035] px-3 py-2 text-sm text-[#dce5e8]">
+              {feedback}
+            </p>
+          ) : null}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {packs.length ? (
+              packs.map((pack) => {
+                const publishedVersion = pack.versions.find(
+                  (item) => item.status === "PUBLISHED",
+                );
+                return (
+                  <button
+                    key={pack.id}
+                    type="button"
+                    className={`rounded-[8px] border p-4 text-left transition ${
+                      selectedId === pack.id
+                        ? "border-[rgba(88,163,169,0.48)] bg-[rgba(58,118,124,0.15)]"
+                        : "border-white/10 bg-white/[0.025] hover:border-white/20"
+                    }`}
+                    onClick={() => selectPack(pack)}
+                    disabled={pending}
+                  >
+                    <span className="block text-sm font-semibold text-[#f1e9df]">
+                      {pack.name}
+                    </span>
+                    <span className="mt-1 block text-xs text-[#98a7b0]">
+                      {pack.code} · {publishedVersion?.packSize ?? 0} Karten ·{" "}
+                      {publishedVersion?.price ?? 0} Credits
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="ui-empty rounded-[8px] p-4 text-sm">
+                Noch keine veröffentlichten Custom Packs.
+              </div>
+            )}
+          </div>
+          {version ? (
+            <button
+              type="button"
+              className="ui-button-primary mt-5"
+              disabled={pending}
+              onClick={() => void openPublishedPack()}
+            >
+              {pending ? "Pack wird geöffnet…" : `Pack für ${version.price} Credits öffnen`}
+            </button>
+          ) : null}
+        </Panel>
+      </DuelConsoleScaffold>
+    );
   }
 
   return (

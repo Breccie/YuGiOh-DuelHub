@@ -15,7 +15,11 @@ type LoadedDeck = Awaited<ReturnType<typeof loadDecks>>[number];
 type OwnershipSummary = {
   cardName: string;
   kind: CardKind;
+  attribute: string | null;
   monsterType: string | null;
+  levelRankLink: number | null;
+  atk: number | null;
+  def: number | null;
   imageUrl: string | null;
   currentOracleText: string | null;
   currentPendulumText: string | null;
@@ -45,7 +49,11 @@ export type DeckCardResolution = {
   cardId: string;
   cardName: string;
   kind: CardKind;
+  attribute: string | null;
   monsterType: string | null;
+  levelRankLink: number | null;
+  atk: number | null;
+  def: number | null;
   imageUrl: string | null;
   section: DeckSection;
   quantity: number;
@@ -125,10 +133,14 @@ export type DeckLegalitySnapshot = {
       pointLimit: number | null;
     }>;
     collectionCards: Array<{
-      cardId: string;
-      name: string;
-      kind: CardKind;
-      monsterType: string | null;
+       cardId: string;
+       name: string;
+       kind: CardKind;
+       attribute: string | null;
+       monsterType: string | null;
+       levelRankLink: number | null;
+       atk: number | null;
+       def: number | null;
       imageUrl: string | null;
       oracleText: string | null;
       errataCutoff: string | null;
@@ -504,7 +516,11 @@ function evaluateDeck(
       cardId: deckCard.cardId,
       cardName: deckCard.card.name,
       kind: deckCard.card.kind,
+      attribute: deckCard.card.attribute,
       monsterType: deckCard.card.monsterType,
+      levelRankLink: deckCard.card.levelRankLink,
+      atk: deckCard.card.atk,
+      def: deckCard.card.def,
       imageUrl: ownership.imageUrl,
       section: deckCard.section,
       quantity: deckCard.quantity,
@@ -603,9 +619,13 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
         },
         card: {
           select: {
-            name: true,
-            kind: true,
-            monsterType: true,
+             name: true,
+             kind: true,
+             attribute: true,
+             monsterType: true,
+             levelRankLink: true,
+             atk: true,
+             def: true,
             externalCardId: true,
             currentOracleText: true,
             currentPendulumText: true,
@@ -638,9 +658,13 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
         entry.card.textVersions.find((version) => version.isErrata)?.effectiveFrom ?? null;
 
       ownershipByCardId.set(entry.cardId, {
-        cardName: entry.card.name,
-        kind: entry.card.kind,
-        monsterType: entry.card.monsterType,
+         cardName: entry.card.name,
+         kind: entry.card.kind,
+         attribute: entry.card.attribute,
+         monsterType: entry.card.monsterType,
+         levelRankLink: entry.card.levelRankLink,
+         atk: entry.card.atk,
+         def: entry.card.def,
         imageUrl: getCardAssetUrl(entry.card.externalCardId),
         currentOracleText: entry.card.currentOracleText,
         currentPendulumText: entry.card.currentPendulumText,
@@ -772,9 +796,13 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
 
         return {
           cardId,
-          name: ownership.cardName,
-          kind: ownership.kind,
-          monsterType: ownership.monsterType,
+           name: ownership.cardName,
+           kind: ownership.kind,
+           attribute: ownership.attribute,
+           monsterType: ownership.monsterType,
+           levelRankLink: ownership.levelRankLink,
+           atk: ownership.atk,
+           def: ownership.def,
           imageUrl: ownership.imageUrl,
           oracleText: ownership.currentOracleText,
           errataCutoff: ownership.firstErrataDate

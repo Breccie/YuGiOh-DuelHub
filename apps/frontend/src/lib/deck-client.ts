@@ -2,6 +2,7 @@ import type {
   CreateDeckRequest,
   DeckExportRequest,
   DeckExportResult,
+  MoveDeckCardRequest,
   RemoveDeckCardRequest,
   UpsertDeckCardRequest,
   UpdateDeckRequest,
@@ -26,12 +27,14 @@ type DeckMutationResponse = {
 
 type DeckDeleteResponse = {
   ok: boolean;
+  activeDeck?: DeckLegalitySnapshot["activeDeck"];
 };
 
 type DeckCardMutationResponse = {
   deckCard: {
     id: string;
   };
+  activeDeck: DeckLegalitySnapshot["activeDeck"];
 };
 
 type DeckExportResponse = {
@@ -99,6 +102,15 @@ export const deckClient = {
       `/api/decks/${deckId}/cards`,
       input,
     );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
+  },
+
+  async moveCard(deckId: string, input: MoveDeckCardRequest) {
+    const response = await apiPostJson<
+      DeckCardMutationResponse,
+      MoveDeckCardRequest
+    >(`/api/decks/${deckId}/cards/move`, input);
     refreshLocalSyncCacheSoon({ forceFullDelta: true });
     return response;
   },

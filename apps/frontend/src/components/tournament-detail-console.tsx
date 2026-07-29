@@ -127,7 +127,7 @@ export function TournamentDetailConsole({
 
     try {
       await tournamentClient.complete(tournament.overview.id);
-      setFeedback("Turnier abgeschlossen. Rewards und naechster Kampagnenschritt wurden aktualisiert.");
+      setFeedback("Turnier abgeschlossen. Rewards und nächster Kampagnenschritt wurden aktualisiert.");
       startTransition(() => router.refresh());
     } catch (error) {
       setFeedback(getApiErrorMessage(error, "Turnier konnte nicht abgeschlossen werden."));
@@ -210,10 +210,10 @@ export function TournamentDetailConsole({
                   <p className="ui-kicker">Kampagnenabschluss</p>
                   <p className="mt-2 text-sm leading-7 text-[#baa58a]">
                     {completed
-                      ? "Dieses Turnier ist abgeschlossen. Rewards wurden vergeben und der naechste Pack-Schritt ist bereit, sobald einer existiert."
+                      ? "Dieses Turnier ist abgeschlossen. Rewards wurden vergeben und der nächste Pack-Schritt ist bereit, sobald einer existiert."
                       : tournament.campaign.openMatchCount > 0
                         ? `${tournament.campaign.openMatchCount} Match(es) sind noch offen. Danach kann der Host das Turnier abschliessen.`
-                        : "Alle Matches sind erledigt. Der Host kann jetzt Rewards vergeben und das naechste Pack vorbereiten."}
+                        : "Alle Matches sind erledigt. Der Host kann jetzt Rewards vergeben und das nächste Pack vorbereiten."}
                   </p>
                 </div>
                 <StatusPill

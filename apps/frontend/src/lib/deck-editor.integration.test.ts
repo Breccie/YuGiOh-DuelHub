@@ -1,7 +1,11 @@
 import { CardKind, PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
 import { afterAll, describe, expect, it } from "vitest";
-import { duplicateDeck, upsertDeckCard } from "@/lib/deck-editor";
+import {
+  duplicateDeck,
+  moveDeckCard,
+  upsertDeckCard,
+} from "@/lib/deck-editor";
 
 const prisma = new PrismaClient();
 
@@ -187,6 +191,41 @@ describe("deck card copy limit", () => {
           section: "MAIN",
           quantity: 2,
         },
+      ]);
+    } finally {
+      await deleteDeckFixture(fixture);
+    }
+  });
+
+  it("moves one copy between sections in a single transaction", async () => {
+    const fixture = await createDeckFixture("move");
+
+    try {
+      await upsertDeckCard(prisma, fixture.userId, fixture.deckId, {
+        cardId: fixture.cardId,
+        section: "MAIN",
+        quantity: 2,
+      });
+      await upsertDeckCard(prisma, fixture.userId, fixture.deckId, {
+        cardId: fixture.cardId,
+        section: "SIDE",
+        quantity: 1,
+      });
+
+      await moveDeckCard(prisma, fixture.userId, fixture.deckId, {
+        cardId: fixture.cardId,
+        fromSection: "MAIN",
+        toSection: "SIDE",
+        quantity: 1,
+      });
+
+      const cards = await prisma.deckCard.findMany({
+        where: { deckId: fixture.deckId, cardId: fixture.cardId },
+        orderBy: { section: "asc" },
+      });
+      expect(cards).toMatchObject([
+        { section: "MAIN", quantity: 1 },
+        { section: "SIDE", quantity: 2 },
       ]);
     } finally {
       await deleteDeckFixture(fixture);

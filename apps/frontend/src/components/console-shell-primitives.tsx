@@ -92,17 +92,17 @@ function TopbarStatusChip({
   return (
     <Link
       href={href}
-      className="group flex h-[68px] w-[150px] min-w-0 shrink-0 items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md transition hover:border-[rgba(208,170,110,0.24)] hover:bg-[rgba(18,22,28,0.76)]"
+      className="group hidden h-11 min-w-0 shrink-0 items-center gap-2 rounded-[9px] border border-[rgba(255,255,255,0.08)] bg-[rgba(10,13,18,0.5)] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition hover:border-[rgba(208,170,110,0.24)] hover:bg-[rgba(18,22,28,0.76)] md:flex"
     >
       <AssetIcon
         name={iconName}
-        className="h-5 w-5 text-[#d0b38c] transition group-hover:text-[#f0d6a8]"
+        className="h-4 w-4 text-[#d0b38c] transition group-hover:text-[#f0d6a8]"
       />
       <span className="min-w-0">
-        <span className="block truncate text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">
+        <span className="block truncate text-[0.58rem] uppercase tracking-[0.12em] text-[#9f8c77]">
           {label}
         </span>
-        <span className="mt-1 block max-w-[13rem] truncate text-sm font-semibold text-[#efdfcb]">
+        <span className="block max-w-[9rem] truncate text-xs font-semibold text-[#efdfcb]">
           {value}
         </span>
       </span>
@@ -239,7 +239,7 @@ export function ConsoleGlobalStatusBar({
   }, []);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5 xl:flex-nowrap">
+    <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
       <TopbarStatusChip
         href="/campaigns"
         iconName="shield"
@@ -335,11 +335,11 @@ export function ConsoleProfileMenuChip({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-[68px] w-[190px] shrink-0 items-center gap-3 rounded-[16px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-3 py-3 shadow-[0_12px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md"
+        className="flex h-11 shrink-0 items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md sm:min-w-[156px]"
       >
-        <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[radial-gradient(circle,rgba(35,49,68,0.92),rgba(10,12,16,0.98))] text-[#d9c5ac]">
-          <AssetIcon name="profile-signet" className="h-7 w-7 text-current" />
-          <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#d34d39] shadow-[0_0_10px_rgba(211,77,57,0.85)]" />
+        <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[radial-gradient(circle,rgba(35,49,68,0.92),rgba(10,12,16,0.98))] text-[#d9c5ac]">
+          <AssetIcon name="profile-signet" className="h-5 w-5 text-current" />
+          <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-[#d34d39] shadow-[0_0_8px_rgba(211,77,57,0.85)]" />
         </div>
         <div className="hidden text-left sm:block">
           <p className="text-sm font-semibold text-[#f0dfcc]">{viewer.displayName}</p>
@@ -364,13 +364,6 @@ export function ConsoleProfileMenuChip({
               iconName="profile-signet"
               label="Profil"
               detail="Öffentliche Ansicht"
-              onClick={() => setOpen(false)}
-            />
-            <ProfileMenuLink
-              href="/collection"
-              iconName="book"
-              label="Sammlung"
-              detail="Binder und Karten"
               onClick={() => setOpen(false)}
             />
             <ProfileMenuLink

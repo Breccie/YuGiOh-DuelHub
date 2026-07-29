@@ -1,21 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type {
   CardCatalogItem,
   CardCatalogSort,
   CardOwnershipFilter,
 } from "@ygo/contracts";
+import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
-import { ConsoleBrand } from "@/components/console-brand";
-import { ConsoleCollectionSubNav } from "@/components/console-collection-sub-nav";
-import { consoleNavItems } from "@/components/console-nav-items";
-import {
-  ConsoleSidebarUtilityActions,
-  ConsoleWindowChromeButton as WindowChromeButton,
-} from "@/components/console-shell-primitives";
+import { ConsoleWindowChromeButton as WindowChromeButton } from "@/components/console-shell-primitives";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { collectionClient } from "@/lib/collection-client";
 import { BinderOpenSpread, type BinderEntryDragPayload } from "@/components/binder-open-spread";
@@ -87,36 +81,6 @@ type BinderCollectionEditorProps = {
 
 function classNames(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
-}
-
-function EditorSidebarNavItem({
-  href,
-  label,
-  active,
-  iconName,
-}: {
-  href: string;
-  label: string;
-  active?: boolean;
-  iconName: (typeof consoleNavItems)[number]["iconName"];
-}) {
-  return (
-    <Link
-      href={href}
-      className={classNames(
-        "group relative flex items-center gap-4 border-y border-transparent px-8 py-7 text-sm uppercase tracking-[0.2em] transition",
-        active
-          ? "border-y-[rgba(196,69,48,0.14)] bg-[linear-gradient(90deg,rgba(124,32,22,0.34),rgba(124,32,22,0.12),transparent)] text-[#f4ddc2]"
-          : "text-[#baa58d] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f1deca]",
-      )}
-    >
-      {active ? (
-        <span className="absolute right-0 top-1/2 h-10 w-px -translate-y-1/2 bg-[#d04f36] shadow-[0_0_22px_rgba(208,79,54,0.95)]" />
-      ) : null}
-      <AssetIcon name={iconName} className="h-5 w-5 text-current" />
-      <span>{label}</span>
-    </Link>
-  );
 }
 
 function formatGermanDateTime(value: string | null) {
@@ -242,18 +206,8 @@ export function BinderCollectionEditor({
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryKind, setInventoryKind] = useState<EditorKindFilter>("ALL");
   const [inventoryRarity, setInventoryRarity] = useState<EditorRarityFilter>("ALL");
-  const [inventorySort, setInventorySort] = useState<CollectionSortModeValue>(
-    () => {
-      if (typeof window === "undefined") return "MOST_COPIES";
-      const savedSort = window.localStorage.getItem("binder-editor-sort-mode");
-      return savedSort === "MOST_COPIES" ||
-        savedSort === "NEWEST_ACQUIRED" ||
-        savedSort === "ALPHABETICAL" ||
-        savedSort === "RARITY"
-        ? savedSort
-        : "MOST_COPIES";
-    },
-  );
+  const [inventorySort, setInventorySort] =
+    useState<CollectionSortModeValue>("MOST_COPIES");
   const [selectedPrintingByCardId, setSelectedPrintingByCardId] =
     useState<Record<string, string>>({});
   const [ownershipFilter, setOwnershipFilter] = useState<CardOwnershipFilter>("ALL");
@@ -268,6 +222,21 @@ export function BinderCollectionEditor({
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogRevision, setCatalogRevision] = useState(0);
 
+  useEffect(() => {
+    const savedSort = window.localStorage.getItem("binder-editor-sort-mode");
+    const frameId = window.requestAnimationFrame(() => {
+      if (
+        savedSort === "MOST_COPIES" ||
+        savedSort === "NEWEST_ACQUIRED" ||
+        savedSort === "ALPHABETICAL" ||
+        savedSort === "RARITY"
+      ) {
+        setInventorySort(savedSort);
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
   useEffect(() => {
     window.localStorage.setItem("binder-editor-sort-mode", inventorySort);
   }, [inventorySort]);
@@ -293,6 +262,7 @@ export function BinderCollectionEditor({
   const metadataEditRevisionRef = useRef(0);
   const failedSaveTargetsRef = useRef(new Set<string>());
   const latestSaveRequestByPageRef = useRef(new Map<string, number>());
+  const pagesRef = useRef(pages);
   const activeDragRef = useRef<ActiveDragState | null>(null);
   const dragCandidateRef = useRef<DragCandidateState | null>(null);
   const suppressClickRef = useRef(false);
@@ -307,6 +277,10 @@ export function BinderCollectionEditor({
   useEffect(() => {
     activeDragRef.current = activeDrag;
   }, [activeDrag]);
+
+  useEffect(() => {
+    pagesRef.current = pages;
+  }, [pages]);
 
   useEffect(() => {
     dragCandidateRef.current = dragCandidate;
@@ -600,9 +574,11 @@ export function BinderCollectionEditor({
       failedSaveTargetsRef.current.delete(page.id);
 
       if (latestSaveRequestByPageRef.current.get(page.id) === requestId) {
-        setPages((current) =>
-          current.map((candidate) => (candidate.id === savedPage.id ? savedPage : candidate)),
+        const nextPages = pagesRef.current.map((candidate) =>
+          candidate.id === savedPage.id ? savedPage : candidate,
         );
+        pagesRef.current = nextPages;
+        setPages(nextPages);
         setSnapshot((current) =>
           current
             ? {
@@ -754,13 +730,17 @@ export function BinderCollectionEditor({
       return;
     }
 
-    const nextPages = pages.map((page, index) => (index === activePageIndex ? mutate(page) : page));
+    const currentPages = pagesRef.current;
+    const nextPages = currentPages.map((page, index) =>
+      index === activePageIndex ? mutate(page) : page,
+    );
 
     if (!options?.skipHistory) {
-      setHistoryPast((current) => [...current, pages]);
+      setHistoryPast((current) => [...current, currentPages]);
       setHistoryFuture([]);
     }
 
+    pagesRef.current = nextPages;
     setPages(nextPages);
     void persistPage(nextPages, activePageIndex);
   }
@@ -1156,29 +1136,9 @@ export function BinderCollectionEditor({
       >
         <div className="app-background" />
 
-        <aside className="hidden border-r border-r-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.82),rgba(5,7,10,0.94))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:w-[272px] lg:flex-col">
-          <div className="border-b border-[rgba(255,255,255,0.08)] px-8 pb-8 pt-7">
-            <ConsoleBrand size="lg" />
-          </div>
+        <AppSidebar />
 
-          <nav className="pt-2">
-            {consoleNavItems.map((item) => (
-              <div key={item.href}>
-                <EditorSidebarNavItem
-                  href={item.href}
-                  label={item.label}
-                  iconName={item.iconName}
-                  active={item.href === "/collection"}
-                />
-                {item.href === "/collection" ? <ConsoleCollectionSubNav /> : null}
-              </div>
-            ))}
-          </nav>
-
-          <ConsoleSidebarUtilityActions />
-        </aside>
-
-        <main className="relative z-10 h-screen min-w-0 overflow-y-auto lg:ml-[272px]">
+        <main className="app-main relative z-10 h-screen min-w-0 overflow-y-auto pb-20 lg:ml-[176px] lg:pb-0">
           <div className="flex min-h-full flex-col px-5 pb-5 pt-4 sm:px-7 xl:px-8">
             <div className="flex justify-end gap-3">
               <WindowChromeButton label="Minimieren" name="window-min" />
@@ -1772,7 +1732,7 @@ export function BinderCollectionEditor({
                               className={classNames(
                                 "group rounded-[10px] border bg-[rgba(255,255,255,0.035)] p-1.5 text-left transition select-none touch-none",
                                 tile.disabled
-                                  ? "cursor-pointer border-[rgba(255,255,255,0.05)] opacity-55 hover:border-[rgba(207,91,66,0.22)] hover:opacity-75 focus-visible:opacity-100"
+                                  ? "cursor-pointer border-[rgba(255,255,255,0.05)] hover:border-[rgba(207,91,66,0.22)]"
                                   : tile.isSelected
                                     ? "cursor-grab border-[rgba(214,164,92,0.48)] bg-[rgba(150,97,33,0.18)] shadow-[0_0_0_1px_rgba(214,164,92,0.12),0_0_22px_rgba(151,29,20,0.16)] active:cursor-grabbing"
                                     : "cursor-grab border-[rgba(255,255,255,0.08)] hover:border-[rgba(207,91,66,0.22)] active:cursor-grabbing",
@@ -1787,7 +1747,12 @@ export function BinderCollectionEditor({
                                     sizes="86px"
                                     unoptimized
                                     draggable={false}
-                                    className="pointer-events-none select-none object-contain object-center transition duration-200 group-hover:scale-[1.02] [-webkit-user-drag:none]"
+                                    className={classNames(
+                                      "pointer-events-none select-none object-contain object-center transition duration-200 group-hover:scale-[1.02] [-webkit-user-drag:none]",
+                                      tile.disabled
+                                        ? "opacity-65 group-hover:opacity-[0.82] group-focus-visible:opacity-[0.82]"
+                                        : "opacity-100",
+                                    )}
                                   />
                                 ) : (
                                   <div className="flex h-full items-center justify-center px-2 text-center text-[0.68rem] font-semibold text-[#eadbc7]">

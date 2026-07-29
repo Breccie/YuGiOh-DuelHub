@@ -1,7 +1,5 @@
+import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
-import { ConsoleBrand } from "@/components/console-brand";
-import { ConsoleSidebarUtilityActions } from "@/components/console-shell-primitives";
-import { SiteNav } from "@/components/site-nav";
 
 function SkeletonBar({
   className = "",
@@ -23,10 +21,10 @@ function LoadingMetric({
   label: string;
 }) {
   return (
-    <div className="flex h-[68px] w-[150px] min-w-0 shrink-0 items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
-      <AssetIcon name={iconName} className="h-5 w-5 text-[#d0b38c]" />
+    <div className="hidden h-11 min-w-0 shrink-0 items-center gap-2 rounded-[9px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 backdrop-blur-md md:flex">
+      <AssetIcon name={iconName} className="h-4 w-4 text-[#d0b38c]" />
       <div className="min-w-0 flex-1">
-        <p className="text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">
+        <p className="text-[0.58rem] uppercase tracking-[0.12em] text-[#9f8c77]">
           {label}
         </p>
         <SkeletonBar className="mt-2 h-3 w-20" />
@@ -41,28 +39,18 @@ export default function Loading() {
       <div className="app-background" />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
-          <div className="lg:block">
-            <div className="border-b border-[rgba(255,255,255,0.08)] px-5 py-5 lg:px-6 lg:pb-8 lg:pt-6">
-              <ConsoleBrand size="sm" />
-            </div>
+        <AppSidebar />
 
-            <SiteNav />
-
-            <ConsoleSidebarUtilityActions />
-          </div>
-        </aside>
-
-        <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
-            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5 xl:flex-nowrap">
+        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
+          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
+            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 backdrop-blur-xl sm:px-3">
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
                 <LoadingMetric iconName="shield" label="Kampagne" />
                 <LoadingMetric iconName="book" label="Sammlung" />
                 <LoadingMetric iconName="users" label="Freunde" />
                 <LoadingMetric iconName="sword" label="Duellanfragen" />
-                <div className="flex h-[68px] w-[190px] shrink-0 items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-3 py-2.5 shadow-[0_12px_28px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.035)] backdrop-blur-md">
-                  <AssetIcon name="profile-signet" className="h-8 w-8 text-[#d0b38c]" />
+                <div className="flex h-11 w-[156px] shrink-0 items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.09)] bg-[rgba(10,13,18,0.58)] px-2.5 backdrop-blur-md">
+                  <AssetIcon name="profile-signet" className="h-6 w-6 text-[#d0b38c]" />
                   <div className="min-w-0 flex-1">
                     <p className="text-[0.64rem] uppercase tracking-[0.16em] text-[#9f8c77]">
                       Benutzer

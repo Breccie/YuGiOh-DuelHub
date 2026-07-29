@@ -114,7 +114,7 @@ export function CampaignSelect({
       parsedRunnerUpCredits === null ||
       parsedParticipationCredits === null
     ) {
-      setErrorMessage("Bitte ganze Zahlen fuer alle Kampagnenwerte eingeben.");
+      setErrorMessage("Bitte ganze Zahlen für alle Kampagnenwerte eingeben.");
       return;
     }
 

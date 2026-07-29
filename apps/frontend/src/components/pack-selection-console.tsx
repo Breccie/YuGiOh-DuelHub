@@ -11,13 +11,9 @@ import type {
   RunRewardGrantDto,
   RunRewardsResponse,
 } from "@ygo/contracts";
+import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
-import { ConsoleBrand } from "@/components/console-brand";
-import { consoleNavItems } from "@/components/console-nav-items";
-import {
-  ConsoleGlobalStatusBar,
-  ConsoleSidebarUtilityActions,
-} from "@/components/console-shell-primitives";
+import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { InteractiveBoosterPack } from "@/components/interactive-booster-pack";
 import { apiGetJson, apiPostJson, getApiErrorMessage } from "@/lib/api-client";
 import { getPreferredPackHeroImage } from "@/lib/pack-renders";
@@ -119,36 +115,6 @@ function formatReleaseDate(value: string) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
-}
-
-function SidebarNavItem({
-  href,
-  label,
-  active,
-  iconName,
-}: {
-  href: string;
-  label: string;
-  active?: boolean;
-  iconName: AssetIconName;
-}) {
-  return (
-    <Link
-      href={href}
-      className={classes(
-        "group relative flex items-center gap-4 border-y border-transparent px-6 py-8 text-sm uppercase tracking-[0.22em] transition",
-        active
-          ? "border-y-[rgba(196,69,48,0.14)] bg-[linear-gradient(90deg,rgba(124,32,22,0.34),rgba(124,32,22,0.12),transparent)] text-[#f4ddc2]"
-          : "text-[#baa58d] hover:bg-[rgba(255,255,255,0.03)] hover:text-[#f1deca]",
-      )}
-    >
-      {active ? (
-        <span className="absolute right-0 top-1/2 h-10 w-px -translate-y-1/2 bg-[#d04f36] shadow-[0_0_22px_rgba(208,79,54,0.95)]" />
-      ) : null}
-      <AssetIcon name={iconName} className="h-5 w-5 text-current" />
-      <span>{label}</span>
-    </Link>
-  );
 }
 
 function Panel({
@@ -664,56 +630,13 @@ export function PackSelectionConsole({
     <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
       <div className="app-background" />
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <aside className="app-sidebar border-b border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(8,11,15,0.78),rgba(5,7,10,0.9))] shadow-[18px_0_46px_rgba(0,0,0,0.34)] backdrop-blur-[18px] lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-[196px] lg:border-b-0 lg:border-r lg:border-r-[rgba(255,255,255,0.08)]">
-          <div className="flex items-center justify-between px-5 py-5 lg:block lg:px-0 lg:py-0">
-            <div className="border-b border-[rgba(255,255,255,0.08)] lg:px-6 lg:pb-8 lg:pt-6">
-              <ConsoleBrand size="sm" />
-            </div>
+        <AppSidebar />
 
-            <nav className="hidden lg:block lg:pt-2">
-              {consoleNavItems.map((item) => (
-                <SidebarNavItem
-                  key={item.href}
-                  href={item.href}
-                  label={item.label}
-                  iconName={item.iconName}
-                  active={item.href === "/packs"}
-                />
-              ))}
-            </nav>
-
-            <ConsoleSidebarUtilityActions />
-          </div>
-
-          <nav
-            className="grid border-t border-[rgba(255,255,255,0.08)] lg:hidden"
-            style={{ gridTemplateColumns: `repeat(${consoleNavItems.length}, minmax(0, 1fr))` }}
-          >
-            {consoleNavItems.map((item) => {
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={classes(
-                    "flex flex-col items-center gap-2 px-1 py-3 text-[0.58rem] uppercase tracking-[0.16em] transition",
-                    item.href === "/packs"
-                      ? "bg-[rgba(207,91,66,0.14)] text-[#f4d9c4]"
-                      : "text-[#aa9983] hover:bg-[rgba(255,255,255,0.04)]",
-                  )}
-                >
-                  <AssetIcon name={item.iconName} className="h-5 w-5 text-current" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <main className="relative flex-1 overflow-hidden lg:ml-[196px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1480px] flex-col px-3 pb-4 pt-3 sm:px-4 lg:px-5">
+        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
+          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
             <section className="relative xl:min-h-[520px]">
               <div className="relative">
-                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.72)] px-3 py-2 shadow-[0_18px_38px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-4">
+                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
                   <ConsoleGlobalStatusBar
                     viewer={{ displayName: viewer.displayName }}
                     fallback={{

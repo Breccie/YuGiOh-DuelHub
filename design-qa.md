@@ -67,6 +67,75 @@ final result: passed
 
 ---
 
+**Design QA: Appweiter UI-Umbau und Vollbild-Deckeditor**
+
+source visual truth paths:
+
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\reference-master-duel-editor.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\reference-master-duel-panel.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\reference-master-duel-catalog.png`
+
+implementation screenshot paths:
+
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-deck-editor-1440-final.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-deck-editor-1280-final.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-deck-editor-mobile-catalog-final.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-deck-editor-mobile-deck-final.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-friends-tabs-1280.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-collection-mobile-fixed.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-packs-1280.png`
+
+combined comparison evidence:
+
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-deck-editor-comparison.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\ui-rebuild-deck-editor-catalog-comparison.png`
+
+viewports and capture metadata:
+
+- Desktop full editor: `1440x1000`, CSS viewport `1440x1000`, device scale factor `1`
+- Compact desktop editor: `1280x800`, CSS viewport `1280x800`, device scale factor `1`
+- Mobile editor: `390x844`, CSS viewport `390x844`, device scale factor `1`
+- State: authenticated as `YUGI-001`, campaign `test`, deck `test`
+
+comparison history:
+
+- Iteration 1: [P1] the previous editor was a long modal/form flow and did not expose deck grid and catalog together. Fixed with dedicated `/decks/new` and `/decks/[deckId]/edit` routes, a persistent three-panel workspace, compact top controls, independent scrolling, and direct card manipulation.
+- Iteration 2: [P1] the mobile bottom navigation was positioned near the top because a backdrop-filter created the wrong fixed-position containing block. Fixed by removing the mobile backdrop filter and desktop sidebar header from the mobile layout. [P2] mobile catalog filters pushed cards below the first viewport. Fixed with a compact `Filter & Sortierung` disclosure.
+- Iteration 3: [P2] the new-deck route inherited card-copy counts from the previously active deck. Fixed by resetting Main, Extra, Side, and total deck-copy fields for the creation workspace.
+- Final comparison: no actionable P0-P2 visual mismatch remains. The implementation intentionally keeps Duel Hub typography, colors, deckbox assets, and controls while following the Master Duel information hierarchy and density.
+
+required fidelity surfaces:
+
+- Fonts and typography: passed; compact sans-serif workspaces and showcase-only serif hierarchy.
+- Spacing and layout rhythm: passed at all required viewports.
+- Colors and visual tokens: passed; technical slate surfaces with restrained gold, teal, and ember status accents.
+- Image quality and asset fidelity: passed; real cards and existing deckbox/icon assets, no placeholder drawings.
+- Copy and content: passed; controls use real deck, collection, legality, and presence data.
+- Source surface fidelity: passed; left details, central deck grid, right catalog, and compact editor toolbar remain visible in the first desktop viewport.
+
+verified surfaces and interactions:
+
+- Shared shell is used by collection, decks, packs, promos, binder editor, and loading state.
+- Wishlist is absent from desktop/mobile main navigation, collection submenu, and profile menu; it remains available through card actions and the direct route.
+- Mobile navigation exposes Start, Packs, Sammlung, Decks, and Mehr without horizontal overflow.
+- Deck catalog, deck zones, and details use separate mobile views instead of compressing the desktop columns.
+- `/` and `Ctrl/Cmd+K` focus card search; `Escape` leaves the editor.
+- The shared global topbar and desktop sidebar remain visible on both deck-editor routes; mobile keeps the global profile bar and bottom navigation around the editor workspace.
+- Friend tabs Online, Alle, and Ausstehend switch successfully; accepted friends retain presence text.
+- Browser console contains only development/HMR messages and no React hydration errors.
+- The mobile document width is `390px` at a `390px` viewport.
+
+verification:
+
+- TypeScript typecheck: passed.
+- ESLint: passed.
+- Unit/integration tests: passed, `123` tests passed and `1` integration-only test was skipped.
+- Next.js production build: passed, including `/decks/new` and `/decks/[deckId]/edit`.
+
+final result: passed
+
+---
+
 **Design QA: Sammlung, Deckeditor, Duelist-Showcase und Freunde**
 
 source visual truth:
@@ -84,6 +153,10 @@ implementation screenshots:
 - `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\profile-desktop.png`
 - `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\profile-mobile-fixed.png`
 - `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\friends-mobile.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\audit-current-deck-editor-01.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\audit-deck-editor-reduced-02.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\deck-editor-reduced-mobile-final.png`
+- `C:\Users\Emil\Documents\Yu-Gi-Oh\output\playwright\deck-editor-new-clean-mobile.png`
 
 viewports:
 
@@ -98,13 +171,17 @@ state:
 
 verified surfaces and interactions:
 
-- Wunschliste ist aus der Hauptnavigation entfernt und als gemeinsames Sammlung-Untermenü erreichbar.
+- Wunschliste ist aus Hauptnavigation, Sammlung-Untermenü und Profilmenü entfernt und über Kartenaktionen sowie die direkte Route erreichbar.
 - Mobile Navigation hat eine eigene volle Zeile und überschneidet Marke oder Beschriftungen nicht.
 - Sammlung gruppiert identische Karten und öffnet die Druckvarianten mit Set, Setcode, Seltenheit und Bestand.
 - Binder-Löschdialog nennt Seiten, belegte Plätze, Showcase-Status und den unveränderten Kartenbestand.
 - Bindereditor verwendet beim Einlegen weitere freie physische Kopien; lokale Belegung wird sofort aus der Verfügbarkeit abgezogen.
 - Deckeditor besitzt auf Desktop die Referenzhierarchie Details, Deckraster und Katalog; auf Mobil bleiben Katalog, Deck und Details getrennt.
 - Linksklick fügt hinzu, Rechtsklick entfernt und der Deckstatus reagiert sofort.
+- Katalog-zu-Deck-Drag-and-drop sowie das Verschieben einer Deckkarte zwischen Side und Extra wurden im Browser erfolgreich ausgeführt und anschließend auf den Ausgangszustand zurückgesetzt.
+- Der Editor zeigt Einstellungen nur noch auf Abruf; doppelte Statusleisten, permanente Filterblöcke und große leere Drop-Platzhalter wurden entfernt.
+- Bei 1280 Pixeln bleiben Details, Deck und Katalog vollständig sichtbar; auf Mobil wird ausschließlich der gewählte Editorbereich gerendert.
+- `/decks/new` zeigt bis zur Deckanlage nur noch den fokussierten Erstellungsdialog und keine leeren Editorbereiche.
 - Deckbox-Auswahl tauscht das echte Asset ohne Layoutsprung.
 - Profil zeigt echte Identität, Statistikwerte, Deckbereiche und Deckbox.
 - Freundesliste zeigt Präsenz nur für akzeptierte Freunde und verwendet eine lesbare Zeitdarstellung.
