@@ -2,7 +2,11 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getPackAssetManifestEntry } from "@/lib/pack-asset-manifest";
-import { getPreferredPackHeroImage, hasOfficialPackRender } from "@/lib/pack-renders";
+import {
+  getPreferredPackBackImage,
+  getPreferredPackHeroImage,
+  hasOfficialPackRender,
+} from "@/lib/pack-renders";
 
 const MVP_PACK_CODES = ["LOB", "MRD", "SRL", "PSV", "IOC"];
 const frontendPublicDir = path.join(process.cwd(), "apps", "frontend", "public");
@@ -36,5 +40,14 @@ describe("MVP pack renders", () => {
     expect(heroImageUrl).toBe(
       "/api/assets/remote?url=https%3A%2F%2Fimages.ygoprodeck.com%2Fimages%2Fsets%2FDB1.jpg",
     );
+  });
+
+  it("uses the bundled raster asset instead of a text-based pack-back placeholder", () => {
+    const backImageUrl = getPreferredPackBackImage("UNLISTED");
+
+    expect(backImageUrl).toBe("/app-assets/fallback-pack.png");
+    expect(
+      existsSync(path.join(frontendPublicDir, "app-assets", "fallback-pack.png")),
+    ).toBe(true);
   });
 });
