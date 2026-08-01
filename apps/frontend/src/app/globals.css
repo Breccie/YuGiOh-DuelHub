@@ -116,8 +116,8 @@
   --ui-space-3: 12px;
   --ui-space-4: 16px;
   --ui-space-6: 24px;
-  --app-sidebar-width: 236px;
-  --app-sidebar-collapsed-width: 86px;
+  --app-sidebar-width: 260px;
+  --app-sidebar-collapsed-width: 88px;
   --font-geist-sans: "Geist";
   --font-geist-mono: "Geist Mono";
   --font-cinzel: "Cinzel";
@@ -138,13 +138,13 @@
 
 html {
   color-scheme: dark;
-  font-size: 18px;
+  font-size: 16px;
   scroll-behavior: smooth;
 }
 
 @media (min-width: 1024px) {
   html {
-    font-size: 19px;
+    font-size: 17px;
   }
 }
 
@@ -405,7 +405,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   position: sticky;
   top: 0.75rem;
   z-index: 28;
-  min-height: 64px;
+  min-height: 56px;
 }
 
 .app-content-viewport {
@@ -769,12 +769,12 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: 40px;
   border-radius: 7px;
   border: 1px solid transparent;
   padding: 0.5rem 0.875rem;
   font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
   line-height: 18px;
   letter-spacing: 0;
@@ -858,8 +858,8 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 
 .ui-icon-button {
   display: inline-grid;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 40px;
+  min-height: 40px;
   place-items: center;
   border-radius: 7px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -878,11 +878,11 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 }
 
 .ui-segment-button {
-  min-height: 44px;
+  min-height: 40px;
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
   font-family: var(--font-geist-sans), ui-sans-serif, sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
   line-height: 18px;
 }
@@ -897,7 +897,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   .ui-icon-button,
   .ui-segment-button,
   .ui-input {
-    min-height: 48px;
+    min-height: 44px;
   }
 }
 
@@ -2096,10 +2096,10 @@ html[data-graphics="low"] .pack-opening-image-shell {
 }
 
 .deck-editor-root .ui-input {
-  min-height: 2.65rem;
+  min-height: 2.45rem;
   border-radius: 0.38rem;
   padding: 0.5rem 0.65rem;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .deck-editor-panel {
@@ -2124,7 +2124,7 @@ html[data-graphics="low"] .pack-opening-image-shell {
 
 .deck-editor-panel > div:first-child h2 {
   font-family: var(--font-sans), sans-serif;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
