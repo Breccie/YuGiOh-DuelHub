@@ -20,6 +20,12 @@ import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { deckClient } from "@/lib/deck-client";
 import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
 import type { DeckIssueType, DeckLegalitySnapshot } from "@/lib/deck-legality";
+import {
+  buildDeckCopyStartOffsets,
+  getDeckRestrictionPresentation,
+  getDeckRestrictionSectionKey,
+  getDeckRestrictionStatus,
+} from "@/lib/deck-restriction";
 import { sortDeckCards } from "@/lib/deck-sort";
 import { wishlistClient } from "@/lib/wishlist-client";
 
@@ -258,18 +264,6 @@ function getLimitTone(value: number) {
   return "teal" as const;
 }
 
-function getLimitShortLabel(value: number) {
-  if (value <= 0) {
-    return "0";
-  }
-
-  if (value >= 3) {
-    return "3";
-  }
-
-  return String(value);
-}
-
 function formatPointValue(value: number) {
   return `${value} P`;
 }
@@ -330,6 +324,71 @@ function decodeDragPayload(value: string) {
   return null;
 }
 
+function BanlistRestrictionBadge({ allowedCopies }: { allowedCopies: number }) {
+  const status = getDeckRestrictionStatus(allowedCopies);
+
+  if (status === "UNLIMITED") return null;
+
+  const label = getLimitLabel(allowedCopies);
+
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={classes(
+        "relative z-20 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 text-[0.65rem] font-black shadow-[0_2px_8px_rgba(0,0,0,0.72)]",
+        status === "FORBIDDEN"
+          ? "border-[#ff5c50] bg-[rgba(119,19,18,0.92)] text-[#fff0ed]"
+          : status === "LIMITED"
+            ? "border-[#f2bd5c] bg-[rgba(102,69,17,0.94)] text-[#fff1c8]"
+            : "border-[#53c6dc] bg-[rgba(16,75,91,0.94)] text-[#e0faff]",
+      )}
+    >
+      {status === "FORBIDDEN" ? (
+        <>
+          <span className="h-2.5 w-2.5 rounded-full border border-current" aria-hidden="true" />
+          <span
+            className="absolute h-0.5 w-[78%] -rotate-45 rounded-full bg-current"
+            aria-hidden="true"
+          />
+        </>
+      ) : allowedCopies}
+    </span>
+  );
+}
+
+function BanlistExcessOverlay({ allowedCopies }: { allowedCopies: number }) {
+  const status = getDeckRestrictionStatus(allowedCopies);
+  const isForbidden = status === "FORBIDDEN";
+  const label = isForbidden ? "Verboten" : `Limit ${allowedCopies}`;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
+    >
+      <span
+        className={classes(
+          "relative flex aspect-square w-[72%] items-center justify-center rounded-full border-[4px] shadow-[0_0_18px_rgba(0,0,0,0.5)] backdrop-blur-[1px]",
+          isForbidden
+            ? "border-[rgba(255,64,54,0.82)] bg-[rgba(128,12,12,0.28)] text-[#ffd3cf]"
+            : status === "LIMITED"
+              ? "border-[rgba(242,189,92,0.88)] bg-[rgba(113,68,6,0.3)] text-[#ffe7ad]"
+              : "border-[rgba(83,198,220,0.88)] bg-[rgba(7,74,91,0.3)] text-[#d7f9ff]",
+        )}
+      >
+        <span className="rounded-[3px] bg-[rgba(5,7,10,0.8)] px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.04em]">
+          {label}
+        </span>
+        <span
+          className="absolute h-[4px] w-[112%] -rotate-45 rounded-full bg-current shadow-[0_1px_3px_rgba(0,0,0,0.7)]"
+        />
+      </span>
+    </span>
+  );
+}
+
 function CollectionBrowserCard({
   card,
   selected,
@@ -351,6 +410,8 @@ function CollectionBrowserCard({
 }) {
   const canAdd = card.deckCopies < 3;
   const canRemove = card.deckCopies > 0;
+  const exceedsBanlist =
+    !usesPointLimit && card.deckCopies > Math.max(0, card.legalLimit);
 
   function handleClick() {
     onPreview();
@@ -384,6 +445,8 @@ function CollectionBrowserCard({
           : selected
           ? "border-[#b8df28] bg-[rgba(184,223,40,0.08)] shadow-[0_0_0_1px_rgba(184,223,40,0.22)]"
           : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(207,91,66,0.18)] hover:bg-[rgba(255,255,255,0.04)]",
+        exceedsBanlist &&
+          "border-[rgba(255,74,63,0.72)] shadow-[0_0_0_1px_rgba(255,74,63,0.24)]",
       )}
       disabled={disabled && !canRemove}
     >
@@ -399,7 +462,7 @@ function CollectionBrowserCard({
               "pointer-events-none select-none object-cover transition-opacity duration-150 [-webkit-user-drag:none]",
               card.owned
                 ? "opacity-100"
-                : "opacity-[0.65] group-hover:opacity-[0.82] group-focus-visible:opacity-[0.82]",
+                : "opacity-[0.45] group-hover:opacity-[0.70] group-focus-visible:opacity-[0.70]",
             )}
             unoptimized
           />
@@ -411,26 +474,24 @@ function CollectionBrowserCard({
         <span className="absolute bottom-1 right-1 rounded-[3px] bg-[rgba(8,10,14,0.88)] px-1.5 py-0.5 text-[0.58rem] font-bold text-[#f1dfc8]">
           {card.owned ? `×${card.availableCopies}` : "0"}
         </span>
-        <span
-          className={classes(
-            "absolute right-1 top-1 rounded-[3px] border px-1.5 py-0.5 text-[0.55rem] font-bold uppercase",
-            usesPointLimit && card.legalLimit <= 0
-              ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)] text-[#ffd5cd]"
-              : usesPointLimit
-              ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)] text-[#ffe0af]"
-              : card.legalLimit <= 0
-              ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)] text-[#ffd5cd]"
-              : card.legalLimit < 3
-                ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)] text-[#ffe0af]"
-                : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)] text-[#c7f1f1]",
+        <span className="absolute right-1 top-1 z-20">
+          {usesPointLimit ? (
+            card.legalLimit <= 0 ? (
+              <BanlistRestrictionBadge allowedCopies={0} />
+            ) : (
+              <span className="inline-flex min-h-7 items-center rounded-[4px] border border-[rgba(208,170,110,0.42)] bg-[rgba(104,76,35,0.9)] px-1.5 text-[0.55rem] font-bold uppercase text-[#ffe0af] shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                {formatPointValue(card.pointValue)}
+              </span>
+            )
+          ) : (
+            <BanlistRestrictionBadge allowedCopies={card.legalLimit} />
           )}
-        >
-          {usesPointLimit && card.legalLimit <= 0
-            ? "0"
-            : usesPointLimit
-              ? formatPointValue(card.pointValue)
-              : getLimitShortLabel(card.legalLimit)}
         </span>
+        {exceedsBanlist ? (
+          <span className="absolute left-1 top-1 z-20 rounded-[4px] border border-[rgba(255,92,80,0.72)] bg-[rgba(112,18,17,0.94)] px-1.5 py-0.5 text-[0.55rem] font-black text-[#ffe0dc] shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
+            {card.deckCopies}/{Math.max(0, card.legalLimit)}
+          </span>
+        ) : null}
       </div>
 
       <span className="pointer-events-none absolute inset-x-1 bottom-1 translate-y-1 rounded-[4px] bg-[rgba(4,6,9,0.96)] px-2 py-1 text-center text-[0.62rem] font-semibold leading-4 text-[#f6ebdb] opacity-0 shadow-xl transition group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
@@ -447,6 +508,7 @@ function DeckZoneCompact({
   selectedTarget,
   isSubmitting,
   usesPointLimit,
+  copyStartOffsets,
   onSelect,
   onDropCard,
   onMoveCard,
@@ -458,6 +520,7 @@ function DeckZoneCompact({
   selectedTarget: PreviewTarget | null;
   isSubmitting: boolean;
   usesPointLimit: boolean;
+  copyStartOffsets: ReadonlyMap<string, number>;
   onSelect: (target: PreviewTarget) => void;
   onDropCard: (cardId: string, section: DeckSection) => void;
   onMoveCard: (
@@ -556,8 +619,21 @@ function DeckZoneCompact({
               selectedTarget?.source === "deck" &&
               selectedTarget.cardId === card.cardId &&
               selectedTarget.section === card.section;
+            const copyOrdinal =
+              (copyStartOffsets.get(
+                getDeckRestrictionSectionKey(card.cardId, card.section),
+              ) ?? 0) +
+              copyIndex +
+              1;
             const ownedCopies = card.availableCopies + card.reservedCopies;
-            const isMissingCopy = copyIndex >= ownedCopies;
+            const isMissingCopy = copyOrdinal > ownedCopies;
+            const { isExcess: isExcessCopy } = getDeckRestrictionPresentation({
+              allowedCopies: card.allowedCopies,
+              copyOrdinal,
+              usesPointLimit,
+            });
+            const restrictionLabel =
+              card.allowedCopies < 3 ? getLimitLabel(card.allowedCopies) : null;
 
             return (
               <button
@@ -565,6 +641,8 @@ function DeckZoneCompact({
                 type="button"
                 aria-label={`${card.cardName}, Kopie ${copyIndex + 1}${
                   isMissingCopy ? ", nicht im Besitz" : ""
+                }${restrictionLabel ? `, ${restrictionLabel}` : ""}${
+                  isExcessCopy ? `, überschreitet Limit ${Math.max(0, card.allowedCopies)}` : ""
                 }`}
                 draggable={!isSubmitting}
                 onDragStart={(event) => {
@@ -620,7 +698,7 @@ function DeckZoneCompact({
                       className={classes(
                         "pointer-events-none select-none object-cover transition-opacity duration-150 [-webkit-user-drag:none]",
                         isMissingCopy
-                          ? "opacity-[0.65] group-hover:opacity-[0.82] group-focus-visible:opacity-[0.82]"
+                          ? "opacity-[0.45] group-hover:opacity-[0.70] group-focus-visible:opacity-[0.70]"
                           : "opacity-100",
                       )}
                       unoptimized
@@ -630,7 +708,7 @@ function DeckZoneCompact({
                       className={classes(
                         "flex h-full items-center justify-center px-2 text-center text-[0.6rem] font-semibold text-[#ead9c3] transition-opacity",
                         isMissingCopy
-                          ? "opacity-[0.65] group-hover:opacity-[0.82] group-focus-visible:opacity-[0.82]"
+                          ? "opacity-[0.45] group-hover:opacity-[0.70] group-focus-visible:opacity-[0.70]"
                           : "opacity-100",
                       )}
                     >
@@ -644,26 +722,23 @@ function DeckZoneCompact({
                     </span>
                   ) : null}
 
-                  <span
-                    className={classes(
-                      "absolute right-1 top-1 rounded-[3px] border px-1 py-0.5 text-[0.5rem] font-bold text-[#f2dfc8]",
-                      usesPointLimit && card.allowedCopies <= 0
-                        ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)]"
-                        : usesPointLimit
-                        ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)]"
-                        : card.allowedCopies <= 0
-                        ? "border-[rgba(204,97,78,0.34)] bg-[rgba(141,61,48,0.72)]"
-                        : card.allowedCopies < 3
-                          ? "border-[rgba(208,170,110,0.34)] bg-[rgba(104,76,35,0.72)]"
-                          : "border-[rgba(88,163,169,0.26)] bg-[rgba(24,72,78,0.72)]",
+                  <span className="absolute right-1 top-1 z-20">
+                    {usesPointLimit ? (
+                      card.allowedCopies <= 0 ? (
+                        <BanlistRestrictionBadge allowedCopies={0} />
+                      ) : (
+                        <span className="inline-flex min-h-6 items-center rounded-[4px] border border-[rgba(208,170,110,0.42)] bg-[rgba(104,76,35,0.9)] px-1 text-[0.5rem] font-bold text-[#ffe0af] shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                          {formatPointValue(card.pointValue)}
+                        </span>
+                      )
+                    ) : (
+                      <BanlistRestrictionBadge allowedCopies={card.allowedCopies} />
                     )}
-                  >
-                    {usesPointLimit && card.allowedCopies <= 0
-                      ? "0"
-                      : usesPointLimit
-                        ? formatPointValue(card.pointValue)
-                        : getLimitShortLabel(card.allowedCopies)}
                   </span>
+
+                  {isExcessCopy ? (
+                    <BanlistExcessOverlay allowedCopies={card.allowedCopies} />
+                  ) : null}
                 </div>
 
               </button>
@@ -861,6 +936,10 @@ export function DeckEditorConsole({
     [activeDeck?.cards, deckSortMode],
   );
   const allDeckCards = useMemo(() => activeDeck?.cards ?? [], [activeDeck?.cards]);
+  const deckCopyStartOffsets = useMemo(
+    () => buildDeckCopyStartOffsets(activeDeck?.cards ?? []),
+    [activeDeck?.cards],
+  );
   const selectedBanlist = useMemo(
     () => availableBanlists.find((banlist) => banlist.id === activeBanlistId) ?? null,
     [activeBanlistId, availableBanlists],
@@ -1999,6 +2078,7 @@ export function DeckEditorConsole({
                 selectedTarget={previewTarget}
                 isSubmitting={false}
                 usesPointLimit={usesGenesisRules}
+                copyStartOffsets={deckCopyStartOffsets}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
                   void handleAddCardToSection(cardId, section);
@@ -2018,6 +2098,7 @@ export function DeckEditorConsole({
                 selectedTarget={previewTarget}
                 isSubmitting={false}
                 usesPointLimit={usesGenesisRules}
+                copyStartOffsets={deckCopyStartOffsets}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
                   void handleAddCardToSection(cardId, section);
@@ -2037,6 +2118,7 @@ export function DeckEditorConsole({
                 selectedTarget={previewTarget}
                 isSubmitting={false}
                 usesPointLimit={usesGenesisRules}
+                copyStartOffsets={deckCopyStartOffsets}
                 onSelect={setPreviewTarget}
                 onDropCard={(cardId, section) => {
                   void handleAddCardToSection(cardId, section);

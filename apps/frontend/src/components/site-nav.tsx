@@ -38,8 +38,9 @@ export function SiteNav() {
               key={item.href}
               href={item.href}
               title={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={classes(
-                "group relative mx-3 flex min-h-[58px] items-center gap-4 rounded-[8px] border border-transparent px-4 text-[19px] font-semibold transition",
+                "app-primary-nav-link group relative mx-3 flex min-h-[58px] items-center gap-4 rounded-[8px] border border-transparent px-4 text-[19px] font-semibold transition",
                 isActive
                   ? "border-[rgba(196,69,48,0.2)] bg-[linear-gradient(90deg,rgba(124,32,22,0.36),rgba(124,32,22,0.1))] text-[#f4ddc2]"
                   : "text-[#aa9983] hover:border-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.035)] hover:text-[#f1deca]",

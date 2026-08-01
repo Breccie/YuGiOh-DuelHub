@@ -397,6 +397,25 @@ textarea {
   background: linear-gradient(180deg, transparent, rgba(240, 199, 160, 0.16), transparent);
 }
 
+.app-primary-nav-link [data-nav-label] {
+  font-family: var(--font-cinzel), Georgia, serif;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 1px rgba(0, 0, 0, 0.9),
+    0 1px 8px rgba(221, 173, 104, 0.08);
+}
+
+.app-primary-nav-link[aria-current="page"] [data-nav-label] {
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 1px rgba(0, 0, 0, 0.95),
+    0 1px 10px rgba(231, 181, 110, 0.16);
+}
+
 html[data-nav-collapsed="true"] .app-workspace::before {
   display: none;
 }
