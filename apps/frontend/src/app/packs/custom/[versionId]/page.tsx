@@ -61,7 +61,9 @@ export default async function CustomPackOpeningPage({ params }: { params: Promis
     ]);
     if (!active || !base) redirect("/campaigns");
     runId = active.run.id;
-    const packs = await fetchApiServiceJson<CustomPackRecord[]>(`/api/v1/custom-packs?runId=${encodeURIComponent(runId)}`);
+    const packs = await fetchApiServiceJson<CustomPackRecord[]>(
+      `/api/v1/runs/${encodeURIComponent(runId)}/custom-packs`,
+    );
     snapshot = asOpeningSnapshot(base, runId, versionId, packs);
   } else {
     const prisma = getPrisma();

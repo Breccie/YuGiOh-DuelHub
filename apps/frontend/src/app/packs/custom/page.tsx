@@ -16,7 +16,9 @@ export default async function CustomPacksPage() {
     if (!active) redirect("/campaigns");
     const [session, packs] = await Promise.all([
       getOnlineViewerSession(),
-      fetchApiServiceJson<Awaited<ReturnType<typeof listCustomPacks>>>(`/api/v1/custom-packs?runId=${encodeURIComponent(active.run.id)}`),
+      fetchApiServiceJson<Awaited<ReturnType<typeof listCustomPacks>>>(
+        `/api/v1/runs/${encodeURIComponent(active.run.id)}/custom-packs`,
+      ),
     ]);
     return <CustomPackSelectionConsole session={session} activeRun={active.run} packs={JSON.parse(JSON.stringify(packs)) as import("@/lib/custom-pack-client").CustomPackRecord[]} />;
   }
