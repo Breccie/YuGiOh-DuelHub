@@ -117,7 +117,14 @@ export const cardCatalogSortSchema = z.enum([
   "NAME_ASC",
   "NAME_DESC",
   "OWNED_DESC",
+  "LEVEL_ASC",
+  "LEVEL_DESC",
+  "ATK_ASC",
   "ATK_DESC",
+  "DEF_ASC",
+  "DEF_DESC",
+  "TYPE_ASC",
+  "ATTRIBUTE_ASC",
   "NEWEST_SET",
 ]);
 export type CardCatalogSort = z.infer<typeof cardCatalogSortSchema>;
@@ -129,6 +136,8 @@ export const cardCatalogQuerySchema = z.object({
   monsterType: z.string().trim().max(80).optional(),
   attribute: z.string().trim().max(40).optional(),
   levelRankLink: z.coerce.number().int().min(0).max(13).optional(),
+  levelRankLinkMin: z.coerce.number().int().min(0).max(13).optional(),
+  levelRankLinkMax: z.coerce.number().int().min(0).max(13).optional(),
   atkMin: z.coerce.number().int().min(-1).max(99999).optional(),
   atkMax: z.coerce.number().int().min(-1).max(99999).optional(),
   defMin: z.coerce.number().int().min(-1).max(99999).optional(),
@@ -140,6 +149,7 @@ export const cardCatalogQuerySchema = z.object({
   hasPoints: z.enum(["true", "false"]).optional(),
   sort: cardCatalogSortSchema.default("NAME_ASC"),
   cursor: z.string().trim().min(1).optional(),
+  includeFacets: z.enum(["true", "false"]).optional(),
   limit: z.coerce.number().int().min(12).max(100).default(48),
 });
 export type CardCatalogQuery = z.infer<typeof cardCatalogQuerySchema>;
@@ -181,6 +191,13 @@ export const cardCatalogResponseSchema = z.object({
     uniqueOwned: z.number().int(),
     totalCards: z.number().int(),
   }),
+  facets: z.object({
+    monsterTypes: z.array(z.string()),
+    attributes: z.array(z.string()),
+    levels: z.array(z.number().int()),
+    rarities: z.array(z.string()),
+    setCodes: z.array(z.string()),
+  }).optional(),
 });
 export type CardCatalogResponse = z.infer<typeof cardCatalogResponseSchema>;
 

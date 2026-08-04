@@ -4,18 +4,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DeckBoxKey } from "@ygo/contracts";
+import type { DeckBoxKey, MediaAssetDto } from "@ygo/contracts";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
+import { DeckBoxDesignPreview } from "@/components/personal-design-preview";
+import { ImageCropUpload } from "@/components/image-crop-upload";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { deckClient } from "@/lib/deck-client";
-import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
+import { deckBoxCatalog, defaultDeckBoxKey, getDeckBoxMeta } from "@/lib/deckbox-config";
 import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 
 type DeckOverviewConsoleProps = {
   viewer: {
     displayName: string;
+    duelistId?: string | null;
+    avatarAssetId?: string | null;
+    avatarImageUrl?: string | null;
   };
   collectionProgress: {
     owned: string;
@@ -36,6 +41,7 @@ type DeckOverviewConsoleProps = {
     formatName: string | null;
     banlistName: string | null;
     deckBoxKey: string;
+    deckBoxAssetId?: string | null;
     deckBoxImageUrl: string;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -50,6 +56,9 @@ type DeckOverviewConsoleProps = {
   activeDeck: DeckLegalitySnapshot["activeDeck"];
   availableBanlists: DeckLegalitySnapshot["editor"]["availableBanlists"];
   collectionCards: DeckLegalitySnapshot["editor"]["collectionCards"];
+  detailsLoading?: boolean;
+  onSelectDeck?: (deckId: string) => void;
+  onPrefetchDeck?: (deckId: string) => void;
 };
 
 function classes(...tokens: Array<string | false | null | undefined>) {
@@ -176,6 +185,9 @@ export function DeckOverviewConsole({
   recentCollectionCards,
   activeDeck,
   availableBanlists,
+  detailsLoading = false,
+  onSelectDeck,
+  onPrefetchDeck,
 }: DeckOverviewConsoleProps) {
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
@@ -185,6 +197,7 @@ export function DeckOverviewConsole({
   const [draftDeckName, setDraftDeckName] = useState("");
   const [draftDeckBoxKey, setDraftDeckBoxKey] =
     useState<DeckBoxKey>(defaultDeckBoxKey);
+  const [draftDeckBoxAsset, setDraftDeckBoxAsset] = useState<MediaAssetDto | null>(null);
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const [creatorFeedback, setCreatorFeedback] = useState<string | null>(null);
   const [libraryQuery, setLibraryQuery] = useState("");
@@ -249,7 +262,7 @@ export function DeckOverviewConsole({
   }, [decks, libraryBanlist, libraryFormat, libraryQuery, librarySort, libraryStatus]);
 
   function openEditor() {
-    router.push(activeDeck ? `/decks/${activeDeck.id}/edit` : "/decks/new");
+    if (selectedDeck) router.push(`/decks/${selectedDeck.id}/edit`);
   }
 
   async function handleExportDeck() {
@@ -340,6 +353,7 @@ export function DeckOverviewConsole({
       const payload = await deckClient.create({
         name: trimmedName,
         deckBoxKey: draftDeckBoxKey,
+        deckBoxAssetId: draftDeckBoxAsset?.id ?? null,
         banlistId: availableBanlists[0]?.id ?? null,
       });
 
@@ -348,6 +362,7 @@ export function DeckOverviewConsole({
       }
 
       setDraftDeckName("");
+      setDraftDeckBoxAsset(null);
       setCreatorOpen(false);
       router.push(`/decks?deck=${payload.deck.id}`);
       router.refresh();
@@ -359,7 +374,7 @@ export function DeckOverviewConsole({
   }
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
+    <div className="app-shell relative min-h-screen overflow-x-hidden bg-transparent text-[#f2e5d1]">
       <div className="app-background" />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">
@@ -371,7 +386,7 @@ export function DeckOverviewConsole({
               <div className="relative">
                 <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
                   <ConsoleGlobalStatusBar
-                    viewer={{ displayName: viewer.displayName }}
+                    viewer={{ displayName: viewer.displayName, duelistId: viewer.duelistId, avatarImageUrl: viewer.avatarImageUrl }}
                     fallback={{
                       collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
                     }}
@@ -382,13 +397,7 @@ export function DeckOverviewConsole({
               <div className="mt-3 flex flex-col gap-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,12,18,0.78)] p-3 sm:flex-row sm:items-center">
                 {heroCard ? (
                   <div className="relative h-[76px] w-[58px] shrink-0 overflow-hidden rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b1119]">
-                    <CardArtwork
-                      src={heroCard.imageUrl}
-                      alt={heroCard.name}
-                      sizes="58px"
-                      fallbackLabel="Deckbox"
-                      objectFit="contain"
-                    />
+                    {selectedDeck ? <DeckBoxDesignPreview imageUrl={heroCard.imageUrl} alt={heroCard.name} custom={Boolean(selectedDeck.deckBoxAssetId)} className="h-full w-full" /> : null}
                   </div>
                 ) : null}
 
@@ -397,21 +406,19 @@ export function DeckOverviewConsole({
                     Deckbibliothek
                   </p>
                   <h1 className="truncate text-xl font-semibold text-[#f2e7da] sm:text-2xl">
-                    {activeDeck?.name ?? "Deine Decks"}
+                    {selectedDeck?.name ?? "Deine Decks"}
                   </h1>
                   <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#9f8f7d]">
-                    <span>{activeDeck ? formatGermanDateUtc(activeDeck.snapshotDate) : "Noch kein aktives Deck"}</span>
-                    <span>{activeDeck?.cardCount ?? 0} Karten</span>
-                    <span className={activeDeck?.isLegal ? "text-[#9cd4cf]" : "text-[#e7a08f]"}>
-                      {activeDeck?.isLegal ? "Spielbereit" : "Entwurf"}
+                    <span>{selectedDeck ? formatGermanDateUtc(selectedDeck.updatedAt) : "Noch kein Deck"}</span>
+                    <span>{selectedDeck ? selectedDeck.mainCount + selectedDeck.extraCount + selectedDeck.sideCount : 0} Karten</span>
+                    <span className={selectedDeck?.isLegal ? "text-[#9cd4cf]" : "text-[#e7a08f]"}>
+                      {selectedDeck?.isLegal ? "Spielbereit" : selectedDeck ? "Entwurf" : ""}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 sm:justify-end">
-                  <button type="button" onClick={openEditor} className="ui-button-primary min-h-[38px] px-3 py-2 text-[0.68rem]">
-                    {activeDeck ? "Bearbeiten" : "Neues Deck"}
-                  </button>
+                  {selectedDeck ? <button type="button" onClick={openEditor} className="ui-button-primary min-h-[38px] px-3 py-2 text-[0.68rem]">Bearbeiten</button> : null}
                   <button type="button" onClick={() => void handleDuplicateDeck()} disabled={!activeDeck || isDuplicating} className="ui-button-neutral min-h-[38px] px-3 py-2 text-[0.68rem] disabled:opacity-50">
                     {isDuplicating ? "Dupliziert…" : "Duplizieren"}
                   </button>
@@ -434,16 +441,6 @@ export function DeckOverviewConsole({
                   <p className="text-sm uppercase tracking-[0.24em] text-[#cb5c44]">
                     Deckbibliothek
                   </p>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => router.push("/decks/new")}
-                      className="inline-flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-[#b19b84] transition hover:text-[#f0ddc8]"
-                    >
-                      <span>Neues Deck</span>
-                      <AssetIcon name="plus" className="h-4 w-4 text-current" />
-                    </button>
-                  </div>
                 </div>
 
                 <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -520,7 +517,9 @@ export function DeckOverviewConsole({
                       <button
                         key={deck.id}
                         type="button"
-                        onClick={() => router.push(`/decks?deck=${deck.id}`)}
+                        onClick={() => onSelectDeck ? onSelectDeck(deck.id) : router.replace(`/decks?deck=${deck.id}`, { scroll: false })}
+                        onMouseEnter={() => onPrefetchDeck?.(deck.id)}
+                        onFocus={() => onPrefetchDeck?.(deck.id)}
                         className={classes(
                           "group relative flex min-w-0 flex-col rounded-[10px] border p-2 text-left transition",
                           selected
@@ -529,13 +528,7 @@ export function DeckOverviewConsole({
                         )}
                       >
                         <div className="relative flex h-[150px] w-full items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2">
-                          <CardArtwork
-                            src={deck.deckBoxImageUrl}
-                            alt={deck.name}
-                            sizes="102px"
-                            fallbackLabel="Deckbox"
-                            objectFit="contain"
-                          />
+                          <DeckBoxDesignPreview imageUrl={deck.deckBoxImageUrl} alt={deck.name} custom={Boolean(deck.deckBoxAssetId)} className="h-full w-full" />
                         </div>
                         <span className="mt-2 truncate text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-[#f1dec9]">
                           {deck.name}
@@ -610,7 +603,7 @@ export function DeckOverviewConsole({
                         <select
                           value={draftDeckBoxKey}
                           onChange={(event) =>
-                            setDraftDeckBoxKey(event.target.value as DeckBoxKey)
+                            { setDraftDeckBoxKey(event.target.value as DeckBoxKey); setDraftDeckBoxAsset(null); }
                           }
                           className="ui-input mt-2"
                           disabled={isCreatingDeck}
@@ -622,6 +615,17 @@ export function DeckOverviewConsole({
                           ))}
                         </select>
                       </label>
+                      <div className="grid gap-2">
+                        <div className="h-28 min-w-20">
+                          <DeckBoxDesignPreview
+                            imageUrl={draftDeckBoxAsset?.imageUrl ?? getDeckBoxMeta(draftDeckBoxKey).imageUrl}
+                            alt="Gewählte Deckbox"
+                            custom={Boolean(draftDeckBoxAsset)}
+                            className="h-full w-full"
+                          />
+                        </div>
+                        <ImageCropUpload kind="DECKBOX" aspect={2 / 3} label="Eigenes Design" onUploaded={setDraftDeckBoxAsset} />
+                      </div>
                       <button
                         type="button"
                         onClick={() => void handleCreateDeck()}
@@ -680,7 +684,12 @@ export function DeckOverviewConsole({
                   </div>
                 </div>
 
-                {activeDeck ? (
+                {detailsLoading && selectedDeck && !activeDeck ? (
+                  <div className="grid gap-3" aria-label="Deckdetails werden geladen">
+                    <div className="ui-skeleton h-24 rounded-[12px]" />
+                    <div className="ui-skeleton h-44 rounded-[12px]" />
+                  </div>
+                ) : activeDeck ? (
                   <>
                     <div className="mt-5 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] p-3">
                       <div className="grid grid-cols-5 gap-3">

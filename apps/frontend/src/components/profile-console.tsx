@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel, StatusPill } from "@/components/panel";
+import { BinderDesignPreview, DeckBoxDesignPreview } from "@/components/personal-design-preview";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { PublicProfile, ViewerSession } from "@/lib/app-dtos";
 import { duelClient } from "@/lib/duel-client";
@@ -187,11 +188,7 @@ export function ProfileConsole({
           <Panel kicker="Showcase-Binder" title={profile.showcase.binderName ?? "Noch nicht gewählt"}>
             {profile.showcase.binderName ? (
               <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
-                <div className="relative mx-auto aspect-[62/100] w-full max-w-[180px] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[#080b10] shadow-[0_24px_44px_rgba(0,0,0,0.42)]">
-                  {profile.showcase.coverImageUrl ? (
-                    <Image src={profile.showcase.coverImageUrl} alt={profile.showcase.coverName ?? profile.showcase.binderName} fill sizes="180px" className="object-cover" />
-                  ) : null}
-                </div>
+                {profile.showcase.coverImageUrl ? <BinderDesignPreview imageUrl={profile.showcase.coverImageUrl} alt={profile.showcase.coverName ?? profile.showcase.binderName} custom={Boolean(profile.showcase.coverAssetId)} className="mx-auto w-full max-w-[180px]" /> : null}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {profile.showcase.highlightedCards.map((card, index) => (
                     <article key={`${card.collectionEntryId ?? card.cardName ?? index}`} className="min-w-0">
@@ -218,9 +215,7 @@ export function ProfileConsole({
               <div className="grid gap-3">
                 {profile.decks.map((deck) => (
                   <article key={deck.id} className="grid grid-cols-[76px_minmax(0,1fr)] gap-4 rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-3">
-                    <div className="relative aspect-[62/100] overflow-hidden rounded-[8px] bg-[rgba(255,255,255,0.02)]">
-                      <Image src={deck.deckBoxImageUrl} alt={`${deck.name} Deckbox`} fill sizes="76px" className="object-contain" />
-                    </div>
+                    <DeckBoxDesignPreview imageUrl={deck.deckBoxImageUrl} alt={`${deck.name} Deckbox`} custom={Boolean(deck.deckBoxAssetId)} className="w-[76px]" />
                     <div className="min-w-0 py-1">
                       <div className="flex items-start justify-between gap-3">
                         <p className="truncate text-base font-semibold text-[#f0dfcc]">{deck.name}</p>

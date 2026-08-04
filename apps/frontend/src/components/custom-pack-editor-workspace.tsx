@@ -15,10 +15,18 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CardCatalogItem,
+  CardCatalogResponse,
   CardCatalogSort,
   CustomPackEra,
 } from "@ygo/contracts";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
+import {
+  buildCardCatalogFilterQuery,
+  CardCatalogFilterDrawer,
+  CardCatalogSortSelect,
+  emptyCardCatalogFilters,
+  type CardCatalogFilters,
+} from "@/components/card-catalog-controls";
 import { FieldHelp } from "@/components/field-help";
 import { ImageCropUpload } from "@/components/image-crop-upload";
 import { Panel, StatusPill } from "@/components/panel";
@@ -72,8 +80,7 @@ type PoolItem = {
   imageUrl: string | null;
 };
 
-type MobileEditorView = "PACK" | "POOL" | "CATALOG";
-type CatalogCardKind = CardCatalogItem["kind"];
+type MobileEditorView = "PACK" | "CATALOG";
 type SimulationResult = Awaited<ReturnType<typeof customPackClient.simulate>>;
 
 function classes(...values: Array<string | false | null | undefined>) {
@@ -197,12 +204,14 @@ export function CustomPackEditorWorkspace({
   const [newName, setNewName] = useState("Duel Hub Custom Set");
   const [newCode, setNewCode] = useState("DHC-01");
   const [newEra, setNewEra] = useState<CustomPackEra>("EARLY_TCG");
-  const [mobileView, setMobileView] = useState<MobileEditorView>("POOL");
+  const [mobileView, setMobileView] = useState<MobileEditorView>("PACK");
+  const [poolsExpanded, setPoolsExpanded] = useState(false);
   const [activeRarity, setActiveRarity] = useState("Common");
   const [selectedPoolKey, setSelectedPoolKey] = useState<string | null>(null);
   const [selectedCatalogCard, setSelectedCatalogCard] = useState<CardCatalogItem | null>(null);
   const [search, setSearch] = useState("");
-  const [kindFilter, setKindFilter] = useState<"ALL" | CatalogCardKind>("ALL");
+  const [catalogFilters, setCatalogFilters] = useState<CardCatalogFilters>(emptyCardCatalogFilters);
+  const [catalogFacets, setCatalogFacets] = useState<CardCatalogResponse["facets"]>();
   const [catalogSort, setCatalogSort] = useState<CardCatalogSort>("NAME_ASC");
   const [cards, setCards] = useState<CardCatalogItem[]>([]);
   const [catalogTotal, setCatalogTotal] = useState(0);
@@ -257,6 +266,11 @@ export function CustomPackEditorWorkspace({
     () => pool.find((entry) => `${entry.cardId}:${entry.rarity}` === selectedPoolKey) ?? null,
     [pool, selectedPoolKey],
   );
+  const previewAssetId = version
+    ? artworkAssetId !== version.artworkAssetId
+      ? artworkAssetId
+      : version.packImageAssetId ?? artworkAssetId
+    : artworkAssetId;
 
   function applySelectedPack(pack: CustomPackRecord | null) {
     const nextVersion = getVersion(pack, canEdit);
@@ -330,14 +344,15 @@ export function CustomPackEditorWorkspace({
       setCatalogLoading(true);
       void cardCatalogClient.search({
         q: search,
-        ownership: "ALL",
-        kind: kindFilter === "ALL" ? undefined : kindFilter,
+        ...buildCardCatalogFilterQuery(catalogFilters),
         sort: catalogSort,
+        includeFacets: catalogFacets ? undefined : "true",
         limit: 48,
       }).then((result) => {
         if (catalogRevisionRef.current !== revision) return;
         setCards(result.items);
         setCatalogTotal(result.total);
+        if (result.facets) setCatalogFacets(result.facets);
       }).catch((error) => {
         if (catalogRevisionRef.current === revision) {
           setFeedback(getApiErrorMessage(error, "Kartenkatalog konnte nicht geladen werden."));
@@ -347,7 +362,27 @@ export function CustomPackEditorWorkspace({
       });
     }, 180);
     return () => window.clearTimeout(timer);
-  }, [canEdit, catalogSort, kindFilter, search]);
+  }, [canEdit, catalogFacets, catalogFilters, catalogSort, search]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const key = `custom-pack-pools:${session.duelistId}:${selectedId}`;
+    const frameId = window.requestAnimationFrame(() => {
+      setPoolsExpanded(window.localStorage.getItem(key) === "open");
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [selectedId, session.duelistId]);
+
+  function togglePools() {
+    const next = !poolsExpanded;
+    setPoolsExpanded(next);
+    if (selectedId) {
+      window.localStorage.setItem(
+        `custom-pack-pools:${session.duelistId}:${selectedId}`,
+        next ? "open" : "closed",
+      );
+    }
+  }
 
   function selectPack(pack: CustomPackRecord) {
     if (pack.id === selectedId || pending) return;
@@ -608,7 +643,7 @@ export function CustomPackEditorWorkspace({
 
   if (!canEdit) {
     return (
-      <DuelConsoleScaffold activePath="/packs" viewer={{ displayName: session.displayName, duelistId: session.duelistId }} metrics={[]}>
+      <DuelConsoleScaffold activePath="/packs" viewer={{ displayName: session.displayName, duelistId: session.duelistId, avatarImageUrl: session.avatarImageUrl }} metrics={[]}>
         <Panel kicker="Kampagnen-Packs" title="Veröffentlichte Custom Packs">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {packs.map((pack) => (
@@ -626,9 +661,9 @@ export function CustomPackEditorWorkspace({
   }
 
   return (
-    <DuelConsoleScaffold activePath="/packs" viewer={{ displayName: session.displayName, duelistId: session.duelistId }} metrics={[]}>
-      <section className="custom-pack-workspace flex h-[calc(100dvh-164px)] min-h-[620px] flex-col overflow-hidden rounded-[12px] border border-[rgba(144,174,198,0.14)] bg-[rgba(5,8,13,0.96)] text-[#f2e5d1] lg:h-[calc(100dvh-100px)]">
-        <header className="flex flex-wrap items-center gap-2 border-b border-white/8 bg-[#080d13] px-3 py-2.5">
+    <DuelConsoleScaffold activePath="/packs" viewer={{ displayName: session.displayName, duelistId: session.duelistId, avatarImageUrl: session.avatarImageUrl }} metrics={[]}>
+      <section className="custom-pack-workspace flex h-[calc(100dvh-164px)] min-h-[620px] flex-col overflow-hidden rounded-[12px] border border-[rgba(144,174,198,0.14)] bg-[rgba(5,8,13,0.82)] text-[#f2e5d1] backdrop-blur-xl lg:h-[calc(100dvh-100px)]">
+        <header className="flex flex-wrap items-center gap-2 border-b border-white/8 bg-[rgba(8,13,19,0.86)] px-3 py-2.5">
           <div className="flex min-w-[190px] flex-1 items-center gap-2">
             <IconPackage size={19} className="text-[#d6a45c]" />
             <select
@@ -672,8 +707,8 @@ export function CustomPackEditorWorkspace({
           ) : null}
         </header>
 
-        <nav className="grid grid-cols-3 gap-1.5 border-b border-white/8 p-2 xl:hidden" aria-label="Packeditor-Bereich wählen">
-          {([['PACK', 'Pack'], ['POOL', 'Kartenpool'], ['CATALOG', 'Katalog']] as const).map(([value, label]) => (
+        <nav className="grid grid-cols-2 gap-1.5 border-b border-white/8 p-2 xl:hidden" aria-label="Packeditor-Bereich wählen">
+          {([['PACK', 'Pack'], ['CATALOG', 'Katalog']] as const).map(([value, label]) => (
             <button key={value} type="button" aria-pressed={mobileView === value} onClick={() => setMobileView(value)} className={classes("ui-segment-button border px-3 py-2.5", mobileView === value ? "border-teal-300/35 bg-teal-300/12 text-[#d7f3f2]" : "border-white/8 bg-white/[0.025] text-[#adbac0]")}>{label}</button>
           ))}
         </nav>
@@ -687,13 +722,6 @@ export function CustomPackEditorWorkspace({
                   <p className="mt-1 font-semibold text-[#e7d8c7]">{selected.code}</p>
                   <div className="mt-3 flex items-center gap-2 text-xs text-[#9aa8af]">Era-Vorlage <FieldHelp label="Era-Vorlage">Die Ära bestimmt nur die anfängliche, TCG-nahe Packverteilung. Sie begrenzt weder Kartenalter noch Kartenpool und überschreibt spätere Anpassungen nicht.</FieldHelp></div>
                   <p className="mt-1 text-sm">{ERA_LABELS[selected.era as CustomPackEra]}</p>
-                </div>
-                <div className="rounded-[8px] border border-white/8 bg-white/[0.025] p-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-[#aebbc1]">Booster-Motiv <FieldHelp label="Booster-Motiv">Das Bild wird als Hochformat zugeschnitten und mit Packname und Setcode in eine einheitliche metallische Boosterfolie eingesetzt. Veröffentlichte Versionen behalten ihr Motiv unverändert.</FieldHelp></div>
-                  <div className="relative mx-auto mt-3 aspect-[2/3] w-24 overflow-hidden rounded-lg border border-white/10 bg-black/35">
-                    {(version.packImageAssetId || artworkAssetId) ? <Image src={`/api/assets/media/${encodeURIComponent(artworkAssetId !== version.artworkAssetId ? artworkAssetId! : (version.packImageAssetId ?? artworkAssetId!))}`} alt="Booster-Motiv Vorschau" fill sizes="96px" className="object-cover" unoptimized /> : <div className="grid h-full place-items-center px-2 text-center text-[0.65rem] text-white/35">Standardmotiv</div>}
-                  </div>
-                  {canMutate ? <div className="mt-3 flex flex-wrap gap-2"><ImageCropUpload kind="PACK_ARTWORK" aspect={4 / 5} label={artworkAssetId ? "Motiv ersetzen" : "Motiv hochladen"} onUploaded={(asset) => setArtworkAssetId(asset.id)} />{artworkAssetId ? <button type="button" className="ui-button ui-button-secondary" onClick={() => setArtworkAssetId(null)}>Entfernen</button> : null}</div> : null}
                 </div>
                 <label className="text-xs font-semibold text-[#aebbc1]">Karten pro Pack <input className="ui-input mt-1.5" type="number" min={1} max={100} value={packSize} disabled={!canMutate} onChange={(event) => setPackSize(Math.max(1, Number(event.target.value) || 1))} /></label>
                 <label className="text-xs font-semibold text-[#aebbc1]">Packs pro Display <FieldHelp label="Displaygröße">Legt fest, wie viele Booster ein vollständiges Display enthält. Die Einstellung verändert nicht die Karten pro Booster.</FieldHelp><input className="ui-input mt-1.5" type="number" min={1} max={100} value={displaySize} disabled={!canMutate} onChange={(event) => setDisplaySize(Math.max(1, Number(event.target.value) || 1))} /></label>
@@ -714,8 +742,28 @@ export function CustomPackEditorWorkspace({
             ) : <div className="ui-empty rounded-[8px] p-4 text-sm">Erstelle zuerst ein Custom Pack.</div>}
           </Panel>
 
-          <Panel kicker="Packinhalt" title="Seltenheitspools" className={classes("custom-pack-panel order-2 !rounded-[9px] !p-3 xl:flex xl:min-h-0 xl:flex-col", mobileView !== "POOL" && "!hidden xl:!flex")}>
+          <Panel kicker="Packinhalt" title="Booster-Aufbau" className={classes("custom-pack-panel order-2 !rounded-[9px] !p-3 xl:flex xl:min-h-0 xl:flex-col", mobileView !== "PACK" && "!hidden xl:!flex")}>
             <div className="custom-pack-panel-scroll flex min-h-0 flex-1 flex-col gap-2 pr-1">
+              <div className="grid gap-4 rounded-[10px] border border-[rgba(214,164,92,0.18)] bg-[linear-gradient(125deg,rgba(116,72,32,0.14),rgba(255,255,255,0.025))] p-4 md:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="relative mx-auto aspect-[2/3] w-full max-w-[180px] overflow-hidden rounded-[12px] border border-white/12 bg-[linear-gradient(180deg,rgba(20,26,34,0.9),rgba(7,10,15,0.96))] shadow-[0_24px_48px_rgba(0,0,0,0.42)]">
+                  {previewAssetId ? <Image src={`/api/assets/media/${encodeURIComponent(previewAssetId)}`} alt="Booster-Motiv Vorschau" fill sizes="180px" className="object-cover" unoptimized /> : <div className="grid h-full place-items-center px-3 text-center text-xs text-white/40">Standardmotiv</div>}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-3 pb-3 pt-10 text-center"><p className="text-sm font-semibold text-white">{selected?.name}</p><p className="mt-1 text-[0.62rem] uppercase tracking-[0.16em] text-white/65">{selected?.code}</p></div>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-[#d6a45c]">Aktueller Booster</p>
+                  <h2 className="mt-1 text-xl font-semibold text-[#f1e2d0]">{selected?.name}</h2>
+                  <p className="mt-2 text-sm text-[#9aa8af]">{packSize} Karten · {displaySize} Packs pro Display · {price} Credits</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {canMutate ? <ImageCropUpload kind="PACK_ARTWORK" aspect={4 / 5} label={artworkAssetId ? "Motiv ersetzen" : "Motiv hochladen"} onUploaded={(asset) => setArtworkAssetId(asset.id)} /> : null}
+                    {canMutate && artworkAssetId ? <button type="button" className="ui-button ui-button-secondary" onClick={() => setArtworkAssetId(null)}>Motiv entfernen</button> : null}
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-[7px] border border-white/8 bg-black/20 px-2 py-2"><span className="block text-lg font-semibold">{slots.length}</span><span className="text-[0.58rem] uppercase tracking-[0.12em] text-white/45">Ziehgruppen</span></div>
+                    <div className="rounded-[7px] border border-white/8 bg-black/20 px-2 py-2"><span className="block text-lg font-semibold">{rarities.length}</span><span className="text-[0.58rem] uppercase tracking-[0.12em] text-white/45">Seltenheiten</span></div>
+                    <div className="rounded-[7px] border border-white/8 bg-black/20 px-2 py-2"><span className="block text-lg font-semibold">{pool.length}</span><span className="text-[0.58rem] uppercase tracking-[0.12em] text-white/45">Poolkarten</span></div>
+                  </div>
+                </div>
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-[7px] border border-white/8 bg-white/[0.02] p-2.5">
                 <div><div className="flex items-center gap-2 text-xs font-semibold text-[#d9ccbc]">Booster-Aufbau <FieldHelp label="Ziehgruppen">Eine Ziehgruppe ist keine einzelne Kartenposition. Sie bündelt Karten mit derselben Seltenheitsregel. Beispiel: Eine Common-Ziehgruppe mit der Anzahl 7 erzeugt sieben einzelne Karten im Booster.</FieldHelp></div><p className="mt-1 text-[0.68rem] text-[#84939b]">{slots.length} {slots.length === 1 ? "Ziehgruppe erzeugt" : "Ziehgruppen erzeugen"} zusammen {slots.reduce((sum, slot) => sum + slot.count, 0)} von {packSize} Karten</p></div>
                 {validation.messages.length ? <details className="relative"><summary className="cursor-pointer list-none rounded-[5px] border border-red-300/20 bg-red-300/8 px-2.5 py-1 text-xs font-semibold text-[#efb0a6]">{validation.messages.length} Hinweise</summary><div className="absolute right-0 top-[calc(100%+0.4rem)] z-40 w-[min(360px,80vw)] rounded-[8px] border border-red-300/20 bg-[#171013] p-3 shadow-2xl">{validation.messages.map((message) => <p key={message} className="text-xs leading-5 text-[#dfb7b0]">{message}</p>)}</div></details> : <StatusPill tone="teal">Bereit</StatusPill>}
@@ -734,8 +782,15 @@ export function CustomPackEditorWorkspace({
                 ))}
                 {canMutate ? <button type="button" className="min-h-28 rounded-[8px] border border-dashed border-white/12 text-sm font-semibold text-[#8da0a8] hover:border-teal-300/25 hover:text-teal-100" onClick={() => setSlots((current) => [...current, { slotIndex: Math.max(-1, ...current.map((slot) => slot.slotIndex)) + 1, count: 1, allowedRarities: ["Common"], weight: 1, rarityOptions: [{ rarity: "Common", weight: 100 }] }])}><IconPlus size={17} className="mr-1 inline" /> Ziehgruppe hinzufügen</button> : null}
               </div>
-              <div>
-                <div className="grid gap-2 2xl:grid-cols-2">
+              <section className="rounded-[9px] border border-white/8 bg-black/15">
+                <div className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left">
+                  <span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-[#e7d8c7]">Kartenpools <FieldHelp label="Kartenpools">Hier legst du fest, welche Karten eine bereits konfigurierte Seltenheit tatsächlich ziehen darf. Der Booster-Aufbau und seine Kartenplätze bleiben davon getrennt.</FieldHelp></span>
+                    <span className="mt-1 block text-[0.68rem] text-[#84939b]">{pool.length} Poolkarten in {rarities.length} erreichbaren Seltenheiten</span>
+                  </span>
+                  <button type="button" className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[0.66rem] font-semibold text-[#b9c5ca]" aria-expanded={poolsExpanded} onClick={togglePools}>{poolsExpanded ? "Einklappen" : "Bearbeiten"}</button>
+                </div>
+                {poolsExpanded ? <div className="grid gap-2 border-t border-white/8 p-2.5 2xl:grid-cols-2">
                   {rarities.map((rarity) => {
                     const entries = pool.filter((entry) => entry.rarity === rarity);
                     const missing = validation.missingPools.has(rarity);
@@ -746,15 +801,18 @@ export function CustomPackEditorWorkspace({
                       </section>
                     );
                   })}
-                </div>
-              </div>
+                </div> : null}
+              </section>
             </div>
           </Panel>
 
           <Panel kicker="Kartendatenbank" title="Katalog" className={classes("custom-pack-panel order-3 !rounded-[9px] !p-3 xl:flex xl:min-h-0 xl:flex-col", mobileView !== "CATALOG" && "!hidden xl:!flex")}>
             <div className="flex min-h-0 flex-1 flex-col gap-2">
               <label className="block"><span className="sr-only">Karte suchen</span><input className="ui-input" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name oder Setcode …" /></label>
-              <div className="grid grid-cols-2 gap-1.5"><select className="ui-input h-9 py-1" value={kindFilter} onChange={(event) => setKindFilter(event.target.value as typeof kindFilter)} aria-label="Kartentyp filtern"><option value="ALL">Alle Kartentypen</option><option value="MONSTER">Monster</option><option value="SPELL">Zauber</option><option value="TRAP">Fallen</option><option value="TOKEN">Token</option></select><select className="ui-input h-9 py-1" value={catalogSort} onChange={(event) => setCatalogSort(event.target.value as CardCatalogSort)} aria-label="Katalog sortieren"><option value="NAME_ASC">Name A–Z</option><option value="NAME_DESC">Name Z–A</option><option value="ATK_DESC">ATK absteigend</option><option value="NEWEST_SET">Neueste Sets</option></select></div>
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
+                <CardCatalogFilterDrawer value={catalogFilters} onChange={setCatalogFilters} facets={catalogFacets} showBanlist={false} />
+                <CardCatalogSortSelect value={catalogSort} onChange={setCatalogSort} />
+              </div>
               <div className="flex items-center justify-between text-[0.65rem] text-[#7f8e95]"><span>{catalogLoading ? "Lädt…" : `${catalogTotal} Ergebnisse`}</span><span>Aktiv: <strong className="text-teal-100">{activeRarity}</strong></span></div>
               <div className="grid min-h-0 flex-1 grid-cols-4 content-start gap-1.5 overflow-y-auto pr-1">
                 {cards.map((card) => {
@@ -766,7 +824,7 @@ export function CustomPackEditorWorkspace({
           </Panel>
         </div>
 
-        {(feedback || simulation) ? <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-[#080d13] px-3 py-2 text-xs"><p role="status" aria-live="polite" className="text-[#c7d4d7]">{feedback}</p>{simulation ? <details className="relative"><summary className="cursor-pointer list-none font-semibold text-teal-100">Simulation anzeigen</summary><div className="absolute bottom-[calc(100%+0.5rem)] right-0 z-50 grid max-h-[420px] w-[min(520px,90vw)] grid-cols-2 gap-4 overflow-y-auto rounded-[9px] border border-white/12 bg-[#0b1117] p-4 shadow-2xl"><div><p className="font-semibold">Seltenheiten</p>{simulation.rarityDistribution.map((item) => <div key={item.rarity} className="mt-2 flex justify-between gap-3 text-[#aebbc1]"><span>{item.rarity}</span><span>{formatPercentage(item.probability * 100)} %</span></div>)}</div><div><p className="font-semibold">Häufigste Karten</p>{simulation.cardDistribution.slice(0, 8).map((item) => <div key={item.cardId} className="mt-2 flex justify-between gap-3 text-[#aebbc1]"><span className="truncate">{item.name}</span><span>{formatPercentage(item.probability * 100)} %</span></div>)}</div></div></details> : null}</footer> : null}
+        {(feedback || simulation) ? <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-white/8 bg-[rgba(8,13,19,0.86)] px-3 py-2 text-xs"><p role="status" aria-live="polite" className="text-[#c7d4d7]">{feedback}</p>{simulation ? <details className="relative"><summary className="cursor-pointer list-none font-semibold text-teal-100">Simulation anzeigen</summary><div className="absolute bottom-[calc(100%+0.5rem)] right-0 z-50 grid max-h-[420px] w-[min(520px,90vw)] grid-cols-2 gap-4 overflow-y-auto rounded-[9px] border border-white/12 bg-[#0b1117] p-4 shadow-2xl"><div><p className="font-semibold">Seltenheiten</p>{simulation.rarityDistribution.map((item) => <div key={item.rarity} className="mt-2 flex justify-between gap-3 text-[#aebbc1]"><span>{item.rarity}</span><span>{formatPercentage(item.probability * 100)} %</span></div>)}</div><div><p className="font-semibold">Häufigste Karten</p>{simulation.cardDistribution.slice(0, 8).map((item) => <div key={item.cardId} className="mt-2 flex justify-between gap-3 text-[#aebbc1]"><span className="truncate">{item.name}</span><span>{formatPercentage(item.probability * 100)} %</span></div>)}</div></div></details> : null}</footer> : null}
       </section>
 
       {createOpen ? (

@@ -20,8 +20,17 @@ function formatNumber(value: number) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const deckId = url.searchParams.get("deckId")?.trim() || undefined;
+  const view = url.searchParams.get("view")?.trim();
 
   if (shouldProxyToApiService()) {
+    if (view === "library") {
+      return proxyApiRoute(request, "/api/v1/decks/library");
+    }
+
+    if (view === "detail" && deckId) {
+      return proxyApiRoute(request, `/api/v1/decks/${encodeURIComponent(deckId)}/overview`);
+    }
+
     const query = deckId ? `?deckId=${encodeURIComponent(deckId)}` : "";
 
     return proxyApiRoute(request, `/api/v1/decks/overview${query}`);
@@ -109,9 +118,12 @@ export async function GET(request: Request) {
       snapshot.editor.availableBanlists[0]?.name ??
       "Keine Bannliste";
 
-    return NextResponse.json({
+    const responsePayload = {
       viewer: {
         displayName: snapshot.viewer.displayName,
+        duelistId: session.duelistId ?? null,
+        avatarAssetId: session.avatarAssetId ?? null,
+        avatarImageUrl: session.avatarImageUrl ?? null,
       },
       collectionProgress: {
         owned: formatNumber(snapshot.editor.collectionCards.length),
@@ -154,7 +166,32 @@ export async function GET(request: Request) {
       activeDeck: snapshot.activeDeck,
       availableBanlists: snapshot.editor.availableBanlists,
       collectionCards: snapshot.editor.collectionCards,
-    });
+    };
+
+    if (view === "library") {
+      return NextResponse.json({
+        viewer: responsePayload.viewer,
+        collectionProgress: responsePayload.collectionProgress,
+        latestBanlistName: responsePayload.latestBanlistName,
+        selectedDeckId: responsePayload.selectedDeckId,
+        decks: responsePayload.decks,
+        recentCollectionCards: responsePayload.recentCollectionCards,
+        availableBanlists: responsePayload.availableBanlists,
+      });
+    }
+
+    if (view === "detail" && deckId) {
+      if (!responsePayload.activeDeck || responsePayload.activeDeck.id !== deckId) {
+        return NextResponse.json({ error: "Deck wurde nicht gefunden." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        selectedDeckId: deckId,
+        activeDeck: responsePayload.activeDeck,
+      });
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     const status =
       error instanceof Error && "status" in error

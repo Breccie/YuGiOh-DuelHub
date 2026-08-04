@@ -2,23 +2,30 @@
 
 import Image from "next/image";
 import type { MediaAssetDto } from "@ygo/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type {
   CardCatalogItem,
+  CardCatalogResponse,
   CardCatalogSort,
-  CardOwnershipFilter,
 } from "@ygo/contracts";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
+import {
+  buildCardCatalogFilterQuery,
+  CardCatalogFilterDrawer,
+  CardCatalogSortSelect,
+  emptyCardCatalogFilters,
+  type CardCatalogFilters,
+} from "@/components/card-catalog-controls";
+import { ImageCropUpload } from "@/components/image-crop-upload";
+import { BinderDesignPreview } from "@/components/personal-design-preview";
 import { ConsoleWindowChromeButton as WindowChromeButton } from "@/components/console-shell-primitives";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { collectionClient } from "@/lib/collection-client";
 import { BinderOpenSpread, type BinderEntryDragPayload } from "@/components/binder-open-spread";
 import {
   binderCoverCatalog,
-  getCollectionSortLabel,
   type BinderCoverKey,
-  type CollectionSortModeValue,
 } from "@/lib/collection-showcase-config";
 import type {
   BinderEditorInventoryCardDto,
@@ -30,9 +37,6 @@ import type {
 import { mediaClient } from "@/lib/media-client";
 import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { wishlistClient } from "@/lib/wishlist-client";
-
-type EditorKindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
-type EditorRarityFilter = "ALL" | string;
 
 type ActiveDragState = {
   clientX: number;
@@ -62,14 +66,6 @@ type InventoryTile = {
   printing: BinderEditorPrintingDto | null;
   printingCount: number;
 };
-
-function mapCollectionSortToCatalogSort(
-  sort: CollectionSortModeValue,
-): CardCatalogSort {
-  if (sort === "MOST_COPIES") return "OWNED_DESC";
-  if (sort === "NEWEST_ACQUIRED") return "NEWEST_SET";
-  return "NAME_ASC";
-}
 
 type BinderCollectionEditorProps = {
   binderId: string;
@@ -212,13 +208,14 @@ export function BinderCollectionEditor({
   }, []);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(initialSelectedSlotIndex);
   const [inventorySearch, setInventorySearch] = useState("");
-  const [inventoryKind, setInventoryKind] = useState<EditorKindFilter>("ALL");
-  const [inventoryRarity, setInventoryRarity] = useState<EditorRarityFilter>("ALL");
-  const [inventorySort, setInventorySort] =
-    useState<CollectionSortModeValue>("MOST_COPIES");
+  const [catalogFilters, setCatalogFilters] = useState<CardCatalogFilters>({
+    ...emptyCardCatalogFilters,
+    ownership: "OWNED",
+  });
+  const [catalogSort, setCatalogSort] = useState<CardCatalogSort>("OWNED_DESC");
+  const [catalogFacets, setCatalogFacets] = useState<CardCatalogResponse["facets"]>();
   const [selectedPrintingByCardId, setSelectedPrintingByCardId] =
     useState<Record<string, string>>({});
-  const [ownershipFilter, setOwnershipFilter] = useState<CardOwnershipFilter>("ALL");
   const [catalogCards, setCatalogCards] = useState<CardCatalogItem[]>([]);
   const [catalogTotal, setCatalogTotal] = useState(0);
   const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
@@ -233,21 +230,24 @@ export function BinderCollectionEditor({
   useEffect(() => {
     const savedSort = window.localStorage.getItem("binder-editor-sort-mode");
     const frameId = window.requestAnimationFrame(() => {
-      if (
-        savedSort === "MOST_COPIES" ||
-        savedSort === "NEWEST_ACQUIRED" ||
-        savedSort === "ALPHABETICAL" ||
-        savedSort === "RARITY"
-      ) {
-        setInventorySort(savedSort);
+      const legacySorts: Record<string, CardCatalogSort> = {
+        MOST_COPIES: "OWNED_DESC",
+        NEWEST_ACQUIRED: "NEWEST_SET",
+        ALPHABETICAL: "NAME_ASC",
+        RARITY: "NAME_ASC",
+      };
+      const supportedSorts: CardCatalogSort[] = ["NAME_ASC", "NAME_DESC", "OWNED_DESC", "NEWEST_SET", "LEVEL_ASC", "LEVEL_DESC", "ATK_ASC", "ATK_DESC", "DEF_ASC", "DEF_DESC", "TYPE_ASC", "ATTRIBUTE_ASC"];
+      if (savedSort) {
+        const normalized = legacySorts[savedSort] ?? savedSort as CardCatalogSort;
+        if (supportedSorts.includes(normalized)) setCatalogSort(normalized);
       }
     });
 
     return () => window.cancelAnimationFrame(frameId);
   }, []);
   useEffect(() => {
-    window.localStorage.setItem("binder-editor-sort-mode", inventorySort);
-  }, [inventorySort]);
+    window.localStorage.setItem("binder-editor-sort-mode", catalogSort);
+  }, [catalogSort]);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(
@@ -261,6 +261,8 @@ export function BinderCollectionEditor({
   const [stagedPayload, setStagedPayload] = useState<BinderEntryDragPayload | null>(null);
   const [slotContextMenu, setSlotContextMenu] = useState<SlotContextMenuState | null>(null);
   const [closeWarning, setCloseWarning] = useState<string | null>(null);
+  const [pageSwipeOffset, setPageSwipeOffset] = useState(0);
+  const [pageSwipeActive, setPageSwipeActive] = useState(false);
 
   const saveSequenceRef = useRef(0);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -281,6 +283,12 @@ export function BinderCollectionEditor({
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const pageSwipeRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startedAt: number;
+  } | null>(null);
 
   useEffect(() => {
     activeDragRef.current = activeDrag;
@@ -406,10 +414,9 @@ export function BinderCollectionEditor({
       void cardCatalogClient
         .search({
           q: inventorySearch.trim() || undefined,
-          ownership: ownershipFilter,
-          kind: inventoryKind === "ALL" ? undefined : inventoryKind,
-          rarity: inventoryRarity === "ALL" ? undefined : inventoryRarity,
-          sort: mapCollectionSortToCatalogSort(inventorySort),
+          ...buildCardCatalogFilterQuery(catalogFilters),
+          sort: catalogSort,
+          includeFacets: catalogFacets ? undefined : "true",
           limit: 60,
         })
         .then((payload) => {
@@ -418,6 +425,7 @@ export function BinderCollectionEditor({
           setCatalogCards(payload.items);
           setCatalogTotal(payload.total);
           setCatalogCursor(payload.nextCursor);
+          if (payload.facets) setCatalogFacets(payload.facets);
           setSelectedCatalogCard((current) =>
             current ? payload.items.find((card) => card.cardId === current.cardId) ?? current : null,
           );
@@ -438,12 +446,11 @@ export function BinderCollectionEditor({
     };
   }, [
     catalogRevision,
-    inventoryKind,
-    inventoryRarity,
+    catalogFacets,
+    catalogFilters,
+    catalogSort,
     inventorySearch,
-    inventorySort,
     isOpen,
-    ownershipFilter,
   ]);
 
   useEffect(() => {
@@ -539,19 +546,6 @@ export function BinderCollectionEditor({
   const inventoryByCardId = new Map(
     (snapshot?.inventoryCards ?? []).map((card) => [card.cardId, card]),
   );
-
-  const inventoryRarities = Array.from(
-    new Set(
-      [
-        ...(snapshot?.inventoryCards ?? []).flatMap((card) =>
-          card.printings
-            .map((printing) => printing.rarity)
-            .filter((rarity): rarity is string => Boolean(rarity)),
-        ),
-        ...catalogCards.flatMap((card) => card.rarities),
-      ],
-    ),
-  ).sort((left, right) => left.localeCompare(right, "de"));
 
   async function persistPage(nextPages: CollectionBinderPageDto[], pageIndex: number) {
     const page = nextPages[pageIndex];
@@ -899,6 +893,51 @@ export function BinderCollectionEditor({
     setHistoryFuture([]);
   }
 
+  function handlePageSwipeStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+    if (activeDragRef.current || dragCandidateRef.current || slotContextMenu) return;
+    const target = event.target as Element;
+    if (target.closest("input,select,textarea,a,[role='menu']")) return;
+    pageSwipeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startedAt: performance.now(),
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setPageSwipeActive(true);
+  }
+
+  function handlePageSwipeMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const swipe = pageSwipeRef.current;
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - swipe.startX;
+    const deltaY = event.clientY - swipe.startY;
+    if (Math.abs(deltaX) < 10 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+    event.preventDefault();
+    const atStart = activePageIndex === 0 && deltaX > 0;
+    const atEnd = activePageIndex === pages.length - 1 && deltaX < 0;
+    setPageSwipeOffset(Math.max(-96, Math.min(96, deltaX * (atStart || atEnd ? 0.28 : 0.72))));
+  }
+
+  function handlePageSwipeEnd(event: ReactPointerEvent<HTMLDivElement>) {
+    const swipe = pageSwipeRef.current;
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - swipe.startX;
+    const deltaY = event.clientY - swipe.startY;
+    const elapsed = Math.max(1, performance.now() - swipe.startedAt);
+    const velocity = Math.abs(deltaX) / elapsed;
+    const horizontal = Math.abs(deltaX) > Math.abs(deltaY) * 1.35;
+    const qualifies = horizontal && (Math.abs(deltaX) >= 56 || (Math.abs(deltaX) >= 34 && velocity >= 0.45));
+    if (qualifies) {
+      const nextPageIndex = deltaX < 0 ? activePageIndex + 1 : activePageIndex - 1;
+      if (nextPageIndex >= 0 && nextPageIndex < pages.length) handleSelectPage(nextPageIndex);
+    }
+    pageSwipeRef.current = null;
+    setPageSwipeActive(false);
+    setPageSwipeOffset(0);
+  }
+
   async function handleCreatePage() {
     if (failedSaveTargetsRef.current.size === 0) {
       setSaveError(null);
@@ -996,10 +1035,8 @@ export function BinderCollectionEditor({
     try {
       const payload = await cardCatalogClient.search({
         q: inventorySearch.trim() || undefined,
-        ownership: ownershipFilter,
-        kind: inventoryKind === "ALL" ? undefined : inventoryKind,
-        rarity: inventoryRarity === "ALL" ? undefined : inventoryRarity,
-        sort: mapCollectionSortToCatalogSort(inventorySort),
+        ...buildCardCatalogFilterQuery(catalogFilters),
+        sort: catalogSort,
         cursor: catalogCursor,
         limit: 60,
       });
@@ -1053,7 +1090,7 @@ export function BinderCollectionEditor({
     }
 
     const visiblePrintings = inventoryCard.printings.filter(
-      (printing) => inventoryRarity === "ALL" || printing.rarity === inventoryRarity,
+      (printing) => !catalogFilters.rarity || printing.rarity === catalogFilters.rarity,
     );
     const selectedPrinting =
       visiblePrintings.find(
@@ -1090,29 +1127,6 @@ export function BinderCollectionEditor({
       printing: selectedPrinting,
       printingCount: visiblePrintings.length,
     };
-  }).sort((left, right) => {
-    const leftInventory = inventoryByCardId.get(left.card.cardId);
-    const rightInventory = inventoryByCardId.get(right.card.cardId);
-    if (inventorySort === "MOST_COPIES") {
-      return right.card.totalCopies - left.card.totalCopies ||
-        left.card.name.localeCompare(right.card.name, "de");
-    }
-    if (inventorySort === "NEWEST_ACQUIRED") {
-      return (
-        new Date(rightInventory?.latestAcquiredAt ?? 0).getTime() -
-          new Date(leftInventory?.latestAcquiredAt ?? 0).getTime() ||
-        left.card.name.localeCompare(right.card.name, "de")
-      );
-    }
-    if (inventorySort === "RARITY") {
-      return (
-        (right.printing?.rarity ?? "").localeCompare(
-          left.printing?.rarity ?? "",
-          "de",
-        ) || left.card.name.localeCompare(right.card.name, "de")
-      );
-    }
-    return left.card.name.localeCompare(right.card.name, "de");
   });
   const inventoryCardCount = snapshot?.inventoryCards.length ?? 0;
   const selectedCatalogAvailableCopies = selectedCatalogCard
@@ -1141,7 +1155,7 @@ export function BinderCollectionEditor({
         aria-labelledby="binder-editor-title"
         tabIndex={-1}
         className={classNames(
-          "app-shell pointer-events-auto absolute inset-0 overflow-hidden bg-[#04060a] text-[#f2e5d1]",
+          "app-shell pointer-events-auto absolute inset-0 overflow-hidden bg-transparent text-[#f2e5d1]",
           !isOpen && "hidden",
         )}
       >
@@ -1246,8 +1260,20 @@ export function BinderCollectionEditor({
                 </p>
                 <div className="mt-2 flex flex-wrap gap-3">
                   {personalCovers.map((asset) => (
-                    <button key={asset.id} type="button" onClick={() => { if (draftCoverAssetId === asset.id) return; metadataDirtyRef.current = true; metadataEditRevisionRef.current += 1; setDraftCoverAssetId(asset.id); }} className={classNames("relative h-[72px] w-[52px] overflow-hidden rounded-[5px] border", draftCoverAssetId === asset.id ? "border-teal-300/70 ring-1 ring-teal-300/30" : "border-white/10")} aria-label={`${asset.name} als Binder-Cover wählen`}><Image src={asset.imageUrl} alt={asset.name} fill sizes="52px" className="object-cover" unoptimized /></button>
+                    <button key={asset.id} type="button" onClick={() => { if (draftCoverAssetId === asset.id) return; metadataDirtyRef.current = true; metadataEditRevisionRef.current += 1; setDraftCoverAssetId(asset.id); }} className={classNames("relative w-[52px] rounded-[5px] border p-0.5", draftCoverAssetId === asset.id ? "border-teal-300/70 ring-1 ring-teal-300/30" : "border-white/10")} aria-label={`${asset.name} als Binder-Cover wählen`}><BinderDesignPreview imageUrl={asset.imageUrl} alt={asset.name} custom className="w-full" /></button>
                   ))}
+                  <ImageCropUpload
+                    kind="BINDER_COVER"
+                    aspect={2 / 3}
+                    label="Eigenes Cover"
+                    onUploaded={(asset) => {
+                      setPersonalCovers((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+                      setDraftCoverAssetId(asset.id);
+                      metadataDirtyRef.current = true;
+                      metadataEditRevisionRef.current += 1;
+                      setSaveStatus("idle");
+                    }}
+                  />
                   {binderCoverCatalog.map((cover) => (
                     <button
                       key={cover.key}
@@ -1427,7 +1453,20 @@ export function BinderCollectionEditor({
                   </div>
                 ) : null}
 
-                <div className="min-h-0 flex-1 overflow-auto px-3 py-3">
+                <div
+                  className="min-h-0 flex-1 touch-pan-y overflow-auto px-3 py-3"
+                  onPointerDown={handlePageSwipeStart}
+                  onPointerMove={handlePageSwipeMove}
+                  onPointerUp={handlePageSwipeEnd}
+                  onPointerCancel={handlePageSwipeEnd}
+                >
+                  <div
+                    className="transition-transform duration-200 ease-out motion-reduce:transition-none"
+                    style={{
+                      transform: `translateX(${pageSwipeOffset}px)`,
+                      transitionDuration: pageSwipeActive ? "0ms" : undefined,
+                    }}
+                  >
                   <BinderOpenSpread
                     compact
                     editable
@@ -1455,6 +1494,7 @@ export function BinderCollectionEditor({
                       });
                     }}
                   />
+                  </div>
                 </div>
               </aside>
 
@@ -1522,8 +1562,8 @@ export function BinderCollectionEditor({
                                 .get(selectedCatalogCard.cardId)!
                                 .printings.filter(
                                   (printing) =>
-                                    inventoryRarity === "ALL" ||
-                                    printing.rarity === inventoryRarity,
+                                    !catalogFilters.rarity ||
+                                    printing.rarity === catalogFilters.rarity,
                                 )
                                 .map((printing) => {
                                   const available = getAvailableCopies(
@@ -1622,88 +1662,14 @@ export function BinderCollectionEditor({
                           />
                         </label>
 
-                        <div className="grid grid-cols-3 gap-2" aria-label="Besitzfilter">
-                          {([
-                            ["ALL", "Alle Karten"],
-                            ["OWNED", "Im Besitz"],
-                            ["UNOWNED", "Nicht im Besitz"],
-                          ] as const).map(([value, label]) => (
-                            <button
-                              key={value}
-                              type="button"
-                              onClick={() => setOwnershipFilter(value)}
-                              aria-pressed={ownershipFilter === value}
-                              className={classNames(
-                                "rounded-[6px] border px-2 py-2 text-[0.66rem] font-semibold transition",
-                                ownershipFilter === value
-                                  ? "border-[rgba(207,91,66,0.34)] bg-[rgba(207,91,66,0.16)] text-[#ffe3ca]"
-                                  : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#cbb79d]",
-                              )}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {(["ALL", "MONSTER", "SPELL", "TRAP", "TOKEN"] as const).map((kind) => (
-                            <button
-                              key={kind}
-                              type="button"
-                              onClick={() => setInventoryKind(kind)}
-                              aria-pressed={inventoryKind === kind}
-                              className={classNames(
-                                "rounded-[6px] border px-3 py-2 text-xs font-semibold transition",
-                                inventoryKind === kind
-                                  ? "border-[rgba(207,91,66,0.28)] bg-[rgba(207,91,66,0.14)] text-[#ffe3ca]"
-                                  : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#cbb79d] hover:border-[rgba(207,91,66,0.18)]",
-                              )}
-                            >
-                              {kind === "ALL"
-                                ? "Alle"
-                                : kind === "MONSTER"
-                                  ? "Monster"
-                                  : kind === "SPELL"
-                                    ? "Zauber"
-                                    : kind === "TRAP"
-                                      ? "Falle"
-                                      : "Token"}
-                            </button>
-                          ))}
-                          <select
-                            value={inventoryRarity}
-                            onChange={(event) => setInventoryRarity(event.target.value)}
-                            className="rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b0f15] px-3 py-2 text-xs font-semibold text-[#e8d6c0] outline-none"
-                            aria-label="Seltenheit filtern"
-                          >
-                            <option value="ALL">Alle Seltenheiten</option>
-                            {inventoryRarities.map((rarity) => (
-                              <option key={rarity} value={rarity}>{rarity}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={inventorySort}
-                            onChange={(event) =>
-                              setInventorySort(
-                                event.target.value as CollectionSortModeValue,
-                              )
-                            }
-                            className="rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b0f15] px-3 py-2 text-xs font-semibold text-[#e8d6c0] outline-none"
-                            aria-label="Binder-Katalog sortieren"
-                          >
-                            {(
-                              [
-                                "MOST_COPIES",
-                                "NEWEST_ACQUIRED",
-                                "ALPHABETICAL",
-                                "RARITY",
-                              ] as const
-                            ).map((sortMode) => (
-                              <option key={sortMode} value={sortMode}>
-                                {getCollectionSortLabel(sortMode)}
-                              </option>
-                            ))}
-                          </select>
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(170px,0.8fr)]">
+                          <CardCatalogFilterDrawer
+                            value={catalogFilters}
+                            onChange={setCatalogFilters}
+                            facets={catalogFacets}
+                            showBanlist={false}
+                          />
+                          <CardCatalogSortSelect value={catalogSort} onChange={setCatalogSort} />
                         </div>
                       </div>
                     </div>

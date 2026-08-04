@@ -91,7 +91,12 @@ const collectionRoutes: FastifyPluginAsync = async (app) => {
       ]);
 
       return reply.send({
-        viewer: collection.viewer,
+        viewer: {
+          ...collection.viewer,
+          duelistId: session.duelistId,
+          avatarAssetId: session.avatarAssetId,
+          avatarImageUrl: session.avatarImageUrl,
+        },
         binders: showcase.binders,
         presets: showcase.presets,
         totals: collection.totals,

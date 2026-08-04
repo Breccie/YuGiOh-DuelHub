@@ -8,6 +8,7 @@ import { shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { getViewerSession } from "@/lib/auth";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getDeckBoxMeta } from "@/lib/deckbox-config";
+import { getMediaAssetUrl } from "@/lib/media-service";
 import { getPrisma } from "@/lib/prisma";
 import Loading from "../loading";
 
@@ -109,6 +110,9 @@ async function DecksPageContent() {
     <DeckOverviewConsole
       viewer={{
         displayName: snapshot.viewer.displayName,
+        duelistId: session.duelistId ?? null,
+        avatarAssetId: session.avatarAssetId ?? null,
+        avatarImageUrl: session.avatarImageUrl ?? null,
       }}
       collectionProgress={{
         owned: formatNumber(snapshot.editor.collectionCards.length),
@@ -133,7 +137,8 @@ async function DecksPageContent() {
           formatName: summary?.formatName ?? null,
           banlistName: summary?.banlistName ?? null,
           deckBoxKey: deckBox.key,
-          deckBoxImageUrl: deckBox.imageUrl,
+          deckBoxAssetId: deck.deckBoxAssetId,
+          deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
           previewImageUrl: getCardAssetUrl(deck.cards[0]?.card.externalCardId ?? null),
           previewLabel: deck.cards[0]?.card.name ?? deck.name,
         };

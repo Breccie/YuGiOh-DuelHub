@@ -61,7 +61,7 @@ export function DuelConsoleScaffold({
     parseMetricCount(findMetricValue(metrics, ["Duellanfragen", "Anfragen"]));
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
+    <div className="app-shell relative min-h-screen overflow-x-hidden bg-transparent text-[#f2e5d1]">
       <div className="app-background" />
 
       <div className="relative z-10 flex min-h-screen flex-col lg:block">

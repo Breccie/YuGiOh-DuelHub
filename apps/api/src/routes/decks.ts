@@ -46,6 +46,9 @@ function formatNumber(value: number) {
 type DeckOverviewPayload = {
   viewer: {
     displayName: string;
+    duelistId: string | null;
+    avatarAssetId: string | null;
+    avatarImageUrl: string | null;
   };
   collectionProgress: {
     owned: string;
@@ -66,6 +69,7 @@ type DeckOverviewPayload = {
     formatName: string | null;
     banlistName: string | null;
     deckBoxKey: string;
+    deckBoxAssetId?: string | null;
     deckBoxImageUrl: string;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -96,7 +100,7 @@ async function buildDeckOverviewPayload(
     sharedPrisma,
   );
   const activeRun = await getActiveRun(sharedPrisma, snapshot.viewer.id);
-  const [totalCards, recentCollectionEntries, deckPreviewRows] = await Promise.all([
+  const [totalCards, recentCollectionEntries, deckPreviewRows, viewerIdentity] = await Promise.all([
     prisma.card.count(),
     prisma.collectionEntry.findMany({
       where: {
@@ -152,6 +156,10 @@ async function buildDeckOverviewPayload(
         },
       },
     }),
+    prisma.user.findUnique({
+      where: { id: snapshot.viewer.id },
+      select: { duelistId: true, avatarAssetId: true },
+    }),
   ]);
 
   const deckSummaryById = new Map(snapshot.decks.map((deck) => [deck.id, deck]));
@@ -163,6 +171,9 @@ async function buildDeckOverviewPayload(
   return {
     viewer: {
       displayName: snapshot.viewer.displayName,
+      duelistId: viewerIdentity?.duelistId ?? null,
+      avatarAssetId: viewerIdentity?.avatarAssetId ?? null,
+      avatarImageUrl: getMediaAssetUrl(viewerIdentity?.avatarAssetId),
     },
     collectionProgress: {
       owned: formatNumber(snapshot.editor.collectionCards.length),
@@ -187,6 +198,7 @@ async function buildDeckOverviewPayload(
         formatName: summary?.formatName ?? null,
         banlistName: summary?.banlistName ?? null,
         deckBoxKey: deckBox.key,
+        deckBoxAssetId: deck.deckBoxAssetId,
         deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
         previewImageUrl: getCardAssetUrl(deck.cards[0]?.card.externalCardId ?? null),
         previewLabel: deck.cards[0]?.card.name ?? deck.name,
@@ -206,6 +218,44 @@ async function buildDeckOverviewPayload(
 }
 
 const deckRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/library", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const payload = await buildDeckOverviewPayload(session.userId);
+
+      return reply.send({
+        viewer: payload.viewer,
+        collectionProgress: payload.collectionProgress,
+        latestBanlistName: payload.latestBanlistName,
+        selectedDeckId: payload.selectedDeckId,
+        decks: payload.decks,
+        recentCollectionCards: payload.recentCollectionCards,
+        availableBanlists: payload.availableBanlists,
+      });
+    } catch (error) {
+      return sendApiError(reply, error, "Deckbibliothek konnte nicht geladen werden.");
+    }
+  });
+
+  app.get("/:deckId/overview", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { deckId } = request.params as { deckId: string };
+      const payload = await buildDeckOverviewPayload(session.userId, deckId);
+
+      if (!payload.activeDeck || payload.activeDeck.id !== deckId) {
+        return reply.status(404).send({ error: "Deck wurde nicht gefunden." });
+      }
+
+      return reply.send({
+        selectedDeckId: deckId,
+        activeDeck: payload.activeDeck,
+      });
+    } catch (error) {
+      return sendApiError(reply, error, "Deckdetails konnten nicht geladen werden.");
+    }
+  });
+
   app.get("/overview", async (request, reply) => {
     try {
       const session = await requireViewerSession(request, getPrisma());

@@ -40,6 +40,8 @@ async function CollectionPageContent() {
     <CollectionBinderConsole
       viewer={{
         displayName: collectionSnapshot.viewer.displayName,
+        duelistId: session.duelistId,
+        avatarImageUrl: session.avatarImageUrl,
       }}
       collectionProgress={{
         owned: collectionSnapshot.totals.uniqueCards,

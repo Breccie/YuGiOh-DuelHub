@@ -5,7 +5,7 @@ import Link from "next/link";
 import type {
   CardCatalogSort,
   CardCatalogItem,
-  CardOwnershipFilter,
+  CardCatalogResponse,
   DeckBoxKey,
   DeckSortMode,
   DeckSectionValue,
@@ -15,11 +15,20 @@ import type { DragEvent, MouseEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
+import {
+  buildCardCatalogFilterQuery,
+  CardCatalogFilterDrawer,
+  CardCatalogSortSelect,
+  emptyCardCatalogFilters,
+  type CardCatalogFilters,
+} from "@/components/card-catalog-controls";
 import { Panel, StatusPill } from "@/components/panel";
+import { ImageCropUpload } from "@/components/image-crop-upload";
+import { DeckBoxDesignPreview } from "@/components/personal-design-preview";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { deckClient } from "@/lib/deck-client";
-import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
+import { deckBoxCatalog, defaultDeckBoxKey, getDeckBoxMeta } from "@/lib/deckbox-config";
 import { mediaClient } from "@/lib/media-client";
 import type { DeckIssueType, DeckLegalitySnapshot } from "@/lib/deck-legality";
 import {
@@ -40,8 +49,6 @@ type DeckEditorConsoleProps = {
 type DeckCard = NonNullable<DeckLegalitySnapshot["activeDeck"]>["cards"][number];
 type CollectionCard = CardCatalogItem;
 type DeckSection = DeckSectionValue;
-type KindFilter = "ALL" | "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
-type LimitFilter = "ALL" | "LEGAL" | "FORBIDDEN" | "LIMITED" | "SEMI_LIMITED";
 type MobileEditorView = "CATALOG" | "DECK" | "DETAILS";
 type PreviewTarget =
   | { source: "collection"; cardId: string }
@@ -790,20 +797,16 @@ export function DeckEditorConsole({
     activeDeck?.snapshotDate.slice(0, 10) ?? "",
   );
   const [cardSearch, setCardSearch] = useState("");
-  const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
-  const [limitFilter, setLimitFilter] = useState<LimitFilter>("ALL");
-  const [rarityFilter, setRarityFilter] = useState("ALL");
+  const [catalogFilters, setCatalogFilters] = useState<CardCatalogFilters>(emptyCardCatalogFilters);
+  const [catalogFacets, setCatalogFacets] = useState<CardCatalogResponse["facets"]>();
   const [catalogSort, setCatalogSort] = useState<CardCatalogSort>("NAME_ASC");
   const [deckSortMode, setDeckSortMode] =
     useState<DeckSortMode>("TYPE_LEVEL");
-  const [ownershipFilter, setOwnershipFilter] =
-    useState<CardOwnershipFilter>("ALL");
   const [catalogTotal, setCatalogTotal] = useState(initialCollectionCards.length);
   const [catalogCursor, setCatalogCursor] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogRevision, setCatalogRevision] = useState(0);
   const [mobileEditorView, setMobileEditorView] = useState<MobileEditorView>("CATALOG");
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
   const [error, setError] = useState("");
   const [catalogError, setCatalogError] = useState("");
@@ -893,12 +896,10 @@ export function DeckEditorConsole({
     void cardCatalogClient
       .search({
         q: deferredCardSearch.trim(),
-        ownership: ownershipFilter,
-        kind: kindFilter === "ALL" ? undefined : kindFilter,
-        rarity: rarityFilter === "ALL" ? undefined : rarityFilter,
+        ...buildCardCatalogFilterQuery(catalogFilters),
         banlistId: activeBanlistId || undefined,
-        banlistStatus: limitFilter,
         sort: catalogSort,
+        includeFacets: catalogFacets ? undefined : "true",
         limit: 60,
       })
       .then((payload) => {
@@ -906,6 +907,7 @@ export function DeckEditorConsole({
         setCollectionCards(payload.items);
         setCatalogTotal(payload.total);
         setCatalogCursor(payload.nextCursor);
+        if (payload.facets) setCatalogFacets(payload.facets);
       })
       .catch((catalogError) => {
         if (catalogRequestRef.current === requestId) {
@@ -924,10 +926,8 @@ export function DeckEditorConsole({
     catalogRevision,
     catalogSort,
     deferredCardSearch,
-    kindFilter,
-    limitFilter,
-    ownershipFilter,
-    rarityFilter,
+    catalogFilters,
+    catalogFacets,
   ]);
 
   const mainCards = useMemo(
@@ -978,11 +978,11 @@ export function DeckEditorConsole({
       ),
     [activeDeck?.cards, collectionCards],
   );
+  const createDeckBoxAsset = personalDeckBoxes.find((asset) => asset.id === createDeckBoxAssetId) ?? null;
+  const activeDeckBoxAsset = personalDeckBoxes.find((asset) => asset.id === activeDeckBoxAssetId) ?? null;
+  const createDeckBoxImageUrl = createDeckBoxAsset?.imageUrl ?? getDeckBoxMeta(createDeckBoxKey).imageUrl;
+  const activeDeckBoxImageUrl = activeDeckBoxAsset?.imageUrl ?? getDeckBoxMeta(activeDeckBoxKey).imageUrl;
 
-  const rarityOptions = useMemo(
-    () => Array.from(new Set(collectionCards.flatMap((card) => card.rarities))).sort(),
-    [collectionCards],
-  );
 
   const resolvedPreview = useMemo(() => {
     if (previewTarget?.source === "collection") {
@@ -1069,11 +1069,8 @@ export function DeckEditorConsole({
     try {
       const payload = await cardCatalogClient.search({
         q: deferredCardSearch.trim(),
-        ownership: ownershipFilter,
-        kind: kindFilter === "ALL" ? undefined : kindFilter,
-        rarity: rarityFilter === "ALL" ? undefined : rarityFilter,
+        ...buildCardCatalogFilterQuery(catalogFilters),
         banlistId: activeBanlistId || undefined,
-        banlistStatus: limitFilter,
         sort: catalogSort,
         cursor: catalogCursor,
         limit: 60,
@@ -1540,13 +1537,6 @@ export function DeckEditorConsole({
     return plannedCopies < 3;
   }
 
-  const kindFilters: Array<{ value: KindFilter; label: string }> = [
-    { value: "ALL", label: "Alle" },
-    { value: "MONSTER", label: "Monster" },
-    { value: "SPELL", label: "Zauber" },
-    { value: "TRAP", label: "Fallen" },
-    { value: "TOKEN", label: "Token" },
-  ];
 
   if (!activeDeck) {
     return (
@@ -1595,8 +1585,9 @@ export function DeckEditorConsole({
               />
             </label>
 
-            <label className="block space-y-1.5">
+            <div className="block space-y-1.5">
               <span className="text-xs font-semibold text-[#c6d0d5]">Deckbox</span>
+              <DeckBoxDesignPreview imageUrl={createDeckBoxImageUrl} alt="Gewählte Deckbox" custom={Boolean(createDeckBoxAssetId)} className="mx-auto w-24" />
               <select
                 value={createDeckBoxAssetId ? `asset:${createDeckBoxAssetId}` : createDeckBoxKey}
                 onChange={(event) => {
@@ -1624,7 +1615,16 @@ export function DeckEditorConsole({
                   ))}
                 </optgroup>
               </select>
-            </label>
+              <ImageCropUpload
+                kind="DECKBOX"
+                aspect={2 / 3}
+                label="Eigene Deckbox"
+                onUploaded={(asset) => {
+                  setPersonalDeckBoxes((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+                  setCreateDeckBoxAssetId(asset.id);
+                }}
+              />
+            </div>
           </div>
 
           {error ? (
@@ -1739,6 +1739,7 @@ export function DeckEditorConsole({
             <span className="sr-only">Deckeinstellungen</span>
           </summary>
           <div className="absolute right-0 top-[calc(100%+0.45rem)] z-40 w-[min(360px,calc(100vw-2rem))] space-y-3 rounded-[8px] border border-white/10 bg-[#0b111a] p-3 shadow-[0_24px_60px_rgba(0,0,0,0.56)]">
+            <DeckBoxDesignPreview imageUrl={activeDeckBoxImageUrl} alt="Gewählte Deckbox" custom={Boolean(activeDeckBoxAssetId)} className="mx-auto w-24" />
             <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3">
               <span className="text-xs font-semibold text-[#95a4ae]">Deckbox</span>
               <select
@@ -1768,6 +1769,17 @@ export function DeckEditorConsole({
                   ))}
                 </optgroup>
               </select>
+            </div>
+            <div className="flex justify-end">
+              <ImageCropUpload
+                kind="DECKBOX"
+                aspect={2 / 3}
+                label="Eigene Deckbox"
+                onUploaded={(asset) => {
+                  setPersonalDeckBoxes((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+                  setActiveDeckBoxAssetId(asset.id);
+                }}
+              />
             </div>
 
             <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3">
@@ -1893,86 +1905,17 @@ export function DeckEditorConsole({
                 </div>
               </label>
 
-              <div className="deck-editor-filter-row relative flex flex-wrap gap-1.5">
-                {(["ALL", "OWNED", "UNOWNED"] as CardOwnershipFilter[]).map(
-                  (filter) => (
-                    <button
-                      key={filter}
-                      type="button"
-                      aria-pressed={ownershipFilter === filter}
-                      onClick={() => setOwnershipFilter(filter)}
-                      className={classes(
-                        "ui-segment-button border px-2.5 py-1.5 transition",
-                        ownershipFilter === filter
-                          ? "border-[rgba(88,163,169,0.32)] bg-[rgba(58,118,124,0.2)] text-[#d5f5f3]"
-                          : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#cbb79d] hover:text-[#f3dfc8]",
-                      )}
-                    >
-                      {filter === "ALL"
-                        ? "Alle Karten"
-                        : filter === "OWNED"
-                          ? "Im Besitz"
-                          : "Nicht im Besitz"}
-                    </button>
-                  ),
-                )}
-                <button
-                  type="button"
-                  aria-expanded={mobileFiltersOpen}
-                  onClick={() => setMobileFiltersOpen((current) => !current)}
-                  className="ui-segment-button border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-2.5 py-1.5 text-[#cbb79d]"
-                >
-                  {mobileFiltersOpen ? "Weniger" : "Filter"}
-                </button>
-                <div
-                  className={classes(
-                    "w-full grid-cols-2 gap-1.5 rounded-[6px] border border-white/8 bg-black/20 p-2",
-                    mobileFiltersOpen ? "grid" : "hidden",
-                  )}
-                >
-                {kindFilters.map((filter) => (
-                  <button
-                    key={filter.value}
-                    type="button"
-                    aria-pressed={kindFilter === filter.value}
-                    onClick={() => setKindFilter(filter.value)}
-                    disabled={isSubmitting}
-                    className={classes(
-                      "ui-segment-button border px-2.5 py-1.5 transition disabled:cursor-not-allowed disabled:opacity-50",
-                      kindFilter === filter.value
-                        ? "border-[rgba(207,91,66,0.28)] bg-[rgba(207,91,66,0.14)] text-[#ffe3ca]"
-                        : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] text-[#cbb79d] hover:border-[rgba(207,91,66,0.18)] hover:text-[#f3dfc8]",
-                    )}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
-                <select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value)} className="ui-input min-w-[130px] flex-1" aria-label="Seltenheit filtern">
-                  <option value="ALL">Alle Seltenheiten</option>
-                  {rarityOptions.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
-                </select>
-                <select value={limitFilter} onChange={(event) => setLimitFilter(event.target.value as LimitFilter)} className="ui-input min-w-[130px] flex-1" aria-label="Bannlistenstatus filtern">
-                  <option value="ALL">Alle Status</option>
-                  <option value="LEGAL">Erlaubt</option>
-                  <option value="FORBIDDEN">Verboten</option>
-                  <option value="LIMITED">Limitiert</option>
-                  <option value="SEMI_LIMITED">Semi-limitiert</option>
-                </select>
-                <select
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(150px,0.8fr)] gap-1.5">
+                <CardCatalogFilterDrawer
+                  value={catalogFilters}
+                  onChange={setCatalogFilters}
+                  facets={catalogFacets}
+                />
+                <CardCatalogSortSelect
                   value={catalogSort}
-                  onChange={(event) =>
-                    setCatalogSort(event.target.value as CardCatalogSort)
-                  }
-                  className="ui-input min-w-[130px] flex-1"
-                  aria-label="Kartenkatalog sortieren"
-                >
-                  <option value="NAME_ASC">Name A–Z</option>
-                  <option value="NAME_DESC">Name Z–A</option>
-                  <option value="OWNED_DESC">Besitzmenge</option>
-                  <option value="ATK_DESC">ATK absteigend</option>
-                  <option value="NEWEST_SET">Neueste Sets</option>
-                </select>
-                </div>
+                  onChange={setCatalogSort}
+                  className="ui-input h-9 min-w-0 py-1"
+                />
               </div>
             </div>
 

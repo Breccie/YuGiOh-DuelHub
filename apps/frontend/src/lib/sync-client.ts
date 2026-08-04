@@ -38,6 +38,28 @@ export const syncClient = {
     });
   },
 
+  getDeckLibrary() {
+    return apiGetJson<Pick<
+      CachedDeckOverviewPayload,
+      | "viewer"
+      | "collectionProgress"
+      | "latestBanlistName"
+      | "selectedDeckId"
+      | "decks"
+      | "recentCollectionCards"
+      | "availableBanlists"
+    >>("/api/decks?view=library", {
+      cache: "no-store",
+    });
+  },
+
+  getDeckDetail(deckId: string) {
+    return apiGetJson<Pick<CachedDeckOverviewPayload, "selectedDeckId" | "activeDeck">>(
+      `/api/decks?view=detail&deckId=${encodeURIComponent(deckId)}`,
+      { cache: "no-store" },
+    );
+  },
+
   bootstrap() {
     return apiGetJson<SyncBootstrapResponse>("/api/sync/bootstrap", {
       cache: "no-store",

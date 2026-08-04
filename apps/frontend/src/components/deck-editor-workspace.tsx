@@ -7,6 +7,9 @@ import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 type DeckEditorWorkspaceProps = {
   viewer: {
     displayName: string;
+    duelistId?: string | null;
+    avatarAssetId?: string | null;
+    avatarImageUrl?: string | null;
   };
   activeDeck: DeckLegalitySnapshot["activeDeck"];
   availableBanlists: DeckLegalitySnapshot["editor"]["availableBanlists"];

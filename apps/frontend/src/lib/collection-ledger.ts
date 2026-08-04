@@ -18,6 +18,11 @@ export type CollectionCardGroup = {
   slug: string;
   imageUrl: string | null;
   kind: CardKind;
+  attribute: string | null;
+  monsterType: string | null;
+  levelRankLink: number | null;
+  atk: number | null;
+  def: number | null;
   currentOracleText: string | null;
   totalCopies: number;
   availableCopies: number;
@@ -29,6 +34,7 @@ export type CollectionCardGroup = {
     setLabel: string;
     setCode: string | null;
     rarity: string | null;
+    releaseDate: string | null;
     copies: number;
   }>;
   sources: Array<{
@@ -122,6 +128,12 @@ async function loadCollectionEntries(prisma: PrismaClient, viewerId: string, run
           slug: true,
           externalCardId: true,
           kind: true,
+          attribute: true,
+          monsterType: true,
+          levelRankLink: true,
+          atk: true,
+          def: true,
+          currentOracleText: true,
         },
       },
       setCard: {
@@ -133,6 +145,7 @@ async function loadCollectionEntries(prisma: PrismaClient, viewerId: string, run
             select: {
               code: true,
               name: true,
+              releaseDate: true,
             },
           },
         },
@@ -159,7 +172,12 @@ function groupCollectionEntries(entries: RawCollectionEntry[]) {
         slug: entry.card.slug,
         imageUrl: getCardAssetUrl(entry.card.externalCardId),
         kind: entry.card.kind,
-        currentOracleText: null,
+        attribute: entry.card.attribute,
+        monsterType: entry.card.monsterType,
+        levelRankLink: entry.card.levelRankLink,
+        atk: entry.card.atk,
+        def: entry.card.def,
+        currentOracleText: entry.card.currentOracleText,
         totalCopies: 0,
         availableCopies: 0,
         reservedCopies: 0,
@@ -199,6 +217,7 @@ function groupCollectionEntries(entries: RawCollectionEntry[]) {
         setLabel: printingLabel,
         setCode: entry.setCard?.setCode ?? null,
         rarity: entry.setCard?.rarity ?? null,
+        releaseDate: entry.setCard?.set.releaseDate?.toISOString() ?? null,
         copies: 1,
       });
     }

@@ -292,8 +292,8 @@ textarea {
 
 .panel-surface {
   background:
-    linear-gradient(180deg, rgba(10, 13, 18, 0.82), rgba(7, 9, 13, 0.94)),
-    rgba(10, 13, 18, 0.82);
+    linear-gradient(180deg, rgba(10, 13, 18, 0.78), rgba(7, 9, 13, 0.86)),
+    rgba(10, 13, 18, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.085);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -335,7 +335,7 @@ textarea {
   background:
     radial-gradient(circle at 18% 6%, rgba(207, 91, 66, 0.075), transparent 30%),
     radial-gradient(circle at 78% 0%, rgba(47, 105, 112, 0.07), transparent 28%),
-    linear-gradient(180deg, rgba(7, 10, 15, 0.54) 0%, rgba(5, 7, 11, 0.9) 78%, #05070b 100%);
+    linear-gradient(180deg, rgba(7, 10, 15, 0.34) 0%, rgba(5, 7, 11, 0.68) 78%, rgba(5, 7, 11, 0.82) 100%);
 }
 
 .app-sidebar {
@@ -698,7 +698,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 
 .paper-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(14, 18, 24, 0.82), rgba(10, 12, 16, 0.92));
+  background: linear-gradient(180deg, rgba(14, 18, 24, 0.76), rgba(10, 12, 16, 0.84));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
@@ -710,7 +710,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 
 .paper-card-strong {
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(135deg, rgba(16, 21, 28, 0.92), rgba(10, 13, 18, 0.96));
+  background: linear-gradient(135deg, rgba(16, 21, 28, 0.84), rgba(10, 13, 18, 0.88));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 18px 40px rgba(0, 0, 0, 0.24);
@@ -2096,7 +2096,8 @@ html[data-graphics="low"] .panel-surface,
 html[data-graphics="low"] .paper-card,
 html[data-graphics="low"] .paper-card-soft,
 html[data-graphics="low"] .paper-card-strong {
-  backdrop-filter: blur(8px);
+  background-color: rgba(7, 10, 15, 0.92);
+  backdrop-filter: none;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 12px 28px rgba(0, 0, 0, 0.22);
@@ -2110,11 +2111,19 @@ html[data-graphics="low"] .pack-opening-image-shell {
   animation: none !important;
 }
 
+html[data-graphics="low"] .deck-editor-panel,
+html[data-graphics="low"] .custom-pack-panel,
+html[data-graphics="low"] .app-sidebar,
+html[data-graphics="low"] .app-topbar {
+  backdrop-filter: none !important;
+  background-color: rgba(7, 10, 15, 0.92) !important;
+}
+
 /* Dense workspace surfaces used by the deck editor. The cinematic presentation
    stays available to packs and showcases; editing prioritizes scan speed. */
 .deck-editor-root {
-  --deck-panel: rgba(8, 14, 22, 0.96);
-  --deck-panel-raised: rgba(14, 23, 34, 0.98);
+  --deck-panel: rgba(8, 14, 22, 0.82);
+  --deck-panel-raised: rgba(14, 23, 34, 0.88);
   --deck-line: rgba(147, 177, 201, 0.14);
   height: 100%;
 }
@@ -2123,7 +2132,7 @@ html[data-graphics="low"] .pack-opening-image-shell {
   padding: 0.65rem 0.75rem !important;
   border-radius: 0.65rem !important;
   background:
-    linear-gradient(180deg, rgba(18, 27, 39, 0.98), rgba(9, 15, 23, 0.98)) !important;
+    linear-gradient(180deg, rgba(18, 27, 39, 0.88), rgba(9, 15, 23, 0.86)) !important;
 }
 
 .deck-editor-toolbar > div:first-child {
@@ -2205,7 +2214,7 @@ html[data-graphics="low"] .pack-opening-image-shell {
   flex-direction: column;
   overflow: hidden;
   border-color: rgba(144, 174, 198, 0.13) !important;
-  background: linear-gradient(180deg, rgba(11, 16, 23, 0.97), rgba(7, 11, 17, 0.97)) !important;
+  background: linear-gradient(180deg, rgba(11, 16, 23, 0.86), rgba(7, 11, 17, 0.82)) !important;
 }
 
 .custom-pack-panel > div:first-child {

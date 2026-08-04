@@ -139,7 +139,11 @@ export function ImageCropUpload({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img ref={imageRef} src={source.url} alt="Vorschau des gewählten Bildes" className="h-full w-full select-none object-cover" style={{ transform: `translate(${offset.x / 4}%, ${offset.y / 4}%) scale(${zoom})` }} draggable={false} />
-              <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-[#d9b36c]/70" />
+              {kind === "AVATAR" ? (
+                <div className="pointer-events-none absolute inset-0 rounded-full border-2 border-[#e8c889] shadow-[0_0_0_999px_rgba(2,4,8,0.62),inset_0_0_22px_rgba(0,0,0,0.2)]" aria-hidden="true" />
+              ) : (
+                <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-[#d9b36c]/70" />
+              )}
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_180px]">
               <label className="grid gap-1 text-sm text-white/70">Name<input className="ui-input" value={name} maxLength={80} onChange={(event) => setName(event.target.value)} /></label>

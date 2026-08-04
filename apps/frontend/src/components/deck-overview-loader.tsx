@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DeckOverviewConsole } from "@/components/deck-overview-console";
 import { ApiClientError, getApiErrorMessage, isActiveRunRequiredError } from "@/lib/api-client";
@@ -31,6 +31,11 @@ function createFallbackDeckOverview(): CachedDeckOverviewPayload {
   };
 }
 
+const deckDetailCache = new Map<
+  string,
+  NonNullable<CachedDeckOverviewPayload["activeDeck"]>
+>();
+
 export function DeckOverviewLoader() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,34 +48,92 @@ export function DeckOverviewLoader() {
   });
   const [loadError, setLoadError] = useState("");
   const [retryRevision, setRetryRevision] = useState(0);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const detailRequestRef = useRef(0);
+  const initialSelectedDeckIdRef = useRef(selectedDeckId);
+
+  const loadDeckDetail = useCallback(async (deckId: string, foreground = true) => {
+    const cached = deckDetailCache.get(deckId);
+    if (cached) {
+      setPayload((current) => ({
+        ...current,
+        selectedDeckId: deckId,
+        activeDeck: cached,
+      }));
+      return cached;
+    }
+
+    const requestId = foreground ? detailRequestRef.current + 1 : detailRequestRef.current;
+    if (foreground) detailRequestRef.current = requestId;
+    if (foreground) setDetailsLoading(true);
+
+    try {
+      const detail = await syncClient.getDeckDetail(deckId);
+      if (detail.activeDeck) deckDetailCache.set(deckId, detail.activeDeck);
+      if (foreground && detailRequestRef.current === requestId) {
+        setPayload((current) => ({
+          ...current,
+          selectedDeckId: deckId,
+          activeDeck: detail.activeDeck,
+        }));
+      }
+      return detail.activeDeck;
+    } finally {
+      if (foreground && detailRequestRef.current === requestId) {
+        setDetailsLoading(false);
+      }
+    }
+  }, []);
+
+  const selectDeck = useCallback((deckId: string) => {
+    detailRequestRef.current += 1;
+    const cached = deckDetailCache.get(deckId) ?? null;
+    setPayload((current) => ({
+      ...current,
+      selectedDeckId: deckId,
+      activeDeck: cached,
+    }));
+    router.replace(`/decks?deck=${encodeURIComponent(deckId)}`, { scroll: false });
+    void loadDeckDetail(deckId).catch((error) => {
+      setLoadError(getApiErrorMessage(error, "Deckdetails konnten nicht geladen werden."));
+    });
+  }, [loadDeckDetail, router]);
+
+  const prefetchDeck = useCallback((deckId: string) => {
+    if (deckDetailCache.has(deckId)) return;
+    void loadDeckDetail(deckId, false).catch(() => null);
+  }, [loadDeckDetail]);
 
   useEffect(() => {
     let isMounted = true;
 
     async function refresh() {
       setLoadError("");
-      await refreshLocalSyncCache({
+      void refreshLocalSyncCache({
         shouldContinue: () => isMounted,
       }).catch(() => null);
 
-      if (isMounted) {
-        const cachedPayload = buildCachedDeckOverviewPayload(
-          readLocalSyncCache(),
-          selectedDeckId,
-        );
+      const library = await syncClient.getDeckLibrary();
 
-        if (cachedPayload) {
-          setPayload(cachedPayload);
+      if (isMounted) {
+        const requestedDeckId = initialSelectedDeckIdRef.current;
+        const preferredDeckId = requestedDeckId && library.decks.some((deck) => deck.id === requestedDeckId)
+          ? requestedDeckId
+          : library.selectedDeckId ?? library.decks[0]?.id ?? null;
+        const cachedDetail = preferredDeckId ? deckDetailCache.get(preferredDeckId) ?? null : null;
+        setPayload((current) => ({
+          ...current,
+          ...library,
+          selectedDeckId: preferredDeckId,
+          activeDeck: cachedDetail,
+        }));
+        if (preferredDeckId) {
+          void loadDeckDetail(preferredDeckId).catch((error) => {
+            if (isMounted) {
+              setLoadError(getApiErrorMessage(error, "Deckdetails konnten nicht geladen werden."));
+            }
+          });
         }
-      }
-
-      const queryString = selectedDeckId
-        ? `?deckId=${encodeURIComponent(selectedDeckId)}`
-        : "";
-      const freshPayload = await syncClient.getDeckOverview(queryString);
-
-      if (isMounted) {
-        setPayload(freshPayload);
       }
     }
 
@@ -93,7 +156,21 @@ export function DeckOverviewLoader() {
     return () => {
       isMounted = false;
     };
-  }, [retryRevision, router, selectedDeckId]);
+  }, [loadDeckDetail, retryRevision, router]);
+
+  useEffect(() => {
+    if (!selectedDeckId || selectedDeckId === payload.selectedDeckId) return;
+    const exists = payload.decks.some((deck) => deck.id === selectedDeckId);
+    if (!exists) return;
+    const cached = deckDetailCache.get(selectedDeckId) ?? null;
+    const frameId = window.requestAnimationFrame(() => {
+      setPayload((current) => ({ ...current, selectedDeckId, activeDeck: cached }));
+      void loadDeckDetail(selectedDeckId).catch((error) => {
+        setLoadError(getApiErrorMessage(error, "Deckdetails konnten nicht geladen werden."));
+      });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [loadDeckDetail, payload.decks, payload.selectedDeckId, selectedDeckId]);
 
   return (
     <>
@@ -105,7 +182,12 @@ export function DeckOverviewLoader() {
           </button>
         </div>
       ) : null}
-      <DeckOverviewConsole {...payload} />
+      <DeckOverviewConsole
+        {...payload}
+        detailsLoading={detailsLoading}
+        onSelectDeck={selectDeck}
+        onPrefetchDeck={prefetchDeck}
+      />
     </>
   );
 }

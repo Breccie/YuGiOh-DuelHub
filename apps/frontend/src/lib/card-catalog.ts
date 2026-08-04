@@ -104,6 +104,16 @@ function buildCardWhere(
   }
   if (query.levelRankLink !== undefined) {
     and.push({ levelRankLink: query.levelRankLink });
+  } else if (
+    query.levelRankLinkMin !== undefined ||
+    query.levelRankLinkMax !== undefined
+  ) {
+    and.push({
+      levelRankLink: {
+        gte: query.levelRankLinkMin,
+        lte: query.levelRankLinkMax,
+      },
+    });
   }
   if (query.atkMin !== undefined || query.atkMax !== undefined) {
     and.push({ atk: { gte: query.atkMin, lte: query.atkMax } });
@@ -156,8 +166,29 @@ function buildCardWhere(
 
 function getOrderBy(query: CardCatalogQuery): Prisma.CardOrderByWithRelationInput[] {
   if (query.sort === "NAME_DESC") return [{ name: "desc" }, { id: "asc" }];
+  if (query.sort === "LEVEL_ASC") {
+    return [{ levelRankLink: "asc" }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "LEVEL_DESC") {
+    return [{ levelRankLink: "desc" }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "ATK_ASC") {
+    return [{ atk: "asc" }, { name: "asc" }, { id: "asc" }];
+  }
   if (query.sort === "ATK_DESC") {
     return [{ atk: "desc" }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "DEF_ASC") {
+    return [{ def: "asc" }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "DEF_DESC") {
+    return [{ def: "desc" }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "TYPE_ASC") {
+    return [{ kind: "asc" }, { monsterType: "asc" }, { name: "asc" }, { id: "asc" }];
+  }
+  if (query.sort === "ATTRIBUTE_ASC") {
+    return [{ attribute: "asc" }, { name: "asc" }, { id: "asc" }];
   }
   if (query.sort === "NEWEST_SET") {
     return [{ setCards: { _count: "desc" } }, { name: "asc" }, { id: "asc" }];
@@ -197,12 +228,44 @@ export async function getCardCatalog(
     ],
   };
   const where = buildCardWhere(query, viewerId, activeRun.id, visiblePrintingWhere);
+  const ownershipSortData = query.sort === "OWNED_DESC"
+    ? await Promise.all([
+        prisma.card.findMany({ where, select: { id: true, name: true } }),
+        prisma.collectionEntry.groupBy({
+          by: ["cardId"],
+          where: { userId: viewerId, runId: activeRun.id },
+          _count: { _all: true },
+        }),
+      ])
+    : null;
+  const ownershipSortIds = ownershipSortData
+    ? (() => {
+        const [matchingCards, countRows] = ownershipSortData;
+        const counts = new Map(countRows.map((row) => [row.cardId, row._count._all]));
+        return matchingCards
+          .sort((left, right) => (counts.get(right.id) ?? 0) - (counts.get(left.id) ?? 0) || left.name.localeCompare(right.name, "de") || left.id.localeCompare(right.id))
+          .map((card) => card.id);
+      })()
+    : null;
+  const ownershipCursorIndex = ownershipSortIds && query.cursor
+    ? ownershipSortIds.indexOf(query.cursor)
+    : -1;
+  const ownershipPageIds = ownershipSortIds
+    ? ownershipSortIds.slice(
+        ownershipCursorIndex >= 0 ? ownershipCursorIndex + 1 : 0,
+        (ownershipCursorIndex >= 0 ? ownershipCursorIndex + 1 : 0) + query.limit + 1,
+      )
+    : null;
   const [cards, total, ownedGroups, totalCards] = await Promise.all([
     prisma.card.findMany({
-      where,
+      where: ownershipPageIds ? { AND: [where, { id: { in: ownershipPageIds } }] } : where,
       orderBy: getOrderBy(query),
-      take: query.limit + 1,
-      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      ...(ownershipPageIds
+        ? {}
+        : {
+            take: query.limit + 1,
+            ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+          }),
       include: {
         textVersions: {
           where: { isErrata: true },
@@ -233,8 +296,13 @@ export async function getCardCatalog(
     prisma.card.count(),
   ]);
 
-  const hasNextPage = cards.length > query.limit;
-  const pageCards = hasNextPage ? cards.slice(0, query.limit) : cards;
+  const orderedCards = ownershipPageIds
+    ? ownershipPageIds
+        .map((cardId) => cards.find((card) => card.id === cardId))
+        .filter((card): card is (typeof cards)[number] => Boolean(card))
+    : cards;
+  const hasNextPage = orderedCards.length > query.limit;
+  const pageCards = hasNextPage ? orderedCards.slice(0, query.limit) : orderedCards;
   const cardIds = pageCards.map((card) => card.id);
   const [ownershipGroups, deckGroups] = cardIds.length
     ? await Promise.all([
@@ -338,11 +406,26 @@ export async function getCardCatalog(
     };
   });
 
-  if (query.sort === "OWNED_DESC") {
-    items.sort((left, right) =>
-      right.totalCopies - left.totalCopies || left.name.localeCompare(right.name, "de"),
-    );
-  }
+  const facets = query.includeFacets === "true"
+    ? await Promise.all([
+        prisma.card.findMany({
+          where,
+          distinct: ["attribute", "monsterType", "levelRankLink"],
+          select: { attribute: true, monsterType: true, levelRankLink: true },
+        }),
+        prisma.setCard.findMany({
+          where: { AND: [visiblePrintingWhere, { card: where }] },
+          distinct: ["rarity", "setCode"],
+          select: { rarity: true, setCode: true },
+        }),
+      ]).then(([cardFacets, printingFacets]) => ({
+        monsterTypes: [...new Set(cardFacets.map((card) => card.monsterType).filter((value): value is string => Boolean(value)))].sort((left, right) => left.localeCompare(right, "de")),
+        attributes: [...new Set(cardFacets.map((card) => card.attribute).filter((value): value is string => Boolean(value)))].sort((left, right) => left.localeCompare(right, "de")),
+        levels: [...new Set(cardFacets.map((card) => card.levelRankLink).filter((value): value is number => value !== null))].sort((left, right) => left - right),
+        rarities: [...new Set(printingFacets.map((printing) => printing.rarity).filter(Boolean))].sort((left, right) => left.localeCompare(right, "de")),
+        setCodes: [...new Set(printingFacets.map((printing) => printing.setCode).filter(Boolean))].sort((left, right) => left.localeCompare(right, "de")),
+      }))
+    : undefined;
 
   return {
     items,
@@ -352,5 +435,6 @@ export async function getCardCatalog(
       uniqueOwned: ownedGroups.length,
       totalCards,
     },
+    ...(facets ? { facets } : {}),
   };
 }

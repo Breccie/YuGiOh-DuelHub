@@ -82,6 +82,9 @@ type CachedDeck = {
 export type CachedDeckOverviewPayload = {
   viewer: {
     displayName: string;
+    duelistId?: string | null;
+    avatarAssetId?: string | null;
+    avatarImageUrl?: string | null;
   };
   collectionProgress: {
     owned: string;
@@ -102,6 +105,7 @@ export type CachedDeckOverviewPayload = {
     formatName: string | null;
     banlistName: string | null;
     deckBoxKey: string;
+    deckBoxAssetId?: string | null;
     deckBoxImageUrl: string;
     previewImageUrl: string | null;
     previewLabel: string;
@@ -122,6 +126,9 @@ export type CachedCollectionPagePayload = {
   viewer: {
     id: string;
     displayName: string;
+    duelistId?: string | null;
+    avatarAssetId?: string | null;
+    avatarImageUrl?: string | null;
   };
   binders: Array<{
     id: string;
@@ -586,6 +593,7 @@ export function buildCachedDeckOverviewPayload(
         formatName: null,
         banlistName: null,
         deckBoxKey: deckBox.key,
+        deckBoxAssetId: null,
         deckBoxImageUrl: deckBox.imageUrl,
         previewImageUrl: previewExternalId ? getCardAssetUrl(previewExternalId) : null,
         previewLabel: asString(previewCard?.card?.name) ?? name,

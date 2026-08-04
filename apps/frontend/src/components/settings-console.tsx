@@ -24,6 +24,9 @@ import { friendClient } from "@/lib/friend-client";
 import { profileClient } from "@/lib/profile-client";
 import { ImageCropUpload } from "@/components/image-crop-upload";
 import { mediaClient } from "@/lib/media-client";
+import { IconCheck } from "@tabler/icons-react";
+import { BinderDesignPreview, DeckBoxDesignPreview } from "@/components/personal-design-preview";
+import { publishViewerPresentation } from "@/lib/viewer-presentation";
 
 type BinderOption = {
   id: string;
@@ -68,9 +71,12 @@ function DesignLibrary({
         <ImageCropUpload kind={kind} aspect={aspect} onUploaded={onUploaded} />
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {kind === "AVATAR" ? <button type="button" onClick={() => onSelectAvatar(null)} className={`grid aspect-square place-items-center rounded-lg border text-xs ${avatarAssetId === null ? "border-teal-300/60 bg-teal-300/10" : "border-white/10 bg-black/25"}`}>Standardsiegel</button> : null}
-        {items.map((asset) => <div key={asset.id} className={`group relative overflow-hidden rounded-lg border ${kind === "AVATAR" && avatarAssetId === asset.id ? "border-teal-300/70 ring-1 ring-teal-300/30" : "border-white/10"}`}>
-          <button type="button" className="relative block w-full bg-black/35" style={{ aspectRatio: String(aspect) }} onClick={() => kind === "AVATAR" && onSelectAvatar(asset.id)} aria-label={`${asset.name}${kind === "AVATAR" ? " als Profilbild wählen" : ""}`}><Image src={asset.imageUrl} alt={asset.name} fill sizes="130px" className="object-cover" unoptimized /></button>
+        {kind === "AVATAR" ? <button type="button" onClick={() => onSelectAvatar(null)} className={`relative grid aspect-square place-items-center rounded-full border px-2 text-center text-xs ${avatarAssetId === null ? "border-teal-200 bg-teal-300/10 ring-2 ring-teal-300/30" : "border-white/10 bg-black/25"}`}>Standardsiegel{avatarAssetId === null ? <span className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-teal-500 text-white"><IconCheck size={15} /></span> : null}</button> : null}
+        {items.map((asset) => <div key={asset.id} className={`group relative border ${kind === "AVATAR" ? "overflow-visible rounded-full" : "overflow-hidden rounded-lg"} ${kind === "AVATAR" && avatarAssetId === asset.id ? "border-teal-200 ring-2 ring-teal-300/35" : "border-white/10"}`}>
+          <button type="button" className={`relative block w-full bg-black/35 ${kind === "AVATAR" ? "overflow-hidden rounded-full" : ""}`} style={{ aspectRatio: String(aspect) }} onClick={() => kind === "AVATAR" && onSelectAvatar(asset.id)} aria-label={`${asset.name}${kind === "AVATAR" ? " als Profilbild wählen" : ""}`}>
+            {kind === "BINDER_COVER" ? <BinderDesignPreview imageUrl={asset.imageUrl} alt={asset.name} custom className="h-full w-full" /> : kind === "DECKBOX" ? <DeckBoxDesignPreview imageUrl={asset.imageUrl} alt={asset.name} custom className="h-full w-full" /> : <Image src={asset.imageUrl} alt={asset.name} fill sizes="130px" className="object-cover" unoptimized />}
+          </button>
+          {kind === "AVATAR" && avatarAssetId === asset.id ? <span className="pointer-events-none absolute right-0 top-0 z-10 grid h-6 w-6 place-items-center rounded-full bg-teal-500 text-white shadow-lg"><IconCheck size={15} /></span> : null}
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/80 p-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"><button type="button" className="px-1 text-[.65rem]" onClick={() => onRename(asset)}>Name</button><button type="button" disabled={!asset.deletable} className="px-1 text-[.65rem] text-red-300 disabled:text-white/25" onClick={() => onRemove(asset)}>Löschen</button></div>
         </div>)}
       </div>
@@ -211,7 +217,7 @@ export function SettingsConsole({
     setFeedback(null);
 
     try {
-      await profileClient.update({
+      const updated = await profileClient.update({
         displayName,
         bio,
         favoriteEra,
@@ -219,12 +225,37 @@ export function SettingsConsole({
         showcaseBinderId: showcaseBinderId || null,
         avatarAssetId,
       });
+      publishViewerPresentation({
+        displayName: updated.profile.displayName,
+        duelistId: updated.profile.duelistId,
+        avatarImageUrl: updated.profile.avatarImageUrl,
+      });
       setFeedback("Profil gespeichert.");
       startTransition(() => router.refresh());
     } catch (error) {
       setFeedback(getApiErrorMessage(error, "Profil konnte nicht gespeichert werden."));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function selectAvatar(nextAssetId: string | null) {
+    const previousAssetId = avatarAssetId;
+    setAvatarAssetId(nextAssetId);
+    setFeedback("Profilbild wird gespeichert …");
+
+    try {
+      const updated = await profileClient.update({ avatarAssetId: nextAssetId });
+      publishViewerPresentation({
+        displayName: updated.profile.displayName,
+        duelistId: updated.profile.duelistId,
+        avatarImageUrl: updated.profile.avatarImageUrl,
+      });
+      setFeedback("Profilbild aktualisiert.");
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setAvatarAssetId(previousAssetId);
+      setFeedback(getApiErrorMessage(error, "Profilbild konnte nicht gespeichert werden."));
     }
   }
 
@@ -533,7 +564,7 @@ export function SettingsConsole({
               {([[
                 "AVATAR", "Profilbilder", 1,
               ], ["BINDER_COVER", "Binder-Cover", 2 / 3], ["DECKBOX", "Deckboxen", 2 / 3]] as const).map(([kind, title, aspect]) => (
-                <DesignLibrary key={kind} kind={kind} title={title} aspect={aspect} designs={designs} avatarAssetId={avatarAssetId} onUploaded={(asset) => setDesigns((current) => [asset, ...current])} onSelectAvatar={setAvatarAssetId} onRename={(asset) => void renameDesign(asset)} onRemove={(asset) => void removeDesign(asset)} />
+                <DesignLibrary key={kind} kind={kind} title={title} aspect={aspect} designs={designs} avatarAssetId={avatarAssetId} onUploaded={(asset) => setDesigns((current) => [asset, ...current])} onSelectAvatar={(assetId) => void selectAvatar(assetId)} onRename={(asset) => void renameDesign(asset)} onRemove={(asset) => void removeDesign(asset)} />
               ))}
             </div>}
           </Panel>

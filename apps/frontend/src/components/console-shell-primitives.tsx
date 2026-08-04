@@ -11,6 +11,7 @@ import {
   writeCachedDashboardSummary,
 } from "@/lib/dashboard-cache";
 import { syncClient } from "@/lib/sync-client";
+import { subscribeViewerPresentation } from "@/lib/viewer-presentation";
 
 type DesktopViewer = {
   displayName: string;
@@ -309,7 +310,13 @@ export function ConsoleProfileMenuChip({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [viewerOverride, setViewerOverride] = useState<Partial<DesktopViewer>>({});
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const presentedViewer = { ...viewer, ...viewerOverride };
+
+  useEffect(() => subscribeViewerPresentation((next) => {
+    setViewerOverride((current) => ({ ...current, ...next }));
+  }), []);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -340,13 +347,13 @@ export function ConsoleProfileMenuChip({
         className="flex h-[48px] shrink-0 items-center gap-2.5 rounded-[10px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md sm:min-w-[172px]"
       >
         <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[radial-gradient(circle,rgba(35,49,68,0.92),rgba(10,12,16,0.98))] text-[#d9c5ac]">
-          {viewer.avatarImageUrl ? <Image src={viewer.avatarImageUrl} alt="" fill sizes="32px" className="object-cover" unoptimized /> : <AssetIcon name="profile-signet" className="h-5 w-5 text-current" />}
+          {presentedViewer.avatarImageUrl ? <Image src={presentedViewer.avatarImageUrl} alt="" fill sizes="32px" className="object-cover" unoptimized /> : <AssetIcon name="profile-signet" className="h-5 w-5 text-current" />}
           <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-[#d34d39] shadow-[0_0_8px_rgba(211,77,57,0.85)]" />
         </div>
         <div className="hidden text-left sm:block">
-          <p className="text-sm font-semibold text-[#f0dfcc]">{viewer.displayName}</p>
+          <p className="text-sm font-semibold text-[#f0dfcc]">{presentedViewer.displayName}</p>
           <p className="text-xs uppercase tracking-[0.12em] text-[#9f8c77]">
-            {viewer.duelistId ?? viewer.displayName}
+            {presentedViewer.duelistId ?? presentedViewer.displayName}
           </p>
         </div>
         <AssetIcon name="chevron-down" className="h-4 w-4 text-[#c3ae92]" />
@@ -355,14 +362,14 @@ export function ConsoleProfileMenuChip({
       {open ? (
         <div className="absolute right-0 top-[calc(100%+0.75rem)] z-40 min-w-[292px] rounded-[20px] border border-[rgba(255,255,255,0.09)] bg-[linear-gradient(180deg,rgba(11,14,19,0.98),rgba(7,9,13,0.99))] p-2 shadow-[0_26px_54px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.04)]">
           <div className="rounded-[16px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.025)] px-4 py-3">
-            <p className="text-sm font-semibold text-[#f0dfcc]">{viewer.displayName}</p>
+            <p className="text-sm font-semibold text-[#f0dfcc]">{presentedViewer.displayName}</p>
             <p className="mt-1 text-[0.72rem] uppercase tracking-[0.18em] text-[#9f8c77]">
-              {viewer.duelistId ?? viewer.displayName}
+              {presentedViewer.duelistId ?? presentedViewer.displayName}
             </p>
           </div>
           <div className="mt-2 grid gap-1">
             <ProfileMenuLink
-              href={viewer.duelistId ? `/profiles/${viewer.duelistId}` : "/settings"}
+              href={presentedViewer.duelistId ? `/profiles/${presentedViewer.duelistId}` : "/settings"}
               iconName="profile-signet"
               label="Profil"
               detail="Öffentliche Ansicht"

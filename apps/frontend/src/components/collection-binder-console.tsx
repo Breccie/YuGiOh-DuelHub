@@ -9,6 +9,13 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
 import { BinderCollectionEditor } from "@/components/binder-collection-editor";
 import { BinderOpenSpread } from "@/components/binder-open-spread";
+import { BinderDesignPreview } from "@/components/personal-design-preview";
+import { ImageCropUpload } from "@/components/image-crop-upload";
+import {
+  CardCatalogFilterDrawer,
+  emptyCardCatalogFilters,
+  type CardCatalogFilters,
+} from "@/components/card-catalog-controls";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -31,6 +38,8 @@ import type {
 type CollectionBinderConsoleProps = {
   viewer: {
     displayName: string;
+    duelistId?: string | null;
+    avatarImageUrl?: string | null;
   };
   collectionProgress: {
     owned: number;
@@ -47,6 +56,11 @@ type CollectionBinderConsoleProps = {
     slug: string;
     imageUrl: string | null;
     kind: "MONSTER" | "SPELL" | "TRAP" | "TOKEN";
+    attribute?: string | null;
+    monsterType?: string | null;
+    levelRankLink?: number | null;
+    atk?: number | null;
+    def?: number | null;
     currentOracleText: string | null;
     totalCopies: number;
     availableCopies: number;
@@ -58,6 +72,7 @@ type CollectionBinderConsoleProps = {
       setLabel: string;
       setCode: string | null;
       rarity: string | null;
+      releaseDate?: string | null;
       copies: number;
     }>;
     sources: Array<{
@@ -132,47 +147,6 @@ function Panel({
   );
 }
 
-function BinderCoverArtwork({
-  src,
-  alt,
-  eager,
-  className,
-}: {
-  src: string;
-  alt: string;
-  eager?: boolean;
-  className?: string;
-}) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const failed = failedSrc === src;
-
-  if (failed) {
-    return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-4 text-center text-[#d9c4aa]">
-        <AssetIcon name="book" className="h-9 w-9 text-current" />
-        <span className="text-[0.68rem] font-semibold uppercase tracking-[0.14em]">
-          {alt}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    // Binder covers are already local static assets; a plain img avoids slow
-    // optimizer hops in hosted/browser mode and keeps the shelf stable.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      loading={eager ? "eager" : undefined}
-      decoding="async"
-      draggable={false}
-      onError={() => setFailedSrc(src)}
-      className={classes("absolute inset-0 h-full w-full", className)}
-    />
-  );
-}
-
 function BinderShelfCard({
   binder,
   onSelect,
@@ -198,13 +172,8 @@ function BinderShelfCard({
       <button type="button" onClick={() => onSelect(binder.id)} className="block w-full text-left">
         <div className="relative mx-auto w-full max-w-[160px] [perspective:1400px]">
           <div className="pointer-events-none absolute inset-x-[12%] bottom-1 h-8 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.18),transparent_72%)] opacity-0 blur-2xl transition duration-500 group-hover:opacity-100" />
-          <div className="relative aspect-[62/100] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] shadow-[0_22px_34px_rgba(0,0,0,0.28)]">
-            <BinderCoverArtwork
-              src={binder.coverImageUrl}
-              alt={binder.name}
-              eager={binder.isActive}
-              className="pointer-events-none select-none object-cover object-center drop-shadow-[0_18px_30px_rgba(0,0,0,0.34)] [-webkit-user-drag:none]"
-            />
+          <div className="relative aspect-[2/3] bg-transparent">
+            <BinderDesignPreview imageUrl={binder.coverImageUrl} alt={binder.name} custom={Boolean(binder.coverAssetId)} className="h-full w-full" />
             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.26),transparent_34%)]" />
               <div className="absolute inset-0 bg-[linear-gradient(125deg,transparent_18%,rgba(255,255,255,0.07)_38%,rgba(255,255,255,0.18)_48%,rgba(255,255,255,0.06)_56%,transparent_74%)]" />
@@ -305,12 +274,8 @@ function BinderDetailPanel({
 
       <div className="relative mx-auto mt-5 w-full max-w-[230px] [perspective:1400px]">
         <div className="pointer-events-none absolute inset-x-[16%] bottom-1 h-10 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.18),transparent_72%)] blur-2xl" />
-        <div className="relative aspect-[62/100] overflow-hidden rounded-[18px] border border-[rgba(255,255,255,0.1)] bg-[#05070a] shadow-[0_28px_48px_rgba(0,0,0,0.42)]">
-          <BinderCoverArtwork
-            src={binder.coverImageUrl}
-            alt={binder.name}
-            className="pointer-events-none select-none object-cover object-center [-webkit-user-drag:none]"
-          />
+        <div className="relative aspect-[2/3] bg-transparent shadow-[0_28px_48px_rgba(0,0,0,0.42)]">
+          <BinderDesignPreview imageUrl={binder.coverImageUrl} alt={binder.name} custom={Boolean(binder.coverAssetId)} className="h-full w-full" />
           <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,transparent_18%,rgba(255,255,255,0.05)_38%,rgba(255,255,255,0.16)_48%,rgba(255,255,255,0.04)_58%,transparent_74%)]" />
         </div>
       </div>
@@ -448,10 +413,9 @@ export function CollectionBinderConsole({
   useEffect(() => {
     void mediaClient.list("BINDER_COVER").then(setPersonalCovers).catch(() => undefined);
   }, []);
-  const [collectionKind, setCollectionKind] = useState("ALL");
-  const [collectionRarity, setCollectionRarity] = useState("ALL");
+  const [collectionFilters, setCollectionFilters] = useState<CardCatalogFilters>(emptyCardCatalogFilters);
   const [collectionSort, setCollectionSort] =
-    useState<CollectionSortModeValue>("MOST_COPIES");
+    useState<CollectionSortModeValue | "NAME_DESC" | "LEVEL_ASC" | "LEVEL_DESC" | "ATK_ASC" | "ATK_DESC" | "DEF_ASC" | "DEF_DESC" | "TYPE_ASC" | "ATTRIBUTE_ASC" | "NEWEST_SET">("MOST_COPIES");
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<CollectionBinderDto | null>(null);
@@ -480,9 +444,10 @@ export function CollectionBinderConsole({
         savedSort === "MOST_COPIES" ||
         savedSort === "NEWEST_ACQUIRED" ||
         savedSort === "ALPHABETICAL" ||
-        savedSort === "RARITY"
+        savedSort === "RARITY" ||
+        ["NAME_DESC", "LEVEL_ASC", "LEVEL_DESC", "ATK_ASC", "ATK_DESC", "DEF_ASC", "DEF_DESC", "TYPE_ASC", "ATTRIBUTE_ASC", "NEWEST_SET"].includes(savedSort ?? "")
       ) {
-        setCollectionSort(savedSort);
+        setCollectionSort(savedSort as typeof collectionSort);
       }
     });
 
@@ -504,16 +469,35 @@ export function CollectionBinderConsole({
       ).sort((left, right) => left.localeCompare(right, "de")),
     [cards],
   );
+  const collectionFacets = useMemo(() => ({
+    monsterTypes: [...new Set(cards.map((card) => card.monsterType).filter((value): value is string => Boolean(value)))].sort((left, right) => left.localeCompare(right, "de")),
+    attributes: [...new Set(cards.map((card) => card.attribute).filter((value): value is string => Boolean(value)))].sort((left, right) => left.localeCompare(right, "de")),
+    levels: [...new Set(cards.map((card) => card.levelRankLink).filter((value): value is number => value !== null && value !== undefined))].sort((left, right) => left - right),
+    rarities: collectionRarities,
+    setCodes: [...new Set(cards.flatMap((card) => card.printings.map((printing) => printing.setCode).filter((value): value is string => Boolean(value))))].sort((left, right) => left.localeCompare(right, "de")),
+  }), [cards, collectionRarities]);
   const filteredCollectionCards = useMemo(() => {
     const search = collectionSearch.trim().toLowerCase();
+    const minimumLevel = collectionFilters.levelMin ? Number(collectionFilters.levelMin) : null;
+    const maximumLevel = collectionFilters.levelMax ? Number(collectionFilters.levelMax) : null;
+    const minimumAtk = collectionFilters.atkMin ? Number(collectionFilters.atkMin) : null;
+    const maximumAtk = collectionFilters.atkMax ? Number(collectionFilters.atkMax) : null;
+    const minimumDef = collectionFilters.defMin ? Number(collectionFilters.defMin) : null;
+    const maximumDef = collectionFilters.defMax ? Number(collectionFilters.defMax) : null;
 
     return cards
       .filter((card) => {
-        if (collectionKind !== "ALL" && card.kind !== collectionKind) return false;
-        if (
-          collectionRarity !== "ALL" &&
-          !card.printings.some((printing) => printing.rarity === collectionRarity)
-        ) return false;
+        if (collectionFilters.kind !== "ALL" && card.kind !== collectionFilters.kind) return false;
+        if (collectionFilters.rarity && !card.printings.some((printing) => printing.rarity === collectionFilters.rarity)) return false;
+        if (collectionFilters.setCode && !card.printings.some((printing) => printing.setCode?.toLocaleLowerCase("de").includes(collectionFilters.setCode.toLocaleLowerCase("de")))) return false;
+        if (collectionFilters.monsterType && !card.monsterType?.toLocaleLowerCase("de").includes(collectionFilters.monsterType.toLocaleLowerCase("de"))) return false;
+        if (collectionFilters.attribute && card.attribute !== collectionFilters.attribute) return false;
+        if (minimumLevel !== null && (card.levelRankLink ?? -1) < minimumLevel) return false;
+        if (maximumLevel !== null && (card.levelRankLink ?? Number.POSITIVE_INFINITY) > maximumLevel) return false;
+        if (minimumAtk !== null && (card.atk ?? -1) < minimumAtk) return false;
+        if (maximumAtk !== null && (card.atk ?? Number.POSITIVE_INFINITY) > maximumAtk) return false;
+        if (minimumDef !== null && (card.def ?? -1) < minimumDef) return false;
+        if (maximumDef !== null && (card.def ?? Number.POSITIVE_INFINITY) > maximumDef) return false;
 
         return !search || `${card.name} ${card.slug}`.toLowerCase().includes(search);
       })
@@ -528,6 +512,13 @@ export function CollectionBinderConsole({
         if (collectionSort === "ALPHABETICAL") {
           return left.name.localeCompare(right.name, "de");
         }
+        if (collectionSort === "NAME_DESC") return right.name.localeCompare(left.name, "de");
+        if (collectionSort === "LEVEL_ASC" || collectionSort === "LEVEL_DESC") return ((left.levelRankLink ?? -1) - (right.levelRankLink ?? -1)) * (collectionSort === "LEVEL_ASC" ? 1 : -1) || left.name.localeCompare(right.name, "de");
+        if (collectionSort === "ATK_ASC" || collectionSort === "ATK_DESC") return ((left.atk ?? -1) - (right.atk ?? -1)) * (collectionSort === "ATK_ASC" ? 1 : -1) || left.name.localeCompare(right.name, "de");
+        if (collectionSort === "DEF_ASC" || collectionSort === "DEF_DESC") return ((left.def ?? -1) - (right.def ?? -1)) * (collectionSort === "DEF_ASC" ? 1 : -1) || left.name.localeCompare(right.name, "de");
+        if (collectionSort === "TYPE_ASC") return `${left.kind}:${left.monsterType ?? ""}:${left.name}`.localeCompare(`${right.kind}:${right.monsterType ?? ""}:${right.name}`, "de");
+        if (collectionSort === "ATTRIBUTE_ASC") return `${left.attribute ?? "ZZZ"}:${left.name}`.localeCompare(`${right.attribute ?? "ZZZ"}:${right.name}`, "de");
+        if (collectionSort === "NEWEST_SET") return Math.max(...right.printings.map((printing) => printing.releaseDate ? new Date(printing.releaseDate).getTime() : 0)) - Math.max(...left.printings.map((printing) => printing.releaseDate ? new Date(printing.releaseDate).getTime() : 0)) || left.name.localeCompare(right.name, "de");
         if (collectionSort === "RARITY") {
           return (
             (right.printings[0]?.rarity ?? "").localeCompare(
@@ -541,7 +532,7 @@ export function CollectionBinderConsole({
           left.name.localeCompare(right.name, "de")
         );
       });
-  }, [cards, collectionKind, collectionRarity, collectionSearch, collectionSort]);
+  }, [cards, collectionFilters, collectionSearch, collectionSort]);
 
   function updateEditorRoute(
     nextBinderId: string | null,
@@ -729,7 +720,7 @@ export function CollectionBinderConsole({
           <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
             <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
               <ConsoleGlobalStatusBar
-                viewer={{ displayName: viewer.displayName }}
+                viewer={{ displayName: viewer.displayName, duelistId: viewer.duelistId, avatarImageUrl: viewer.avatarImageUrl }}
                 fallback={{
                   collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
                 }}
@@ -776,15 +767,6 @@ export function CollectionBinderConsole({
                 ))}
               </div>
 
-              {collectionView === "BINDERS" ? (
-                <button
-                  type="button"
-                  onClick={() => setCreatorOpen(true)}
-                  className="ui-button-primary min-h-[36px] px-3 py-2 text-[0.68rem]"
-                >
-                  Neuer Binder
-                </button>
-              ) : null}
             </header>
 
             {feedbackMessage ? (
@@ -822,7 +804,21 @@ export function CollectionBinderConsole({
                     />
                   </label>
 
-                  {personalCovers.length ? <div><p className="mb-2 text-xs font-semibold text-[#bca98f]">Eigene Designs</p><div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-5">{personalCovers.map((asset) => <button key={asset.id} type="button" onClick={() => setDraftCoverAssetId(asset.id)} className={classes("overflow-hidden rounded-xl border p-1", draftCoverAssetId === asset.id ? "border-teal-300/60 bg-teal-300/10" : "border-white/10 bg-white/[.02]")}><div className="relative aspect-[2/3]"><Image src={asset.imageUrl} alt={asset.name} fill sizes="100px" className="rounded-lg object-cover" unoptimized /></div><span className="mt-1 block truncate text-[.65rem]">{asset.name}</span></button>)}</div></div> : null}
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-[#bca98f]">Eigene Designs</p>
+                      <ImageCropUpload
+                        kind="BINDER_COVER"
+                        aspect={2 / 3}
+                        label="Eigenes Cover"
+                        onUploaded={(asset) => {
+                          setPersonalCovers((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+                          setDraftCoverAssetId(asset.id);
+                        }}
+                      />
+                    </div>
+                    {personalCovers.length ? <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-5">{personalCovers.map((asset) => <button key={asset.id} type="button" onClick={() => setDraftCoverAssetId(asset.id)} className={classes("rounded-xl border p-1", draftCoverAssetId === asset.id ? "border-teal-300/60 bg-teal-300/10" : "border-white/10 bg-white/[.02]")}><BinderDesignPreview imageUrl={asset.imageUrl} alt={asset.name} custom className="w-full" /><span className="mt-1 block truncate text-[.65rem]">{asset.name}</span></button>)}</div> : <p className="mb-4 text-xs text-white/40">Noch kein eigenes Cover.</p>}
+                  </div>
                   <p className="mb-2 text-xs font-semibold text-[#bca98f]">Standarddesigns</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {binderCoverCatalog.map((cover) => (
@@ -840,9 +836,11 @@ export function CollectionBinderConsole({
                         <div className="relative mx-auto w-full max-w-[100px] [perspective:1200px]">
                           <div className="pointer-events-none absolute inset-x-[16%] bottom-1 h-6 rounded-full bg-[radial-gradient(circle,rgba(207,91,66,0.16),transparent_74%)] opacity-0 blur-xl transition duration-500 group-hover:opacity-100" />
                           <div className="relative aspect-[62/100] overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))]">
-                            <BinderCoverArtwork
+                            <Image
                               src={cover.imageUrl}
                               alt={cover.name}
+                              fill
+                              sizes="100px"
                               className="pointer-events-none select-none object-cover object-center drop-shadow-[0_16px_26px_rgba(0,0,0,0.28)] [-webkit-user-drag:none]"
                             />
                             <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100">
@@ -938,37 +936,34 @@ export function CollectionBinderConsole({
                 <StatusPill tone="slate">{filteredCollectionCards.length} Karten</StatusPill>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_180px_200px_210px]">
+              <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(220px,0.8fr)_230px]">
                 <label className="flex items-center gap-3 rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
                   <AssetIcon name="search" className="h-4 w-4 text-[#b9a894]" />
                   <input value={collectionSearch} onChange={(event) => setCollectionSearch(event.target.value)} className="w-full bg-transparent text-sm outline-none" placeholder="Karten suchen" />
                 </label>
-                <select value={collectionKind} onChange={(event) => setCollectionKind(event.target.value)} className="ui-input" aria-label="Kartentyp filtern">
-                  <option value="ALL">Alle Kartentypen</option>
-                  <option value="MONSTER">Monster</option>
-                  <option value="SPELL">Zauber</option>
-                  <option value="TRAP">Fallen</option>
-                  <option value="TOKEN">Token</option>
-                </select>
-                <select value={collectionRarity} onChange={(event) => setCollectionRarity(event.target.value)} className="ui-input" aria-label="Seltenheit filtern">
-                  <option value="ALL">Alle Seltenheiten</option>
-                  {collectionRarities.map((rarity) => <option key={rarity} value={rarity}>{rarity}</option>)}
-                </select>
+                <CardCatalogFilterDrawer value={collectionFilters} onChange={setCollectionFilters} facets={collectionFacets} showOwnership={false} showBanlist={false} />
                 <select
                   value={collectionSort}
                   onChange={(event) =>
-                    setCollectionSort(event.target.value as CollectionSortModeValue)
+                    setCollectionSort(event.target.value as typeof collectionSort)
                   }
                   className="ui-input"
                   aria-label="Sammlung sortieren"
                 >
-                  {(["MOST_COPIES", "NEWEST_ACQUIRED", "ALPHABETICAL", "RARITY"] as const).map(
-                    (sortMode) => (
-                      <option key={sortMode} value={sortMode}>
-                        {getCollectionSortLabel(sortMode)}
-                      </option>
-                    ),
-                  )}
+                  <option value="MOST_COPIES">{getCollectionSortLabel("MOST_COPIES")}</option>
+                  <option value="NEWEST_ACQUIRED">{getCollectionSortLabel("NEWEST_ACQUIRED")}</option>
+                  <option value="ALPHABETICAL">Name A–Z</option>
+                  <option value="NAME_DESC">Name Z–A</option>
+                  <option value="LEVEL_ASC">Stufe/Rang/Link aufsteigend</option>
+                  <option value="LEVEL_DESC">Stufe/Rang/Link absteigend</option>
+                  <option value="ATK_ASC">ATK aufsteigend</option>
+                  <option value="ATK_DESC">ATK absteigend</option>
+                  <option value="DEF_ASC">DEF aufsteigend</option>
+                  <option value="DEF_DESC">DEF absteigend</option>
+                  <option value="TYPE_ASC">Kartentyp</option>
+                  <option value="ATTRIBUTE_ASC">Eigenschaft</option>
+                  <option value="NEWEST_SET">Neueste Sets</option>
+                  <option value="RARITY">{getCollectionSortLabel("RARITY")}</option>
                 </select>
               </div>
 

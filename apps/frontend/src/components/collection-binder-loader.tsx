@@ -116,6 +116,8 @@ export function CollectionBinderLoader() {
         .join("|")}
       viewer={{
         displayName: payload.viewer.displayName,
+        duelistId: payload.viewer.duelistId,
+        avatarImageUrl: payload.viewer.avatarImageUrl,
       }}
       collectionProgress={{
         owned: payload.totals.uniqueCards,

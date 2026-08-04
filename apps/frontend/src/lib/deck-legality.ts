@@ -83,6 +83,9 @@ export type DeckLegalitySnapshot = {
   viewer: {
     id: string;
     displayName: string;
+    duelistId: string;
+    avatarAssetId: string | null;
+    avatarImageUrl: string | null;
   };
   selectedDeckId: string | null;
   decks: Array<{
@@ -844,6 +847,9 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       viewer: {
         id: viewer.id,
         displayName: viewer.displayName,
+        duelistId: viewer.duelistId,
+        avatarAssetId: viewer.avatarAssetId,
+        avatarImageUrl: getMediaAssetUrl(viewer.avatarAssetId),
       },
       selectedDeckId: null,
       decks: summarizedDecks,
@@ -856,6 +862,9 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
     viewer: {
       id: viewer.id,
       displayName: viewer.displayName,
+      duelistId: viewer.duelistId,
+      avatarAssetId: viewer.avatarAssetId,
+      avatarImageUrl: getMediaAssetUrl(viewer.avatarAssetId),
     },
     selectedDeckId: selectedDeck.id,
     decks: summarizedDecks,
