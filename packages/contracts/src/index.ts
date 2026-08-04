@@ -1700,11 +1700,16 @@ export const customPackPoolEntryInputSchema = z.object({
   rarity: z.string().trim().min(1).max(40),
   weight: z.number().int().min(1).max(1_000_000).default(1),
 });
+export const customPackRarityOptionInputSchema = z.object({
+  rarity: z.string().trim().min(1).max(40),
+  weight: z.number().int().min(1).max(1_000_000),
+});
 export const customPackSlotInputSchema = z.object({
   slotIndex: z.number().int().min(0).max(99),
   count: z.number().int().min(1).max(100).default(1),
   allowedRarities: z.array(z.string().trim().min(1)).min(1),
   weight: z.number().int().min(1).max(1_000_000).default(1),
+  rarityOptions: z.array(customPackRarityOptionInputSchema).min(1).optional(),
 });
 export const createCustomPackRequestSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -1719,6 +1724,9 @@ export type CreateCustomPackRequest = z.infer<typeof createCustomPackRequestSche
 export const updateCustomPackDraftRequestSchema = z.object({
   poolEntries: z.array(customPackPoolEntryInputSchema).max(5_000),
   slots: z.array(customPackSlotInputSchema).min(1).max(100),
+  packSize: z.number().int().min(1).max(100).optional(),
+  displaySize: z.number().int().min(1).max(100).optional(),
+  price: z.number().int().min(0).max(1_000_000).optional(),
 }).superRefine((draft, context) => {
   const slotIndexes = new Set<number>();
   draft.slots.forEach((slot, index) => {
@@ -1731,10 +1739,12 @@ export const updateCustomPackDraftRequestSchema = z.object({
     }
     slotIndexes.add(slot.slotIndex);
 
-    if (new Set(slot.allowedRarities).size !== slot.allowedRarities.length) {
+    const configuredRarities = slot.rarityOptions?.map((option) => option.rarity)
+      ?? slot.allowedRarities;
+    if (new Set(configuredRarities).size !== configuredRarities.length) {
       context.addIssue({
         code: "custom",
-        path: ["slots", index, "allowedRarities"],
+        path: ["slots", index, slot.rarityOptions ? "rarityOptions" : "allowedRarities"],
         message: "Eine Seltenheit darf pro Slot nur einmal vorkommen.",
       });
     }

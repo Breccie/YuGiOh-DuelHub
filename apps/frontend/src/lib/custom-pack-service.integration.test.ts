@@ -43,7 +43,7 @@ describe("custom pack publishing and opening", () => {
       });
       runId = run.id;
       const cards = await Promise.all(
-        ["Common", "Rare", "Super Rare", "Ultra Rare"].map((rarity, index) =>
+        ["Common", "Rare", "Super Rare", "Ultra Rare", "Secret Rare"].map((rarity, index) =>
           prisma.card.create({
             data: {
               slug: `${tag}-${index}`,
@@ -70,7 +70,7 @@ describe("custom pack publishing and opening", () => {
         poolEntries: cards.map((card, index) => ({
           cardId: card.id,
           setCardId: null,
-          rarity: ["Common", "Rare", "Super Rare", "Ultra Rare"][index]!,
+          rarity: ["Common", "Rare", "Super Rare", "Ultra Rare", "Secret Rare"][index]!,
           weight: 1,
         })),
         slots: version.slots.map((slot) => ({

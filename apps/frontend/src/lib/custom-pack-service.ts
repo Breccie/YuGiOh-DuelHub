@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { CustomPackEra, OwnershipSource, Prisma, type PrismaClient } from "@prisma/client";
+import { OwnershipSource, Prisma, type CustomPackEra, type PrismaClient } from "@prisma/client";
 import type { CreateCustomPackRequest, UpdateCustomPackDraftRequest } from "@ygo/contracts";
 import { DomainError } from "@ygo/domain";
 import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
@@ -7,26 +7,12 @@ import {
   assertPackAccessAvailable,
   isCampaignPackAvailableNow,
 } from "@/lib/campaign-pack-access-service";
+import {
+  getCustomPackEraPreset,
+  normalizeCustomPackRarityOptions,
+  toPersistedCustomPackSlot,
+} from "@/lib/custom-pack-config";
 import { getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
-
-const ERA_SLOTS: Record<CustomPackEra, Array<{ slotIndex: number; count: number; allowedRarities: string[]; weight: number }>> = {
-  EARLY_TCG: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Rare", "Super Rare", "Ultra Rare"], weight: 10 },
-    { slotIndex: 1, count: 8, allowedRarities: ["Common"], weight: 1 },
-  ],
-  GX_5DS: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Rare", "Super Rare", "Ultra Rare", "Secret Rare"], weight: 8 },
-    { slotIndex: 1, count: 8, allowedRarities: ["Common"], weight: 1 },
-  ],
-  MODERN_CORE: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Super Rare", "Ultra Rare", "Secret Rare"], weight: 15 },
-    { slotIndex: 1, count: 7, allowedRarities: ["Common"], weight: 1 },
-    { slotIndex: 2, count: 1, allowedRarities: ["Common", "Rare", "Super Rare", "Ultra Rare"], weight: 4 },
-  ],
-  PROMO_CUSTOM: [
-    { slotIndex: 0, count: 1, allowedRarities: ["Promo"], weight: 1 },
-  ],
-};
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -73,6 +59,7 @@ type CustomPackTemplateConfig = {
       count: number;
       allowedRarities: string[];
       weight: number;
+      rarityWeights?: Array<{ rarity: string; weight: number }>;
     }>;
   };
 };
@@ -88,7 +75,9 @@ export function validatePackDraft(input: UpdateCustomPackDraftRequest, packSize?
     throw new DomainError({ code: "custom_pack_empty_pool", message: "Der Kartenpool darf nicht leer sein.", status: 400 });
   }
   const poolRarities = new Set(input.poolEntries.map((entry) => entry.rarity));
-  const reachableRarities = new Set(input.slots.flatMap((slot) => slot.allowedRarities));
+  const reachableRarities = new Set(input.slots.flatMap((slot) =>
+    normalizeCustomPackRarityOptions(slot).map((option) => option.rarity),
+  ));
   const emptyRarity = [...reachableRarities].find((rarity) => !poolRarities.has(rarity));
   if (emptyRarity) {
     throw new DomainError({ code: "custom_pack_empty_rarity", message: `Für ${emptyRarity} ist kein Kartenpool definiert.`, status: 400 });
@@ -141,17 +130,10 @@ function weightedPick<T extends { weight: number }>(items: T[], random: () => nu
 }
 
 function pickSlotRarity(
-  allowedRarities: string[],
-  upgradeWeight: number,
+  rarityOptions: Array<{ rarity: string; weight: number }>,
   random: () => number,
 ) {
-  return weightedPick(
-    allowedRarities.map((rarity, index) => ({
-      rarity,
-      weight: index === 0 ? 100 : upgradeWeight,
-    })),
-    random,
-  ).rarity;
+  return weightedPick(rarityOptions, random).rarity;
 }
 
 export async function listCustomPacks(prisma: PrismaClient, viewerId: string, runId: string) {
@@ -164,7 +146,7 @@ export async function listCustomPacks(prisma: PrismaClient, viewerId: string, ru
       versions: {
         orderBy: { version: "desc" },
         include: {
-          poolEntries: { include: { card: { select: { name: true } } } },
+          poolEntries: { include: { card: { select: { name: true, externalCardId: true } } } },
           slots: true,
           accesses: true,
         },
@@ -202,7 +184,7 @@ export async function createCustomPack(
   input: CreateCustomPackRequest,
 ) {
   await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
-  const slots = ERA_SLOTS[input.era].map((slot) => ({ ...slot, allowedRarities: slot.allowedRarities }));
+  const slots = getCustomPackEraPreset(input.era).map(toPersistedCustomPackSlot);
   const packSize = input.era === "PROMO_CUSTOM" && input.packSize === 9 ? 1 : input.packSize;
   return prisma.customPackDefinition.create({
     data: {
@@ -219,7 +201,15 @@ export async function createCustomPack(
           displaySize: input.displaySize,
           price: input.price,
           slotConfig: { era: input.era, editable: true },
-          slots: { create: slots.map((slot) => ({ ...slot, allowedRarities: slot.allowedRarities })) },
+          slots: {
+            create: slots.map((slot) => ({
+              slotIndex: slot.slotIndex,
+              count: slot.count,
+              allowedRarities: slot.allowedRarities,
+              weight: slot.weight,
+              rarityWeights: slot.rarityOptions,
+            })),
+          },
         },
       },
     },
@@ -244,7 +234,8 @@ export async function updateCustomPackDraft(
       throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
     }
     assertDraft(version.status);
-    validatePackDraft(input, version.packSize);
+    const nextPackSize = input.packSize ?? version.packSize;
+    validatePackDraft(input, nextPackSize);
 
     const cardIds = [...new Set(input.poolEntries.map((entry) => entry.cardId))];
     const cards = await tx.card.count({ where: { id: { in: cardIds } } });
@@ -275,13 +266,28 @@ export async function updateCustomPackDraft(
       })),
     });
     await tx.customPackSlot.createMany({
-      data: input.slots.map((slot) => ({
-        versionId,
-        slotIndex: slot.slotIndex,
-        count: slot.count,
-        allowedRarities: slot.allowedRarities,
-        weight: slot.weight,
-      })),
+      data: input.slots.map((inputSlot) => {
+        const slot = toPersistedCustomPackSlot({
+          ...inputSlot,
+          rarityOptions: normalizeCustomPackRarityOptions(inputSlot),
+        });
+        return {
+          versionId,
+          slotIndex: slot.slotIndex,
+          count: slot.count,
+          allowedRarities: slot.allowedRarities,
+          weight: slot.weight,
+          rarityWeights: slot.rarityOptions,
+        };
+      }),
+    });
+    await tx.customPackVersion.update({
+      where: { id: versionId },
+      data: {
+        packSize: nextPackSize,
+        displaySize: input.displaySize ?? version.displaySize,
+        price: input.price ?? version.price,
+      },
     });
     return tx.customPackVersion.findUniqueOrThrow({
       where: { id: versionId },
@@ -303,7 +309,13 @@ export async function publishCustomPackVersion(prisma: PrismaClient, viewerId: s
     assertDraft(version.status);
     validatePackDraft({
       poolEntries: version.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })),
-      slots: version.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as string[], weight: slot.weight })),
+      slots: version.slots.map((slot) => ({
+        slotIndex: slot.slotIndex,
+        count: slot.count,
+        allowedRarities: slot.allowedRarities as string[],
+        weight: slot.weight,
+        rarityOptions: normalizeCustomPackRarityOptions(slot),
+      })),
     }, version.packSize);
 
     const generatedCode = `CUST-${version.definitionId.slice(-8)}-V${version.version}`.toUpperCase();
@@ -477,9 +489,8 @@ export async function openCustomPackVersion(
       }
       const pulls: Array<{ cardId: string; setCardId: string; rarity: string; slotIndex: number }> = [];
       for (const slot of [...version.slots].sort((a, b) => a.slotIndex - b.slotIndex)) {
-        const allowedRarities = slot.allowedRarities as string[];
         for (let copy = 0; copy < slot.count; copy += 1) {
-          const rarity = pickSlotRarity(allowedRarities, slot.weight, random);
+          const rarity = pickSlotRarity(normalizeCustomPackRarityOptions(slot), random);
           const selected = weightedPick(poolsByRarity.get(rarity) ?? [], random);
           pulls.push({
             cardId: selected.cardId,
@@ -600,7 +611,15 @@ export async function createNextCustomPackDraft(prisma: PrismaClient, viewerId: 
         rewardOnly: source.rewardOnly,
         slotConfig: source.slotConfig as Prisma.InputJsonValue,
         poolEntries: { create: source.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })) },
-        slots: { create: source.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as Prisma.InputJsonValue, weight: slot.weight })) },
+        slots: {
+          create: source.slots.map((slot) => ({
+            slotIndex: slot.slotIndex,
+            count: slot.count,
+            allowedRarities: slot.allowedRarities as Prisma.InputJsonValue,
+            weight: slot.weight,
+            rarityWeights: normalizeCustomPackRarityOptions(slot) as Prisma.InputJsonValue,
+          })),
+        },
       },
       include: { poolEntries: true, slots: true },
     });
@@ -660,6 +679,7 @@ export async function createCustomPackTemplate(
         count: slot.count,
         allowedRarities: slot.allowedRarities as string[],
         weight: slot.weight,
+        rarityWeights: normalizeCustomPackRarityOptions(slot),
       })),
     },
   };
@@ -712,8 +732,12 @@ export async function copyCustomPackTemplateToRun(
           poolEntries: { create: config.version.poolEntries },
           slots: {
             create: config.version.slots.map((slot) => ({
-              ...slot,
+              slotIndex: slot.slotIndex,
+              count: slot.count,
               allowedRarities: slot.allowedRarities as Prisma.InputJsonValue,
+              weight: slot.weight,
+              rarityWeights: (slot.rarityWeights
+                ?? normalizeCustomPackRarityOptions(slot)) as Prisma.InputJsonValue,
             })),
           },
         },
@@ -738,7 +762,13 @@ export async function simulateCustomPackVersion(
   if (!version) throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
   const input = {
     poolEntries: version.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })),
-    slots: version.slots.map((slot) => ({ slotIndex: slot.slotIndex, count: slot.count, allowedRarities: slot.allowedRarities as string[], weight: slot.weight })),
+    slots: version.slots.map((slot) => ({
+      slotIndex: slot.slotIndex,
+      count: slot.count,
+      allowedRarities: slot.allowedRarities as string[],
+      weight: slot.weight,
+      rarityOptions: normalizeCustomPackRarityOptions(slot),
+    })),
   };
   validatePackDraft(input, version.packSize);
   const random = createDeterministicRandom(options.seed);
@@ -754,7 +784,7 @@ export async function simulateCustomPackVersion(
   for (let iteration = 0; iteration < options.iterations; iteration += 1) {
     for (const slot of orderedSlots) {
       for (let copy = 0; copy < slot.count; copy += 1) {
-        const rarity = pickSlotRarity(slot.allowedRarities, slot.weight, random);
+        const rarity = pickSlotRarity(normalizeCustomPackRarityOptions(slot), random);
         const selected = weightedPick(poolsByRarity.get(rarity) ?? [], random);
         rarityCounts.set(rarity, (rarityCounts.get(rarity) ?? 0) + 1);
         const current = cardCounts.get(selected.cardId) ?? { cardId: selected.cardId, name: selected.card.name, count: 0 };

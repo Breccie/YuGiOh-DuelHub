@@ -978,6 +978,7 @@ model CustomPackSlot {
   count           Int               @default(1)
   allowedRarities Json
   weight          Int               @default(1)
+  rarityWeights   Json?
   version         CustomPackVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
 
   @@unique([versionId, slotIndex])
