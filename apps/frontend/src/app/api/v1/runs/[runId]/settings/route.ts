@@ -32,6 +32,9 @@ export async function PATCH(
     const run = await updateRunSettings(prisma, {
       runId,
       viewerId: session.userId,
+      name: body.name,
+      description: body.description,
+      status: body.status,
       defaultPackPrice: body.defaultPackPrice,
       defaultDisplaySize: body.defaultDisplaySize,
       freePacksPerSetUnlock: body.freePacksPerSetUnlock,

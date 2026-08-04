@@ -12,6 +12,7 @@ import type {
   RunProgressionResponse,
 } from "@ygo/contracts";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
+import { CampaignPackAccessPanel } from "@/components/campaign-pack-access-panel";
 import { Panel, StatPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { PlayGroupRunDto, ViewerSession } from "@/lib/app-dtos";
@@ -37,6 +38,16 @@ type CampaignSettingsSection =
   | "TRADES"
   | "TOURNAMENTS"
   | "ACTIVATION";
+
+type CampaignWorkspaceSection =
+  | "OVERVIEW"
+  | "PACKS"
+  | "CUSTOM_PACKS"
+  | "ECONOMY"
+  | "DECKS_TRADES"
+  | "TOURNAMENTS"
+  | "MEMBERS"
+  | "HISTORY";
 
 type CampaignDraft = {
   preset: CampaignRulePreset;
@@ -221,16 +232,6 @@ function getActiveRuleVersion(versions: CampaignRuleVersionDto[]) {
   return versions.find((version) => version.status === "ACTIVE") ?? null;
 }
 
-function getCheckpointSetNames(
-  checkpoint: RunProgressionResponse["nextCheckpoint"],
-) {
-  return (
-    checkpoint?.unlocks
-      .filter((unlock) => unlock.type === "SET")
-      .map((unlock) => unlock.setName ?? unlock.setCode ?? "Unbekanntes Pack") ?? []
-  );
-}
-
 export function CampaignSettingsConsole({
   session,
   activeRun,
@@ -285,6 +286,12 @@ export function CampaignSettingsConsole({
   const [inviting, setInviting] = useState(false);
   const [actionPending, setActionPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [workspaceSection, setWorkspaceSection] =
+    useState<CampaignWorkspaceSection>("OVERVIEW");
+  const [campaignName, setCampaignName] = useState(activeRun.name);
+  const [campaignDescription, setCampaignDescription] = useState(activeRun.description ?? "");
+  const [campaignStatus, setCampaignStatus] = useState<PlayGroupRunDto["status"]>(activeRun.status);
+  const [identitySaving, setIdentitySaving] = useState(false);
   const [campaignDataReady, setCampaignDataReady] = useState(false);
   const [activeSection, setActiveSection] =
     useState<CampaignSettingsSection>("ECONOMY");
@@ -295,6 +302,41 @@ export function CampaignSettingsConsole({
   const [reviewOpen, setReviewOpen] = useState(false);
   const isManager = canManageCampaign(activeRun.viewerRole);
   const canManageRules = activeRun.viewerRole === "OWNER";
+  const handleFeedback = useCallback((message: string) => setFeedback(message), []);
+
+  function selectWorkspaceSection(section: CampaignWorkspaceSection) {
+    setWorkspaceSection(section);
+    const ruleSection: Partial<Record<CampaignWorkspaceSection, CampaignSettingsSection>> = {
+      PACKS: "PROGRESSION",
+      ECONOMY: "ECONOMY",
+      DECKS_TRADES: "DECKS",
+      TOURNAMENTS: "TOURNAMENTS",
+      HISTORY: "ACTIVATION",
+    };
+    if (ruleSection[section]) setActiveSection(ruleSection[section]);
+  }
+
+  async function saveCampaignIdentity() {
+    if (!canManageRules) {
+      setFeedback("Nur der Kampagnen-Owner kann Name, Beschreibung und Status ändern.");
+      return;
+    }
+    setIdentitySaving(true);
+    setFeedback(null);
+    try {
+      await runClient.updateSettings(activeRun.id, {
+        name: campaignName.trim(),
+        description: campaignDescription.trim() || null,
+        status: campaignStatus,
+      });
+      setFeedback("Kampagnenprofil wurde gespeichert.");
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Kampagnenprofil konnte nicht gespeichert werden."));
+    } finally {
+      setIdentitySaving(false);
+    }
+  }
 
   const applyConfigToForm = useCallback((config: CampaignRuleConfig, nextPreset: CampaignRulePreset) => {
     setBaseRuleConfig(config);
@@ -838,7 +880,97 @@ export function CampaignSettingsConsole({
           </section>
         </div>
       ) : null}
-      <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <header className="campaign-settings-header">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="ui-kicker">Kampagnenzentrale</p>
+            <span className={`campaign-status campaign-status-${activeRun.status === "ACTIVE" ? "available" : "locked"}`}>
+              {activeRun.status}
+            </span>
+          </div>
+          <h1>{activeRun.name}</h1>
+          <p>{activeRun.description || "Steuere Fortschritt, Packs, Regeln und Mitglieder dieser Kampagne."}</p>
+        </div>
+        <div className="campaign-settings-header-meta">
+          <StatPill label="Rolle" value={activeRun.viewerRole} tone="teal" />
+          <StatPill label="Mitglieder" value={String(activeRun.memberCount)} tone="slate" />
+          <StatPill label="Regeln" value={baseRuleVersionId ? `v${getActiveRuleVersion(ruleVersions)?.version ?? "–"}` : "Lädt"} tone="gold" />
+        </div>
+      </header>
+
+      <div className="campaign-settings-layout">
+        <label className="campaign-settings-mobile-nav">
+          <span>Bereich</span>
+          <select className="ui-input" value={workspaceSection} onChange={(event) => selectWorkspaceSection(event.target.value as CampaignWorkspaceSection)}>
+            <option value="OVERVIEW">Übersicht</option>
+            <option value="PACKS">Packs & Fortschritt</option>
+            <option value="CUSTOM_PACKS">Custom Packs</option>
+            <option value="ECONOMY">Wirtschaft</option>
+            <option value="DECKS_TRADES">Decks & Tausch</option>
+            <option value="TOURNAMENTS">Turniere</option>
+            <option value="MEMBERS">Mitglieder</option>
+            <option value="HISTORY">Versionen & Verlauf</option>
+          </select>
+        </label>
+        <aside className="campaign-settings-nav" aria-label="Kampagneneinstellungen">
+          {([
+            ["OVERVIEW", "Übersicht"],
+            ["PACKS", "Packs & Fortschritt"],
+            ["CUSTOM_PACKS", "Custom Packs"],
+            ["ECONOMY", "Wirtschaft"],
+            ["DECKS_TRADES", "Decks & Tausch"],
+            ["TOURNAMENTS", "Turniere"],
+            ["MEMBERS", "Mitglieder"],
+            ["HISTORY", "Versionen & Verlauf"],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={workspaceSection === value ? "is-active" : ""}
+              onClick={() => selectWorkspaceSection(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </aside>
+
+        <main className="campaign-settings-main">
+      {workspaceSection === "PACKS" ? (
+        <Panel kicker="Packzugriff" title="Packs & Fortschritt">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="max-w-2xl text-sm leading-6 text-[#baa58a]">
+              Manuelle Freigaben, Sperren und Zeitfenster wirken nur auf zukünftige Käufe und Öffnungen.
+            </p>
+            <button
+              className="ui-button-secondary"
+              type="button"
+              disabled={!isManager || actionPending}
+              onClick={() => void unlockNextProgressionStep()}
+            >
+              {actionPending ? "Wird freigeschaltet…" : "Nächstes Pack freischalten"}
+            </button>
+          </div>
+          <CampaignPackAccessPanel runId={activeRun.id} canManage={isManager} onFeedback={handleFeedback} />
+        </Panel>
+      ) : null}
+
+      {workspaceSection === "CUSTOM_PACKS" ? (
+        <Panel kicker="Eigene Produkte" title="Custom Packs">
+          <div className="campaign-custom-pack-callout">
+            <div>
+              <h2>Entwerfen, simulieren, veröffentlichen</h2>
+              <p>
+                Das Studio verwaltet Kartenpool, Slots, Gewichte und unveränderliche Versionen.
+                Eine veröffentlichte Version wird anschließend hier unter „Packs & Fortschritt“ für Spieler freigegeben.
+              </p>
+            </div>
+            {isManager ? <Link className="ui-button-primary" href="/campaigns/custom-packs">Custom-Pack-Studio öffnen</Link> : null}
+          </div>
+        </Panel>
+      ) : null}
+
+      <section className={workspaceSection === "OVERVIEW" || ["PACKS", "ECONOMY", "DECKS_TRADES", "TOURNAMENTS", "HISTORY"].includes(workspaceSection) ? "grid gap-6" : "hidden"}>
+        <div className={workspaceSection === "OVERVIEW" ? "block" : "hidden"}>
         <Panel kicker="Kampagne" title={activeRun.name}>
           <div className="grid gap-4">
             <p className="text-sm leading-7 text-[#baa58a]">
@@ -883,14 +1015,22 @@ export function CampaignSettingsConsole({
                 Dashboard öffnen
               </Link>
             </div>
+            {canManageRules ? (
+              <div className="campaign-identity-form">
+                <label><span>Name</span><input className="ui-input" value={campaignName} onChange={(event) => setCampaignName(event.target.value)} /></label>
+                <label><span>Status</span><select className="ui-input" value={campaignStatus} onChange={(event) => setCampaignStatus(event.target.value as PlayGroupRunDto["status"])}><option value="ACTIVE">Aktiv</option><option value="ARCHIVED">Archiviert</option></select></label>
+                <label className="sm:col-span-2"><span>Beschreibung</span><textarea className="ui-input min-h-24" value={campaignDescription} onChange={(event) => setCampaignDescription(event.target.value)} /></label>
+                <button type="button" className="ui-button-primary sm:col-span-2 sm:justify-self-start" disabled={identitySaving || !campaignName.trim()} onClick={() => void saveCampaignIdentity()}>{identitySaving ? "Speichert…" : "Kampagnenprofil speichern"}</button>
+              </div>
+            ) : null}
           </div>
         </Panel>
+        </div>
 
+        <div className={workspaceSection !== "OVERVIEW" ? "block" : "hidden"}>
         <Panel kicker="Regeln" title="Pack- und Turnierwerte">
           {!campaignDataReady ? (
-            <p role="alert" className="mb-4 rounded-[14px] border border-[rgba(207,91,66,0.35)] bg-[rgba(151,29,20,0.16)] px-4 py-3 text-sm text-[#ffe3ca]">
-              Die aktive Regelversion konnte noch nicht vollständig geladen werden. Bearbeitung bleibt gesperrt.
-            </p>
+            <div className="campaign-skeleton-list" aria-label="Regelversion wird geladen" />
           ) : null}
           {!isManager ? (
             <p className="mb-4 text-sm leading-7 text-[#baa58a]">
@@ -899,17 +1039,10 @@ export function CampaignSettingsConsole({
             </p>
           ) : null}
           <nav
-            className="mb-5 flex gap-1 overflow-x-auto rounded-[8px] border border-white/8 bg-black/20 p-1"
+            className={workspaceSection === "DECKS_TRADES" ? "mb-5 flex gap-1 rounded-[8px] border border-white/8 bg-black/20 p-1" : "hidden"}
             aria-label="Regelbereich"
           >
-            {([
-              ["ECONOMY", "Wirtschaft"],
-              ["PROGRESSION", "Fortschritt"],
-              ["DECKS", "Decks"],
-              ["TRADES", "Tausch"],
-              ["TOURNAMENTS", "Turniere"],
-              ["ACTIVATION", "Aktivierung & Verlauf"],
-            ] as const).map(([value, label]) => (
+            {([ ["DECKS", "Deckregeln"], ["TRADES", "Tauschregeln"] ] as const).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
@@ -1090,21 +1223,6 @@ export function CampaignSettingsConsole({
             </label>
           ) : null}
           </div>
-          {feedback ? (
-            <div role="status" aria-live="polite" className="mt-4 rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
-              {feedback}
-            </div>
-          ) : null}
-          {canManageRules ? (
-            <button
-              className="ui-button-primary mt-4 disabled:cursor-not-allowed disabled:opacity-40"
-              type="button"
-              disabled={saving || !campaignDataReady}
-              onClick={() => void saveCampaignSettings(false)}
-            >
-              {saving ? "Prüft…" : "Änderungen prüfen"}
-            </button>
-          ) : null}
           </fieldset>
           <div className={activeSection === "ACTIVATION" ? "mt-5 flex flex-wrap gap-2" : "hidden"}>
             {ruleVersions.slice(0, 6).map((version) => (
@@ -1114,9 +1232,11 @@ export function CampaignSettingsConsole({
             ))}
           </div>
         </Panel>
+        </div>
       </section>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
+      <section className={workspaceSection === "MEMBERS" || workspaceSection === "TOURNAMENTS" ? "grid gap-6" : "hidden"}>
+        <div className={workspaceSection === "MEMBERS" ? "block" : "hidden"}>
         <Panel kicker="Mitglieder" title="Spieler einladen">
           <div className="grid gap-4">
             <form className="grid gap-3 lg:grid-cols-[1fr_auto_auto]" onSubmit={inviteCampaignMember}>
@@ -1177,31 +1297,11 @@ export function CampaignSettingsConsole({
             </div>
           </div>
         </Panel>
+        </div>
 
-        <Panel kicker="Host-Aktionen" title="Kampagne steuern">
+        <div className={workspaceSection === "TOURNAMENTS" ? "block" : "hidden"}>
+        <Panel kicker="Host-Aktionen" title="Turniere steuern">
           <div className="grid gap-4">
-            <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4">
-              <p className="text-sm font-semibold text-[#f0dfcc]">Nächster Pack-Schritt</p>
-              <p className="mt-2 text-sm leading-7 text-[#baa58a]">
-                {progression?.nextCheckpoint
-                  ? `${progression.nextCheckpoint.title} (${progression.nextCheckpoint.status})`
-                  : "Noch kein weiterer Step generiert."}
-              </p>
-              {getCheckpointSetNames(progression?.nextCheckpoint ?? null).length > 0 ? (
-                <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#d8bc91]">
-                  {getCheckpointSetNames(progression?.nextCheckpoint ?? null).join(", ")}
-                </p>
-              ) : null}
-              <button
-                className="ui-button-secondary mt-4"
-                type="button"
-                disabled={!isManager || actionPending}
-                onClick={() => void unlockNextProgressionStep()}
-              >
-                {actionPending ? "Wird ausgeführt…" : "Nächstes Pack freischalten"}
-              </button>
-            </div>
-
             <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4">
               <p className="text-sm font-semibold text-[#f0dfcc]">Turnier-Schnellstart</p>
               <p className="mt-2 text-sm leading-7 text-[#baa58a]">
@@ -1216,6 +1316,9 @@ export function CampaignSettingsConsole({
               >
                 {actionPending ? "Wird ausgeführt…" : "Neues Turnier starten"}
               </button>
+              <Link className="ui-button-secondary mt-4 ml-2" href="/tournaments">
+                Rangliste & Siegerarchiv
+              </Link>
             </div>
 
             {!isManager ? (
@@ -1226,7 +1329,39 @@ export function CampaignSettingsConsole({
             ) : null}
           </div>
         </Panel>
+        </div>
       </section>
+
+      {feedback ? (
+        <div role="status" aria-live="polite" className="campaign-feedback">{feedback}</div>
+      ) : null}
+
+      {canManageRules && ["PACKS", "ECONOMY", "DECKS_TRADES", "TOURNAMENTS", "HISTORY"].includes(workspaceSection) ? (
+        <div className="campaign-sticky-actions">
+          <div>
+            <strong>Regelentwurf</strong>
+            <span>{campaignDataReady ? "Lokal gesichert · bereit zur Prüfung" : "Aktive Version wird geladen"}</span>
+          </div>
+          <div>
+            <button
+              type="button"
+              className="ui-button-secondary"
+              disabled={!campaignDataReady || saving}
+              onClick={() => {
+                const activeVersion = getActiveRuleVersion(ruleVersions);
+                if (activeVersion) applyActiveRuleVersion(activeVersion);
+              }}
+            >
+              Verwerfen
+            </button>
+            <button type="button" className="ui-button-primary" disabled={!campaignDataReady || saving} onClick={() => void saveCampaignSettings(false)}>
+              {saving ? "Prüft…" : "Änderungen prüfen"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+        </main>
+      </div>
     </DuelConsoleScaffold>
   );
 }

@@ -737,6 +737,75 @@ export type TournamentStandingsDto = {
   }>;
 };
 
+export type TournamentMvpCardDto = {
+  id: string;
+  cardId: string;
+  cardName: string;
+  imageUrl: string | null;
+  featuredUserId: string;
+  featuredDisplayName: string;
+  position: number;
+  note: string | null;
+};
+
+export type CampaignLeaderboardRowDto = {
+  rank: number;
+  userId: string;
+  duelistId: string;
+  displayName: string;
+  tournamentWins: number;
+  runnerUpFinishes: number;
+  podiumFinishes: number;
+  participations: number;
+  matchPoints: number;
+  matchWins: number;
+  losses: number;
+  draws: number;
+  byes: number;
+  winRate: number;
+  latestTitleAt: string | null;
+};
+
+export type TournamentWinnerArchiveDto = {
+  tournamentId: string;
+  title: string;
+  formatLabel: string | null;
+  completedAt: string;
+  participantCount: number;
+  podium: Array<{
+    rank: number;
+    userId: string;
+    duelistId: string;
+    displayName: string;
+  }>;
+  mvpCards: TournamentMvpCardDto[];
+  mvpCandidates: Array<{
+    cardId: string;
+    cardName: string;
+    imageUrl: string | null;
+    featuredUserId: string;
+    featuredDisplayName: string;
+  }>;
+};
+
+export type CampaignLeaderboardResponse = {
+  runId: string;
+  viewerRole: "OWNER" | "ORGANIZER" | "PLAYER";
+  rows: CampaignLeaderboardRowDto[];
+  winnerArchive: TournamentWinnerArchiveDto[];
+};
+
+export const updateTournamentMvpCardsRequestSchema = z.object({
+  cards: z.array(z.object({
+    cardId: z.string().trim().min(1),
+    featuredUserId: z.string().trim().min(1),
+    note: z.string().trim().max(240).nullable().optional(),
+  })).max(3),
+});
+export type UpdateTournamentMvpCardsRequest = z.infer<
+  typeof updateTournamentMvpCardsRequestSchema
+>;
+
 export type DeckExportResult = {
   exportId: string;
   deckId: string;
@@ -1077,6 +1146,9 @@ export const joinRunRequestSchema = z.object({
 export type JoinRunRequest = z.infer<typeof joinRunRequestSchema>;
 
 export const updateRunSettingsRequestSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  description: z.string().trim().max(400).nullable().optional(),
+  status: runStatusSchema.optional(),
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
   freePacksPerSetUnlock: z.number().int().min(0).max(240).optional(),
@@ -1089,6 +1161,75 @@ export const updateRunSettingsRequestSchema = z.object({
 });
 export type UpdateRunSettingsRequest = z.infer<
   typeof updateRunSettingsRequestSchema
+>;
+
+export const packAvailabilityStatusSchema = z.enum([
+  "AVAILABLE",
+  "LOCKED",
+  "SCHEDULED",
+]);
+export type PackAvailabilityStatus = z.infer<typeof packAvailabilityStatusSchema>;
+
+export const campaignPackKindSchema = z.enum(["SET", "CUSTOM"]);
+export type CampaignPackKind = z.infer<typeof campaignPackKindSchema>;
+
+export const campaignPackAccessSchema = z.object({
+  accessId: z.string().nullable(),
+  kind: campaignPackKindSchema,
+  productId: z.string(),
+  name: z.string(),
+  code: z.string(),
+  imageUrl: z.string().nullable(),
+  availabilityStatus: packAvailabilityStatusSchema,
+  isAvailableNow: z.boolean(),
+  availableFrom: z.string().nullable(),
+  availableUntil: z.string().nullable(),
+  price: z.number().int().nullable(),
+  displaySize: z.number().int().nullable(),
+  rewardOnly: z.boolean(),
+  unlockedAt: z.string().nullable(),
+  statusReason: z.string().nullable(),
+});
+export type CampaignPackAccessDto = z.infer<typeof campaignPackAccessSchema>;
+
+export const campaignPackAccessResponseSchema = z.object({
+  runId: z.string(),
+  viewerRole: runRoleSchema,
+  items: z.array(campaignPackAccessSchema),
+});
+export type CampaignPackAccessResponse = z.infer<
+  typeof campaignPackAccessResponseSchema
+>;
+
+export const updateCampaignPackAccessRequestSchema = z.object({
+  kind: campaignPackKindSchema,
+  productId: z.string().trim().min(1),
+  availabilityStatus: packAvailabilityStatusSchema,
+  availableFrom: z.string().datetime().nullable().optional(),
+  availableUntil: z.string().datetime().nullable().optional(),
+  price: z.number().int().min(0).max(99_999).nullable().optional(),
+  displaySize: z.number().int().min(1).max(120).nullable().optional(),
+  rewardOnly: z.boolean().optional(),
+  reason: z.string().trim().min(1).max(400),
+}).superRefine((input, context) => {
+  if (input.availabilityStatus === "SCHEDULED" && !input.availableFrom) {
+    context.addIssue({
+      code: "custom",
+      path: ["availableFrom"],
+      message: "Eine geplante Freigabe benötigt einen Startzeitpunkt.",
+    });
+  }
+  if (input.availableFrom && input.availableUntil
+    && new Date(input.availableFrom) >= new Date(input.availableUntil)) {
+    context.addIssue({
+      code: "custom",
+      path: ["availableUntil"],
+      message: "Das Enddatum muss nach dem Startdatum liegen.",
+    });
+  }
+});
+export type UpdateCampaignPackAccessRequest = z.infer<
+  typeof updateCampaignPackAccessRequestSchema
 >;
 
 export const updateActiveRunRequestSchema = z.object({

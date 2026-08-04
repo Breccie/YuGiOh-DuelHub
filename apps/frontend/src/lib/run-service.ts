@@ -848,6 +848,9 @@ export async function updateRunSettings(
   options: {
     runId: string;
     viewerId: string;
+    name?: string;
+    description?: string | null;
+    status?: "ACTIVE" | "ARCHIVED";
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
     freePacksPerSetUnlock?: number;
@@ -859,35 +862,66 @@ export async function updateRunSettings(
     tournamentParticipationCredits?: number;
   },
 ) {
-  await requireRunMembership(prisma, {
+  const membership = await requireRunMembership(prisma, {
     runId: options.runId,
     userId: options.viewerId,
     organizerOnly: true,
   });
 
-  const run = await prisma.playGroupRun.update({
-    where: {
-      id: options.runId,
-    },
-    data: {
-      defaultPackPrice: options.defaultPackPrice,
-      defaultDisplaySize: options.defaultDisplaySize,
-      freePacksPerSetUnlock: options.freePacksPerSetUnlock,
-      initialSetUnlockCount: options.initialSetUnlockCount,
-      setsPerProgressionStep: options.setsPerProgressionStep,
-      separatePromoProgression: options.separatePromoProgression,
-      tournamentWinnerCredits: options.tournamentWinnerCredits,
-      tournamentRunnerUpCredits: options.tournamentRunnerUpCredits,
-      tournamentParticipationCredits: options.tournamentParticipationCredits,
-    },
-    include: {
-      memberships: true,
-      _count: {
-        select: {
-          memberships: true,
+  if (
+    (options.name !== undefined
+      || options.description !== undefined
+      || options.status !== undefined)
+    && membership.role !== "OWNER"
+  ) {
+    throw new DomainError({
+      code: "campaign_identity_owner_only",
+      message: "Nur der Owner kann Name, Beschreibung oder Status der Kampagne ändern.",
+      status: 403,
+    });
+  }
+
+  const run = await prisma.$transaction(async (tx) => {
+    const updated = await tx.playGroupRun.update({
+      where: {
+        id: options.runId,
+      },
+      data: {
+        name: options.name,
+        description: options.description,
+        status: options.status,
+        defaultPackPrice: options.defaultPackPrice,
+        defaultDisplaySize: options.defaultDisplaySize,
+        freePacksPerSetUnlock: options.freePacksPerSetUnlock,
+        initialSetUnlockCount: options.initialSetUnlockCount,
+        setsPerProgressionStep: options.setsPerProgressionStep,
+        separatePromoProgression: options.separatePromoProgression,
+        tournamentWinnerCredits: options.tournamentWinnerCredits,
+        tournamentRunnerUpCredits: options.tournamentRunnerUpCredits,
+        tournamentParticipationCredits: options.tournamentParticipationCredits,
+      },
+      include: {
+        memberships: true,
+        _count: {
+          select: {
+            memberships: true,
+          },
         },
       },
-    },
+    });
+    if (options.name !== undefined || options.description !== undefined || options.status !== undefined) {
+      await tx.historyEvent.create({
+        data: {
+          runId: options.runId,
+          type: "CUSTOM",
+          title: "Kampagnenprofil aktualisiert",
+          description: `Akteur ${options.viewerId} · Status ${updated.status}`,
+          eventDate: new Date(),
+          isUnlocked: updated.status === "ACTIVE",
+        },
+      });
+    }
+    return updated;
   });
 
   return serializeRun(run, options.viewerId);

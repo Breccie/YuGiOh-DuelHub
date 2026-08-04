@@ -3,6 +3,10 @@ import { CustomPackEra, OwnershipSource, Prisma, type PrismaClient } from "@pris
 import type { CreateCustomPackRequest, UpdateCustomPackDraftRequest } from "@ygo/contracts";
 import { DomainError } from "@ygo/domain";
 import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
+import {
+  assertPackAccessAvailable,
+  isCampaignPackAvailableNow,
+} from "@/lib/campaign-pack-access-service";
 import { getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
 
 const ERA_SLOTS: Record<CustomPackEra, Array<{ slotIndex: number; count: number; allowedRarities: string[]; weight: number }>> = {
@@ -175,7 +179,11 @@ export async function listCustomPacks(prisma: PrismaClient, viewerId: string, ru
       versions: pack.versions
         .filter((version) =>
           version.status === "PUBLISHED"
-          && version.accesses.some((access) => access.runId === runId),
+            && version.accesses.some((access) =>
+              access.runId === runId
+              && !access.rewardOnly
+              && isCampaignPackAvailableNow(access),
+            ),
         )
         .map((version) => ({
           ...version,
@@ -352,11 +360,6 @@ export async function publishCustomPackVersion(prisma: PrismaClient, viewerId: s
       include: { definition: true, poolEntries: { include: { card: true } }, slots: true },
     });
     await tx.customPackDefinition.update({ where: { id: version.definitionId }, data: { status: "PUBLISHED" } });
-    await tx.campaignCustomPackAccess.upsert({
-      where: { runId_versionId: { runId, versionId } },
-      create: { runId, versionId, price: version.price, rewardOnly: version.rewardOnly },
-      update: { price: version.price, rewardOnly: version.rewardOnly },
-    });
     return published;
   });
 }
@@ -454,6 +457,10 @@ export async function openCustomPackVersion(
       if (version.definition.runId !== runId) {
         throw new DomainError({ code: "custom_pack_cross_campaign", message: "Diese Packversion gehört nicht zu dieser Kampagne.", status: 409 });
       }
+      assertPackAccessAvailable({
+        ...access,
+        productName: version.definition.name,
+      });
       if (access.rewardOnly) {
         throw new DomainError({ code: "custom_pack_reward_only", message: "Dieses Pack ist nur als Belohnung erhältlich.", status: 409 });
       }

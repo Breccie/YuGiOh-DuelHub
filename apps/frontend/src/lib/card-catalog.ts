@@ -172,9 +172,13 @@ export async function getCardCatalog(
   query: CardCatalogQuery,
 ): Promise<CardCatalogResponse> {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const now = new Date();
   const customSetAccesses = await prisma.campaignCustomPackAccess.findMany({
     where: {
       runId: activeRun.id,
+      availabilityStatus: { in: ["AVAILABLE", "SCHEDULED"] },
+      OR: [{ availableFrom: null }, { availableFrom: { lte: now } }],
+      AND: [{ OR: [{ availableUntil: null }, { availableUntil: { gt: now } }] }],
       version: {
         status: "PUBLISHED",
         generatedSetId: { not: null },

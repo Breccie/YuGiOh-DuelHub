@@ -1,6 +1,13 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { pairSwissRound } from "@ygo/domain";
-import type { TournamentOverviewDto, TournamentStandingsDto } from "@/lib/app-dtos";
+import type {
+  CampaignLeaderboardResponse,
+  TournamentOverviewDto,
+  TournamentStandingsDto,
+  UpdateTournamentMvpCardsRequest,
+} from "@ygo/contracts";
+import { DomainError } from "@ygo/domain";
+import { getCardAssetUrl } from "@/lib/asset-urls";
 import {
   getActiveCampaignRuleConfig,
   getActiveCampaignRuleVersionId,
@@ -299,6 +306,150 @@ function computeStandings(tournament: TournamentRecord): TournamentStandingsDto 
       ...entry,
     })),
   };
+}
+
+type SnapshotCard = {
+  cardId: string;
+  section: "MAIN" | "EXTRA" | "SIDE";
+  quantity: number;
+};
+
+function canOperateTournament(
+  activeRun: Awaited<ReturnType<typeof getActiveRun>>,
+  viewerId: string,
+  hostId?: string,
+) {
+  const membership = activeRun.memberships.find((entry) => entry.userId === viewerId);
+  return hostId === viewerId || membership?.role === "OWNER" || membership?.role === "ORGANIZER";
+}
+
+function normalizeSnapshotCards(value: Prisma.JsonValue): SnapshotCard[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const row = entry as Record<string, unknown>;
+    if (typeof row.cardId !== "string" || typeof row.quantity !== "number") return [];
+    if (row.section !== "MAIN" && row.section !== "EXTRA" && row.section !== "SIDE") return [];
+    return [{
+      cardId: row.cardId,
+      section: row.section,
+      quantity: row.quantity,
+    }];
+  });
+}
+
+async function persistTournamentSnapshots(
+  tx: Prisma.TransactionClient,
+  tournament: TournamentRecord,
+) {
+  const standings = computeStandings(tournament).standings;
+  for (const row of standings) {
+    await tx.tournamentResult.upsert({
+      where: {
+        tournamentId_userId: {
+          tournamentId: tournament.id,
+          userId: row.userId,
+        },
+      },
+      create: {
+        tournamentId: tournament.id,
+        userId: row.userId,
+        duelistId: row.duelistId,
+        displayName: row.displayName,
+        rank: row.rank,
+        matchPoints: row.matchPoints,
+        wins: row.wins,
+        losses: row.losses,
+        draws: row.draws,
+        byes: row.byes,
+        opponentsMatchWinRate: row.opponentsMatchWinRate,
+      },
+      update: {},
+    });
+  }
+
+  const matches = await tx.tournamentMatch.findMany({
+    where: { tournamentId: tournament.id },
+    include: {
+      playerOneDeck: { include: { cards: true } },
+      playerTwoDeck: { include: { cards: true } },
+      deckExport: {
+        include: {
+          deck: { include: { cards: true } },
+        },
+      },
+    },
+  });
+  const decksByUser = new Map<string, {
+    deckId: string;
+    deckName: string;
+    cards: SnapshotCard[];
+  }>();
+  for (const match of matches) {
+    if (match.playerOneDeck && !decksByUser.has(match.playerOneId)) {
+      decksByUser.set(match.playerOneId, {
+        deckId: match.playerOneDeck.id,
+        deckName: match.playerOneDeck.name,
+        cards: match.playerOneDeck.cards,
+      });
+    }
+    if (match.playerTwoId && match.playerTwoDeck && !decksByUser.has(match.playerTwoId)) {
+      decksByUser.set(match.playerTwoId, {
+        deckId: match.playerTwoDeck.id,
+        deckName: match.playerTwoDeck.name,
+        cards: match.playerTwoDeck.cards,
+      });
+    }
+    if (match.deckExport && !decksByUser.has(match.deckExport.userId)) {
+      decksByUser.set(match.deckExport.userId, {
+        deckId: match.deckExport.deck.id,
+        deckName: match.deckExport.deck.name,
+        cards: match.deckExport.deck.cards,
+      });
+    }
+  }
+
+  for (const [userId, deck] of decksByUser) {
+    await tx.tournamentDeckSnapshot.upsert({
+      where: {
+        tournamentId_userId: {
+          tournamentId: tournament.id,
+          userId,
+        },
+      },
+      create: {
+        tournamentId: tournament.id,
+        userId,
+        deckId: deck.deckId,
+        deckName: deck.deckName,
+        cards: deck.cards.map((card) => ({
+          cardId: card.cardId,
+          section: card.section,
+          quantity: card.quantity,
+        })),
+      },
+      update: {},
+    });
+  }
+  for (const row of standings) {
+    if (decksByUser.has(row.userId)) continue;
+    await tx.tournamentDeckSnapshot.upsert({
+      where: {
+        tournamentId_userId: {
+          tournamentId: tournament.id,
+          userId: row.userId,
+        },
+      },
+      create: {
+        tournamentId: tournament.id,
+        userId: row.userId,
+        deckId: null,
+        deckName: null,
+        cards: [],
+      },
+      update: {},
+    });
+  }
 }
 
 function parseTournamentRewardConfig(value: Prisma.JsonValue): TournamentRewardConfig | null {
@@ -668,10 +819,11 @@ async function mapTournamentDetail(
 
 export async function listTournamentOverviews(prisma: PrismaClient, viewerId: string) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  const canManage = canOperateTournament(activeRun, viewerId);
   const tournaments = await prisma.tournament.findMany({
     where: {
       runId: activeRun.id,
-      participants: {
+      participants: canManage ? undefined : {
         some: {
           userId: viewerId,
         },
@@ -702,7 +854,8 @@ export async function getTournamentDetail(
   if (
     !tournament ||
     tournament.runId !== activeRun.id ||
-    !tournament.participants.some((participant) => participant.userId === viewerId)
+    (!canOperateTournament(activeRun, viewerId, tournament.hostId)
+      && !tournament.participants.some((participant) => participant.userId === viewerId))
   ) {
     throw new Error("Turnier wurde nicht gefunden.");
   }
@@ -721,6 +874,13 @@ export async function createTournament(
   },
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
+  if (!canOperateTournament(activeRun, viewerId)) {
+    throw new DomainError({
+      code: "tournament_create_forbidden",
+      message: "Nur Kampagnen-Owner und Organizer können Turniere erstellen.",
+      status: 403,
+    });
+  }
   const ruleVersionId = await getActiveCampaignRuleVersionId(prisma, activeRun.id);
   const tournament = await prisma.tournament.create({
     data: {
@@ -760,8 +920,8 @@ export async function inviteTournamentParticipant(
     },
   });
 
-  if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
-    throw new Error("Nur der Host kann Teilnehmer einladen.");
+  if (!tournament || tournament.runId !== activeRun.id || !canOperateTournament(activeRun, viewerId, tournament.hostId)) {
+    throw new Error("Nur Host oder Kampagnen-Organizer können Teilnehmer einladen.");
   }
 
   const invitee = await prisma.user.findUnique({
@@ -812,8 +972,8 @@ export async function createSwissRound(
   const ruleConfig = await getActiveCampaignRuleConfig(prisma, activeRun.id);
   const tournament = await loadTournament(prisma, tournamentId);
 
-  if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
-    throw new Error("Nur der Host kann neue Swiss-Runden erzeugen.");
+  if (!tournament || tournament.runId !== activeRun.id || !canOperateTournament(activeRun, viewerId, tournament.hostId)) {
+    throw new Error("Nur Host oder Kampagnen-Organizer können neue Swiss-Runden erzeugen.");
   }
 
   const acceptedParticipants = tournament.participants.filter(
@@ -1079,8 +1239,8 @@ export async function completeTournament(
     },
   });
 
-  if (!tournament || tournament.hostId !== viewerId || tournament.runId !== activeRun.id) {
-    throw new Error("Nur der Host kann das Turnier abschließen.");
+  if (!tournament || tournament.runId !== activeRun.id || !canOperateTournament(activeRun, viewerId, tournament.hostId)) {
+    throw new Error("Nur Host oder Kampagnen-Organizer können das Turnier abschließen.");
   }
 
   if (tournament.status === "COMPLETED") {
@@ -1096,6 +1256,7 @@ export async function completeTournament(
   }
 
   await prisma.$transaction(async (tx) => {
+    await persistTournamentSnapshots(tx, tournament);
     await grantTournamentRewards(tx, tournament);
     await tx.tournament.update({
       where: {
@@ -1103,10 +1264,287 @@ export async function completeTournament(
       },
       data: {
         status: "COMPLETED",
+        completedAt: new Date(),
       },
     });
     await markTournamentProgressionReady(tx, tournamentId);
   });
 
   return getTournamentDetail(prisma, viewerId, tournamentId);
+}
+
+export async function getCampaignLeaderboard(
+  prisma: PrismaClient,
+  viewerId: string,
+): Promise<CampaignLeaderboardResponse> {
+  const activeRun = await getActiveRun(prisma, viewerId);
+  const membership = await requireRunMembership(prisma, {
+    runId: activeRun.id,
+    userId: viewerId,
+  });
+  const historicalTournaments = await prisma.tournament.findMany({
+    where: {
+      runId: activeRun.id,
+      status: "COMPLETED",
+      OR: [
+        { results: { none: {} } },
+        { deckSnapshots: { none: {} } },
+      ],
+    },
+    select: { id: true, completedAt: true, updatedAt: true },
+  });
+  for (const historical of historicalTournaments) {
+    const loaded = await loadTournament(prisma, historical.id);
+    if (!loaded) continue;
+    await prisma.$transaction(async (tx) => {
+      await persistTournamentSnapshots(tx, loaded as TournamentRecord);
+      if (!historical.completedAt) {
+        await tx.tournament.update({
+          where: { id: historical.id },
+          data: { completedAt: historical.updatedAt },
+        });
+      }
+    });
+  }
+  const [memberships, completedTournaments] = await Promise.all([
+    prisma.runMembership.findMany({
+      where: { runId: activeRun.id },
+      include: { user: true },
+      orderBy: { joinedAt: "asc" },
+    }),
+    prisma.tournament.findMany({
+      where: { runId: activeRun.id, status: "COMPLETED" },
+      include: {
+        results: { orderBy: { rank: "asc" } },
+        deckSnapshots: true,
+        mvpCards: {
+          orderBy: { position: "asc" },
+          include: { card: true },
+        },
+      },
+      orderBy: [{ completedAt: "desc" }, { updatedAt: "desc" }],
+    }),
+  ]);
+
+  const memberById = new Map(memberships.map((entry) => [entry.userId, entry.user]));
+  const aggregate = new Map(memberships.map((entry) => [entry.userId, {
+    userId: entry.userId,
+    duelistId: entry.user.duelistId,
+    displayName: entry.user.displayName,
+    tournamentWins: 0,
+    runnerUpFinishes: 0,
+    podiumFinishes: 0,
+    participations: 0,
+    matchPoints: 0,
+    matchWins: 0,
+    losses: 0,
+    draws: 0,
+    byes: 0,
+    latestTitleAt: null as string | null,
+  }]));
+
+  const archive: CampaignLeaderboardResponse["winnerArchive"] = [];
+  for (const tournament of completedTournaments) {
+    let resultRows = tournament.results;
+    if (resultRows.length === 0) {
+      const loaded = await loadTournament(prisma, tournament.id);
+      resultRows = loaded
+        ? computeStandings(loaded as TournamentRecord).standings.map((row) => ({
+            id: `derived-${tournament.id}-${row.userId}`,
+            tournamentId: tournament.id,
+            createdAt: tournament.completedAt ?? tournament.updatedAt,
+            ...row,
+          }))
+        : [];
+    }
+
+    const completedAt = (tournament.completedAt ?? tournament.updatedAt).toISOString();
+    for (const result of resultRows) {
+      const row = aggregate.get(result.userId);
+      if (!row) continue;
+      const realWins = Math.max(0, result.wins - result.byes);
+      row.participations += 1;
+      row.matchPoints += result.matchPoints;
+      row.matchWins += realWins;
+      row.losses += result.losses;
+      row.draws += result.draws;
+      row.byes += result.byes;
+      if (result.rank === 1) {
+        row.tournamentWins += 1;
+        row.latestTitleAt = !row.latestTitleAt || completedAt > row.latestTitleAt
+          ? completedAt
+          : row.latestTitleAt;
+      }
+      if (result.rank === 2) row.runnerUpFinishes += 1;
+      if (result.rank <= 3) row.podiumFinishes += 1;
+    }
+
+    const snapshotsByUser = new Map(tournament.deckSnapshots.map((snapshot) => [
+      snapshot.userId,
+      normalizeSnapshotCards(snapshot.cards),
+    ]));
+    const candidatePairs = [...snapshotsByUser.entries()].flatMap(([userId, cards]) =>
+      [...new Set(cards.map((card) => card.cardId))].map((cardId) => ({ userId, cardId })),
+    );
+    const candidateCardIds = [...new Set(candidatePairs.map((entry) => entry.cardId))];
+    const candidateCards = candidateCardIds.length > 0
+      ? await prisma.card.findMany({
+          where: { id: { in: candidateCardIds } },
+          select: { id: true, name: true, externalCardId: true },
+        })
+      : [];
+    const candidateCardById = new Map(candidateCards.map((card) => [card.id, card]));
+
+    archive.push({
+      tournamentId: tournament.id,
+      title: tournament.title,
+      formatLabel: tournament.formatLabel,
+      completedAt,
+      participantCount: resultRows.length,
+      podium: resultRows.slice(0, 3).map((result) => ({
+        rank: result.rank,
+        userId: result.userId,
+        duelistId: result.duelistId,
+        displayName: result.displayName,
+      })),
+      mvpCards: tournament.mvpCards.map((entry) => ({
+        id: entry.id,
+        cardId: entry.cardId,
+        cardName: entry.card.name,
+        imageUrl: getCardAssetUrl(entry.card.externalCardId),
+        featuredUserId: entry.featuredUserId,
+        featuredDisplayName: memberById.get(entry.featuredUserId)?.displayName ?? "Duelist",
+        position: entry.position,
+        note: entry.note,
+      })),
+      mvpCandidates: candidatePairs.flatMap(({ userId, cardId }) => {
+        const card = candidateCardById.get(cardId);
+        const user = memberById.get(userId);
+        return card && user ? [{
+          cardId,
+          cardName: card.name,
+          imageUrl: getCardAssetUrl(card.externalCardId),
+          featuredUserId: userId,
+          featuredDisplayName: user.displayName,
+        }] : [];
+      }),
+    });
+  }
+
+  const rows = [...aggregate.values()]
+    .map((row) => {
+      const played = row.matchWins + row.losses + row.draws;
+      return {
+        ...row,
+        winRate: played > 0 ? Number((row.matchWins / played).toFixed(3)) : 0,
+      };
+    })
+    .sort((left, right) =>
+      right.tournamentWins - left.tournamentWins
+      || right.runnerUpFinishes - left.runnerUpFinishes
+      || right.matchWins - left.matchWins
+      || right.winRate - left.winRate
+      || left.displayName.localeCompare(right.displayName, "de"),
+    )
+    .map((row, index) => ({ rank: index + 1, ...row }));
+
+  return {
+    runId: activeRun.id,
+    viewerRole: membership.role,
+    rows,
+    winnerArchive: archive,
+  };
+}
+
+export async function updateTournamentMvpCards(
+  prisma: PrismaClient,
+  options: {
+    viewerId: string;
+    tournamentId: string;
+    input: UpdateTournamentMvpCardsRequest;
+  },
+) {
+  const activeRun = await getActiveRun(prisma, options.viewerId);
+  const membership = await requireRunMembership(prisma, {
+    runId: activeRun.id,
+    userId: options.viewerId,
+  });
+  const tournament = await loadTournament(prisma, options.tournamentId);
+  if (!tournament || tournament.runId !== activeRun.id) {
+    throw new DomainError({
+      code: "tournament_not_found",
+      message: "Dieses Turnier wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+  if (tournament.status !== "COMPLETED") {
+    throw new DomainError({
+      code: "tournament_not_completed",
+      message: "MVP-Karten können erst nach dem Turnierabschluss gewählt werden.",
+      status: 409,
+    });
+  }
+  if (tournament.hostId !== options.viewerId
+    && membership.role !== "OWNER"
+    && membership.role !== "ORGANIZER") {
+    throw new DomainError({
+      code: "tournament_mvp_forbidden",
+      message: "Nur Host oder Kampagnen-Organizer können MVP-Karten wählen.",
+      status: 403,
+    });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await persistTournamentSnapshots(tx, tournament as TournamentRecord);
+    const snapshots = await tx.tournamentDeckSnapshot.findMany({
+      where: { tournamentId: tournament.id },
+    });
+    const cardsByUser = new Map(snapshots.map((snapshot) => [
+      snapshot.userId,
+      new Set(normalizeSnapshotCards(snapshot.cards).map((card) => card.cardId)),
+    ]));
+    const uniqueCards = new Set<string>();
+    for (const entry of options.input.cards) {
+      if (uniqueCards.has(entry.cardId)) {
+        throw new DomainError({
+          code: "duplicate_tournament_mvp",
+          message: "Eine Karte kann pro Turnier nur einmal als MVP ausgestellt werden.",
+          status: 409,
+        });
+      }
+      uniqueCards.add(entry.cardId);
+      if (!cardsByUser.get(entry.featuredUserId)?.has(entry.cardId)) {
+        throw new DomainError({
+          code: "tournament_mvp_card_not_used",
+          message: "Die MVP-Karte wurde im gespeicherten Turnierdeck dieses Spielers nicht gefunden.",
+          status: 409,
+        });
+      }
+    }
+    const existingCards = options.input.cards.length > 0
+      ? await tx.card.count({ where: { id: { in: options.input.cards.map((entry) => entry.cardId) } } })
+      : 0;
+    if (existingCards !== options.input.cards.length) {
+      throw new DomainError({
+        code: "tournament_mvp_card_missing",
+        message: "Mindestens eine MVP-Karte wurde nicht gefunden.",
+        status: 404,
+      });
+    }
+    await tx.tournamentMvpCard.deleteMany({ where: { tournamentId: tournament.id } });
+    if (options.input.cards.length > 0) {
+      await tx.tournamentMvpCard.createMany({
+        data: options.input.cards.map((entry, index) => ({
+          tournamentId: tournament.id,
+          cardId: entry.cardId,
+          featuredUserId: entry.featuredUserId,
+          position: index,
+          note: entry.note ?? null,
+          selectedById: options.viewerId,
+        })),
+      });
+    }
+  });
+
+  return getCampaignLeaderboard(prisma, options.viewerId);
 }

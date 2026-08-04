@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type {
   ActiveRunResponse,
+  CampaignLeaderboardResponse,
   TournamentOverviewDto,
   ViewerSession,
   WalletResponse,
@@ -14,14 +15,17 @@ import {
   getOrCreateWallet,
   serializeLedgerEntry,
 } from "@/lib/run-service";
-import { listTournamentOverviews } from "@/lib/tournament-service";
+import {
+  getCampaignLeaderboard,
+  listTournamentOverviews,
+} from "@/lib/tournament-service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   if (shouldProxyToApiService()) {
     try {
-      const [sessionPayload, tournamentPayload, activeRun] = await Promise.all([
+      const [sessionPayload, tournamentPayload, activeRun, leaderboard] = await Promise.all([
         fetchApiServiceJson<{
           session: ViewerSession | null;
         }>("/api/v1/auth/session"),
@@ -29,6 +33,9 @@ export async function GET() {
           "/api/v1/tournaments",
         ),
         fetchApiServiceJson<ActiveRunResponse>("/api/v1/runs/active"),
+        fetchApiServiceJson<CampaignLeaderboardResponse>(
+          "/api/v1/tournaments/leaderboard",
+        ),
       ]);
 
       if (!sessionPayload.session) {
@@ -42,6 +49,7 @@ export async function GET() {
       return NextResponse.json({
         session: sessionPayload.session,
         tournaments: tournamentPayload.tournaments,
+        leaderboard,
         currency: {
           balance: walletPayload.wallet.balance,
           tournamentCreditsEarned: walletPayload.recentEntries
@@ -66,8 +74,9 @@ export async function GET() {
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const activeRun = await getActiveRun(prisma, session.userId);
-    const [tournaments, wallet, recentEntries] = await Promise.all([
+    const [tournaments, leaderboard, wallet, recentEntries] = await Promise.all([
       listTournamentOverviews(prisma, session.userId),
+      getCampaignLeaderboard(prisma, session.userId),
       getOrCreateWallet(prisma, {
         runId: activeRun.id,
         userId: session.userId,
@@ -88,6 +97,7 @@ export async function GET() {
     return NextResponse.json({
       session,
       tournaments,
+      leaderboard,
       currency: {
         balance: wallet.balance,
         tournamentCreditsEarned: serializedEntries

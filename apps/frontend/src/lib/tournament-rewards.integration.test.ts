@@ -7,6 +7,7 @@ import {
 } from "@/lib/progression-service";
 import {
   completeTournament,
+  getCampaignLeaderboard,
   recordTournamentMatchResult,
 } from "@/lib/tournament-service";
 import { deleteRunFixture } from "@/test-support/run-fixture-cleanup";
@@ -571,6 +572,13 @@ describe("tournament rewards and progression", () => {
       });
 
       await completeTournament(prisma, owner.id, tournament.id);
+      const leaderboard = await getCampaignLeaderboard(prisma, owner.id);
+      expect(leaderboard.winnerArchive).toEqual(expect.arrayContaining([
+        expect.objectContaining({ tournamentId: tournament.id }),
+      ]));
+      expect(leaderboard.rows.some((row) => row.userId === owner.id)).toBe(true);
+      await expect(prisma.tournamentResult.count({ where: { tournamentId: tournament.id } }))
+        .resolves.toBeGreaterThan(0);
       await expect(
         prisma.rewardGrant.count({
           where: {

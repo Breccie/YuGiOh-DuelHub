@@ -6,6 +6,7 @@ import {
   publishCustomPackVersion,
   updateCustomPackDraft,
 } from "@/lib/custom-pack-service";
+import { updateCampaignPackAccess } from "@/lib/campaign-pack-access-service";
 import { deleteRunFixture } from "@/test-support/run-fixture-cleanup";
 
 const prisma = new PrismaClient();
@@ -90,6 +91,24 @@ describe("custom pack publishing and opening", () => {
         idempotencyKey: "   ",
       })).rejects.toMatchObject({ code: "idempotency_key_required", status: 400 });
 
+      await expect(openCustomPackVersion(prisma, user.id, run.id, version.id, {
+        idempotencyKey: "before-player-release",
+      })).rejects.toMatchObject({ code: "custom_pack_unavailable", status: 409 });
+
+      await updateCampaignPackAccess(prisma, {
+        viewerId: user.id,
+        runId: run.id,
+        input: {
+          kind: "CUSTOM",
+          productId: version.id,
+          availabilityStatus: "AVAILABLE",
+          price: 100,
+          displaySize: null,
+          rewardOnly: false,
+          reason: "Integrationstest: veröffentlichte Version für Spieler freigeben.",
+        },
+      });
+
       const first = await openCustomPackVersion(prisma, user.id, run.id, version.id, {
         idempotencyKey: "stable-purchase-intent",
       });
@@ -105,6 +124,23 @@ describe("custom pack publishing and opening", () => {
       });
       expect(second.id).not.toBe(first.id);
       expect(second.seed).not.toBe(first.seed);
+
+      await updateCampaignPackAccess(prisma, {
+        viewerId: user.id,
+        runId: run.id,
+        input: {
+          kind: "CUSTOM",
+          productId: version.id,
+          availabilityStatus: "LOCKED",
+          price: 100,
+          displaySize: null,
+          rewardOnly: false,
+          reason: "Integrationstest: neue Öffnungen sperren.",
+        },
+      });
+      await expect(openCustomPackVersion(prisma, user.id, run.id, version.id, {
+        idempotencyKey: "after-soft-lock",
+      })).rejects.toMatchObject({ code: "pack_locked", status: 409 });
 
       const [opening, ownedCards, wallet, purchases] = await Promise.all([
         prisma.packOpening.findUniqueOrThrow({ where: { id: first.id } }),

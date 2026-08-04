@@ -12,6 +12,10 @@ import {
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
 import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
 import {
+  assertPackAccessAvailable,
+  isCampaignPackAvailableNow,
+} from "@/lib/campaign-pack-access-service";
+import {
   generatePackCards,
   getCanonicalSetCards,
   getEffectiveSetConfiguration,
@@ -377,6 +381,9 @@ function assertSetIsPurchasableInRun(options: {
   setName: string;
   unlock: {
     rewardOnly: boolean;
+    availabilityStatus: "AVAILABLE" | "LOCKED" | "SCHEDULED";
+    availableFrom: Date | null;
+    availableUntil: Date | null;
   } | null;
 }) {
   if (!options.unlock) {
@@ -400,6 +407,11 @@ function assertSetIsPurchasableInRun(options: {
       },
     });
   }
+
+  assertPackAccessAvailable({
+    ...options.unlock,
+    productName: options.setName,
+  });
 }
 function buildPackPulls(
   set: Awaited<ReturnType<typeof loadSetOrThrow>>,
@@ -742,6 +754,9 @@ export async function getPackDashboardSnapshot(
             packPrice: true,
             displaySize: true,
             rewardOnly: true,
+            availabilityStatus: true,
+            availableFrom: true,
+            availableUntil: true,
           },
         })
       : Promise.resolve([]),
@@ -782,22 +797,25 @@ export async function getPackDashboardSnapshot(
     selectedSetId:
       displaySets.find((set) => {
         const unlock = unlockBySetId.get(set.id);
+        const available = unlock ? isCampaignPackAvailableNow(unlock) : false;
 
         return (
           set.productType === "CORE_BOOSTER" &&
-          (!runId || (unlock && !unlock.rewardOnly))
+          (!runId || (unlock && available && !unlock.rewardOnly))
         );
       })
         ?.id ??
       displaySets.find((set) => {
         const unlock = unlockBySetId.get(set.id);
+        const available = unlock ? isCampaignPackAvailableNow(unlock) : false;
 
-        return !runId || (unlock && !unlock.rewardOnly);
+        return !runId || (unlock && available && !unlock.rewardOnly);
       })?.id ??
       displaySets[0]?.id ??
       null,
     sets: displaySets.map((set) => {
       const unlock = unlockBySetId.get(set.id) ?? null;
+      const available = unlock ? isCampaignPackAvailableNow(unlock) : false;
       const economy =
         run && unlock
           ? normalizePackEconomy({
@@ -819,12 +837,12 @@ export async function getPackDashboardSnapshot(
         imageUrl: resolveAppImageUrl(set.imageUrl),
         totalOpened: openingStatsBySetId.get(set.id)?.totalOpened ?? 0,
         lastOpenedAt: openingStatsBySetId.get(set.id)?.lastOpenedAt ?? null,
-        isUnlocked: runId ? Boolean(unlock) : true,
+        isUnlocked: runId ? Boolean(unlock && available) : true,
         rewardOnly: unlock?.rewardOnly ?? false,
         packPrice: economy?.packPrice ?? null,
         displaySize: economy?.displaySize ?? null,
         displayCost: economy?.displayCost ?? null,
-        canBuy: runId ? Boolean(unlock && !unlock.rewardOnly) : true,
+        canBuy: runId ? Boolean(unlock && available && !unlock.rewardOnly) : true,
       };
     }),
     recentOpenings: recentOpenings.map(serializeOpening),
@@ -909,6 +927,9 @@ export async function getFocusedPackDashboardSnapshot(
             packPrice: true,
             displaySize: true,
             rewardOnly: true,
+            availabilityStatus: true,
+            availableFrom: true,
+            availableUntil: true,
           },
         })
       : Promise.resolve(null),
@@ -938,6 +959,7 @@ export async function getFocusedPackDashboardSnapshot(
           defaultDisplaySize: run.defaultDisplaySize,
         })
       : null;
+  const available = unlock ? isCampaignPackAvailableNow(unlock) : false;
 
   return {
     viewer,
@@ -959,12 +981,12 @@ export async function getFocusedPackDashboardSnapshot(
         imageUrl: resolveAppImageUrl(set.imageUrl),
         totalOpened: openingStats._count._all,
         lastOpenedAt: openingStats._max.openedAt?.toISOString() ?? null,
-        isUnlocked: runId ? Boolean(unlock) : true,
+        isUnlocked: runId ? Boolean(unlock && available) : true,
         rewardOnly: unlock?.rewardOnly ?? false,
         packPrice: economy?.packPrice ?? null,
         displaySize: economy?.displaySize ?? null,
         displayCost: economy?.displayCost ?? null,
-        canBuy: runId ? Boolean(unlock && !unlock.rewardOnly) : true,
+        canBuy: runId ? Boolean(unlock && available && !unlock.rewardOnly) : true,
       },
     ],
     recentOpenings: [],
@@ -1380,6 +1402,9 @@ export async function openPack(
                   packPrice: true,
                   displaySize: true,
                   rewardOnly: true,
+                  availabilityStatus: true,
+                  availableFrom: true,
+                  availableUntil: true,
                 },
                 take: 1,
               },

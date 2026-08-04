@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CreditLedgerEntryDto } from "@ygo/contracts";
+import type {
+  CampaignLeaderboardResponse,
+  CreditLedgerEntryDto,
+} from "@ygo/contracts";
 import { TournamentsConsole } from "@/components/tournaments-console";
 import { ApiClientError, apiGetJson, isActiveRunRequiredError } from "@/lib/api-client";
 import type { TournamentOverviewDto, ViewerSession } from "@/lib/app-dtos";
@@ -12,6 +15,7 @@ import { readLocalSyncCache } from "@/lib/sync-cache";
 type TournamentsOverviewPayload = {
   session: ViewerSession;
   tournaments: TournamentOverviewDto[];
+  leaderboard: CampaignLeaderboardResponse;
   currency: {
     balance: number;
     tournamentCreditsEarned: number;
@@ -36,6 +40,12 @@ function createFallbackTournamentsOverview(): TournamentsOverviewPayload {
       deviceLabel: null,
     },
     tournaments: [],
+    leaderboard: {
+      runId: "",
+      viewerRole: "PLAYER",
+      rows: [],
+      winnerArchive: [],
+    },
     currency: {
       balance: 0,
       tournamentCreditsEarned: 0,
@@ -113,6 +123,7 @@ export function TournamentsLoader() {
     <TournamentsConsole
       session={payload.session}
       tournaments={payload.tournaments}
+      leaderboard={payload.leaderboard}
       currency={payload.currency}
     />
   );

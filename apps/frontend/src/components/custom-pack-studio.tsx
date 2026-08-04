@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CardCatalogItem, CustomPackEra } from "@ygo/contracts";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
@@ -320,7 +321,7 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
       await persistDraft();
       await customPackClient.publish(activeRun.id, version.id);
       await refreshPacks();
-      setFeedback("Packversion veröffentlicht und für diese Kampagne freigeschaltet.");
+      setFeedback("Packversion veröffentlicht. Die Spielerfreigabe wird getrennt in den Kampagneneinstellungen gesteuert.");
     } catch (error) {
       setFeedback(getApiErrorMessage(error, "Packversion konnte nicht veröffentlicht werden."));
     } finally {
@@ -678,7 +679,7 @@ export function CustomPackStudio({ session, activeRun }: { session: ViewerSessio
                   </>
                 ) : (
                   <>
-                    <button className="ui-button-primary disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={pending} onClick={() => void openPublishedPack()}>Pack für {version.price} Credits öffnen</button>
+                    <Link className="ui-button-primary" href="/campaigns/settings">Spielerfreigabe einstellen</Link>
                     <button className="ui-button-secondary disabled:cursor-not-allowed disabled:opacity-40" type="button" disabled={pending} onClick={() => void createNextDraft()}>Neue Version bearbeiten</button>
                   </>
                 )}

@@ -1,7 +1,9 @@
 import type {
   CreateTournamentRequest,
+  CampaignLeaderboardResponse,
   InviteTournamentParticipantRequest,
   RecordTournamentMatchResultRequest,
+  UpdateTournamentMvpCardsRequest,
 } from "@ygo/contracts";
 import { apiPatchJson, apiPost, apiPostJson } from "@/lib/api-client";
 import { refreshLocalSyncCacheSoon } from "@/lib/sync-cache-refresh";
@@ -62,5 +64,14 @@ export const tournamentClient = {
     );
     refreshLocalSyncCacheSoon({ forceFullDelta: true });
     return response;
+  },
+  async updateMvpCards(
+    tournamentId: string,
+    input: UpdateTournamentMvpCardsRequest,
+  ) {
+    return apiPatchJson<CampaignLeaderboardResponse, UpdateTournamentMvpCardsRequest>(
+      `/api/tournaments/${tournamentId}/mvp-cards`,
+      input,
+    );
   },
 };

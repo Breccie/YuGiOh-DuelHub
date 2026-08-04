@@ -4,6 +4,7 @@ import {
   addRunMemberRequestSchema,
   applyRunProgressionRequestSchema,
   applyRunProgressionResponseSchema,
+  campaignPackAccessResponseSchema,
   claimRewardResponseSchema,
   claimPromoRequestSchema,
   claimPromoResponseSchema,
@@ -26,6 +27,7 @@ import {
   runMemberSchema,
   runListResponseSchema,
   updateActiveRunRequestSchema,
+  updateCampaignPackAccessRequestSchema,
   updateRunSettingsRequestSchema,
   walletResponseSchema,
 } from "@ygo/contracts";
@@ -39,6 +41,10 @@ import {
   openPack,
 } from "@/lib/pack-openings";
 import { buildPackSelectionPayload } from "@/lib/packs-data";
+import {
+  listCampaignPackAccess,
+  updateCampaignPackAccess,
+} from "@/lib/campaign-pack-access-service";
 import {
   applyProgressionCheckpoint,
   claimPromoCard,
@@ -220,6 +226,9 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       const run = await updateRunSettings(getSharedPrisma(), {
         runId,
         viewerId: session.userId,
+        name: body.name,
+        description: body.description,
+        status: body.status,
         defaultPackPrice: body.defaultPackPrice,
         defaultDisplaySize: body.defaultDisplaySize,
         freePacksPerSetUnlock: body.freePacksPerSetUnlock,
@@ -234,6 +243,36 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       return reply.send(run);
     } catch (error) {
       return sendApiError(reply, error, "Kampagnen-Einstellungen konnten nicht gespeichert werden.");
+    }
+  });
+
+  app.get("/:runId/pack-access", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const payload = await listCampaignPackAccess(getSharedPrisma(), {
+        runId,
+        viewerId: session.userId,
+      });
+      return reply.send(campaignPackAccessResponseSchema.parse(payload));
+    } catch (error) {
+      return sendApiError(reply, error, "Packzugriffe konnten nicht geladen werden.");
+    }
+  });
+
+  app.patch("/:runId/pack-access", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const input = updateCampaignPackAccessRequestSchema.parse(request.body ?? {});
+      const payload = await updateCampaignPackAccess(getSharedPrisma(), {
+        runId,
+        viewerId: session.userId,
+        input,
+      });
+      return reply.send(campaignPackAccessResponseSchema.parse(payload));
+    } catch (error) {
+      return sendApiError(reply, error, "Packzugriff konnte nicht geändert werden.");
     }
   });
 

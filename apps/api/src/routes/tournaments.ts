@@ -4,15 +4,18 @@ import {
   createTournamentRequestSchema,
   inviteTournamentParticipantRequestSchema,
   recordTournamentMatchResultRequestSchema,
+  updateTournamentMvpCardsRequestSchema,
 } from "@ygo/contracts";
 import {
   createSwissRound,
   createTournament,
   completeTournament,
   getTournamentDetail,
+  getCampaignLeaderboard,
   inviteTournamentParticipant,
   listTournamentOverviews,
   recordTournamentMatchResult,
+  updateTournamentMvpCards,
 } from "@/lib/tournament-service";
 import { requireViewerSession } from "../lib/auth";
 import { sendApiError } from "../lib/errors";
@@ -43,6 +46,15 @@ const tournamentRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(201).send({ tournament });
     } catch (error) {
       return sendApiError(reply, error, "Turnier konnte nicht erstellt werden.");
+    }
+  });
+
+  app.get("/leaderboard", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      return reply.send(await getCampaignLeaderboard(getSharedPrisma(), session.userId));
+    } catch (error) {
+      return sendApiError(reply, error, "Kampagnen-Rangliste konnte nicht geladen werden.");
     }
   });
 
@@ -101,6 +113,21 @@ const tournamentRoutes: FastifyPluginAsync = async (app) => {
       return reply.send({ tournament });
     } catch (error) {
       return sendApiError(reply, error, "Turnier konnte nicht abgeschlossen werden.");
+    }
+  });
+
+  app.patch("/:id/mvp-cards", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { id } = request.params as { id: string };
+      const input = updateTournamentMvpCardsRequestSchema.parse(request.body ?? {});
+      return reply.send(await updateTournamentMvpCards(getSharedPrisma(), {
+        viewerId: session.userId,
+        tournamentId: id,
+        input,
+      }));
+    } catch (error) {
+      return sendApiError(reply, error, "MVP-Karten konnten nicht gespeichert werden.");
     }
   });
 

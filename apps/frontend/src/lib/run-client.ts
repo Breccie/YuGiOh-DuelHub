@@ -3,6 +3,7 @@ import type {
   AddRunMemberRequest,
   ApplyRunProgressionRequest,
   ApplyRunProgressionResponse,
+  CampaignPackAccessResponse,
   CreateRunRequest,
   GenerateRunProgressionRequest,
   GenerateRunProgressionResponse,
@@ -11,6 +12,7 @@ import type {
   RunListResponse,
   RunProgressionResponse,
   UpdateActiveRunRequest,
+  UpdateCampaignPackAccessRequest,
   UpdateRunSettingsRequest,
 } from "@ygo/contracts";
 import {
@@ -50,6 +52,18 @@ export const runClient = {
   updateSettings(runId: string, input: UpdateRunSettingsRequest) {
     return apiPatchJson<ActiveRunResponse["run"], UpdateRunSettingsRequest>(
       `/api/v1/runs/${runId}/settings`,
+      input,
+    );
+  },
+  listPackAccess(runId: string) {
+    return apiGetJson<CampaignPackAccessResponse>(
+      `/api/v1/runs/${runId}/pack-access`,
+      { cache: "no-store" },
+    );
+  },
+  updatePackAccess(runId: string, input: UpdateCampaignPackAccessRequest) {
+    return apiPatchJson<CampaignPackAccessResponse, UpdateCampaignPackAccessRequest>(
+      `/api/v1/runs/${runId}/pack-access`,
       input,
     );
   },
