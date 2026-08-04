@@ -199,3 +199,39 @@ accepted drift:
 - Die lokale Freundessession von Seto Kaiba enthält keinen letzten Aktivitätszeitpunkt; die sichtbare Darstellung ist korrekt „Zuletzt online unbekannt“, während Zeitgrenzen automatisiert getestet werden.
 
 final result: passed
+
+---
+
+# Design QA: Custom-Pack-Editor
+
+## Referenz und Vergleich
+
+- Vorher: `output/playwright/custom-pack-audit-current-1440.png`
+- Neu: `output/playwright/custom-pack-editor-local-final-1440.png`
+- Direkter Vergleich: `output/playwright/custom-pack-editor-comparison.png`
+- Weitere Viewports: `output/playwright/custom-pack-editor-local-1280.png`, `output/playwright/custom-pack-editor-local-mobile.png`
+
+## Geprüfte Viewports
+
+- 1440 × 1000: dauerhafte App-Shell, drei gleichzeitig sichtbare Arbeitsbereiche, unabhängige Scrollflächen.
+- 1280 × 800: vollständige Arbeitsfläche ohne horizontales Abschneiden; kompakte Werkzeugleiste.
+- 390 × 844: lokale Ansichten `Pack`, `Kartenpool` und `Katalog`; untere App-Navigation bleibt erreichbar.
+
+## Behobene Befunde
+
+- P0: Inaktive mobile Editorpanels wurden durch eine globale Display-Regel weiter angezeigt. Die Ansichtsumschaltung verwendet nun vorrangige responsive Display-Utilities.
+- P1: Touch-Klick auf ein Hilfe-Icon schloss das Popover durch die Focus/Click-Reihenfolge sofort wieder. Tippen, Tastaturfokus, Escape und Klick außerhalb funktionieren jetzt konsistent.
+- P1: Drag-and-drop aus dem Katalog und zwischen Seltenheitspools verwendet kompatible Transferdaten und einen lokalen Fallback für Browserunterschiede.
+- P2: Bei 1280 px brach die Veröffentlichungsaktion allein in eine zweite Zeile. Sekundäre Packmetadaten werden auf dieser Breite ausgeblendet und bleiben im Detailpanel sichtbar.
+- P2: Alte Entwürfe aktivierten den ersten technischen Slot statt des erwartbaren Common-Pools. Common wird bevorzugt, sofern die Konfiguration ihn enthält.
+
+## Funktionsprüfung
+
+- Hilfe-Popover: Hover, Fokus, Touch, Escape und Outside-Click.
+- Kartenpool: Klick zum Hinzufügen, Drag aus dem Katalog, Drag zwischen Seltenheiten, Rechtsklick-Entfernung über die bestehende Interaktion.
+- Mobile Navigation: alle drei lokalen Ansichten zeigen ausschließlich ihr jeweiliges Panel.
+- Browserkonsole der App: keine Fehler oder Warnungen im finalen Editorlauf.
+
+## Ergebnis
+
+Final result: passed.

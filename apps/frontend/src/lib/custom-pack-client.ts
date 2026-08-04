@@ -25,9 +25,15 @@ export type CustomPackRecord = {
       setCardId: string | null;
       rarity: string;
       weight: number;
-      card?: { name: string };
+      card?: { name: string; externalCardId?: string | null };
     }>;
-    slots: Array<{ slotIndex: number; count: number; allowedRarities: string[]; weight: number }>;
+    slots: Array<{
+      slotIndex: number;
+      count: number;
+      allowedRarities: string[];
+      weight: number;
+      rarityWeights?: Array<{ rarity: string; weight: number }> | null;
+    }>;
   }>;
 };
 
@@ -62,6 +68,7 @@ export const customPackClient = {
       iterations: number;
       seed: string;
       rarityDistribution: Array<{ rarity: string; count: number; probability: number }>;
+      cardDistribution: Array<{ cardId: string; name: string; count: number; probability: number }>;
     }, SimulateCustomPackRequest>(`/api/custom-packs/${versionId}/simulate?${runQuery(runId)}`, input);
   },
   publish(runId: string, versionId: string) {
