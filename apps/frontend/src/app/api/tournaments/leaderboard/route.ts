@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   if (shouldProxyToApiService()) {
-    return proxyApiRoute(request, "/api/tournaments/leaderboard");
+    return proxyApiRoute(request, "/api/v1/tournaments/leaderboard");
   }
   try {
     const prisma = getPrisma();
