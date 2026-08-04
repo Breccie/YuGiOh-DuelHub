@@ -111,3 +111,10 @@ export function getCustomPackRarityPercentage(options: CustomPackRarityOption[],
   if (total <= 0) return 0;
   return ((options.find((option) => option.rarity === rarity)?.weight ?? 0) / total) * 100;
 }
+
+export function getCustomPackRarityPercentageInputValue(
+  options: CustomPackRarityOption[],
+  rarity: string,
+) {
+  return Number(getCustomPackRarityPercentage(options, rarity).toFixed(1));
+}
