@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
 import type {
   ApplyRunProgressionResponse,
@@ -14,6 +13,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { apiPostJson, getApiErrorMessage } from "@/lib/api-client";
+import { PackSectionNav } from "@/components/pack-section-nav";
 
 type PromoCardsConsoleProps = {
   viewer: {
@@ -181,17 +181,7 @@ export function PromoCardsConsole({
               du hier dieselbe Promo auch mehrfach claimen.
             </p>
 
-                <div className="mt-7 flex max-w-[320px] rounded-full border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-1 text-xs uppercase tracking-[0.16em]">
-                  <Link
-                    href="/packs"
-                    className="flex-1 rounded-full px-3 py-2 text-center text-[#bfa88e] transition hover:text-[#fff0df]"
-                  >
-                    Booster
-                  </Link>
-                  <span className="flex-1 rounded-full bg-[rgba(207,91,66,0.18)] px-3 py-2 text-center text-[#fff0df]">
-                    Promo-Karten
-                  </span>
-                </div>
+                <div className="mt-7"><PackSectionNav active="promos" /></div>
               </div>
 
               <div className="hidden xl:block" />

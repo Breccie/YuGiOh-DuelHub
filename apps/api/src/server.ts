@@ -13,6 +13,7 @@ import dashboardRoutes from "./routes/dashboard";
 import deckRoutes from "./routes/decks";
 import duelRoutes from "./routes/duels";
 import friendsRoutes from "./routes/friends";
+import mediaRoutes from "./routes/media";
 import packsRoutes from "./routes/packs";
 import profileRoutes from "./routes/profiles";
 import rulesRoutes from "./routes/rules";
@@ -109,6 +110,7 @@ export function createServer() {
   app.register(deckRoutes, { prefix: "/api/v1/decks" });
   app.register(duelRoutes, { prefix: "/api/v1/duels" });
   app.register(friendsRoutes, { prefix: "/api/v1/friends" });
+  app.register(mediaRoutes, { prefix: "/api/v1/media" });
   app.register(packsRoutes, { prefix: "/api/v1/packs" });
   app.register(profileRoutes, { prefix: "/api/v1/profiles" });
   app.register(rulesRoutes, { prefix: "/api/v1/rules" });

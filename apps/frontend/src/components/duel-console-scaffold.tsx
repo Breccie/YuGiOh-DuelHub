@@ -42,6 +42,7 @@ export function DuelConsoleScaffold({
   viewer: {
     displayName: string;
     duelistId?: string | null;
+    avatarImageUrl?: string | null;
   };
   metrics: MetricItem[];
   topbar?: {

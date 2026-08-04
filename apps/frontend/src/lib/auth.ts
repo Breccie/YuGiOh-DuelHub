@@ -10,6 +10,7 @@ import {
   verifyPassword,
 } from "@ygo/domain";
 import type { ViewerSession } from "@/lib/app-dtos";
+import { getMediaAssetUrl } from "@/lib/media-service";
 import { getPrisma } from "@/lib/prisma";
 
 export const SESSION_COOKIE_NAME = "duelhub_session";
@@ -39,6 +40,8 @@ function toViewerSession(record: SessionRecord): ViewerSession {
     duelistId: record.user.duelistId,
     displayName: record.user.displayName,
     avatarKey: record.user.avatarKey,
+    avatarAssetId: record.user.avatarAssetId,
+    avatarImageUrl: getMediaAssetUrl(record.user.avatarAssetId),
     favoriteEra: record.user.favoriteEra ?? null,
     isPublic: record.user.isPublic,
     showcaseBinderId: record.user.showcaseBinderId ?? null,

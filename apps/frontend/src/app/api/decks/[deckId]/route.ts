@@ -6,6 +6,7 @@ import { requireViewerSession } from "@/lib/auth";
 import { deleteDeck, updateDeckMetadata } from "@/lib/deck-editor";
 import { getPrisma } from "@/lib/prisma";
 import { getDeckBoxMeta } from "@/lib/deckbox-config";
+import { getMediaAssetUrl } from "@/lib/media-service";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,8 @@ export async function PATCH(
         id: deck.id,
         name: deck.name,
         deckBoxKey: deckBox.key,
-        deckBoxImageUrl: deckBox.imageUrl,
+        deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
+        deckBoxAssetId: deck.deckBoxAssetId,
       },
     });
   } catch (error) {

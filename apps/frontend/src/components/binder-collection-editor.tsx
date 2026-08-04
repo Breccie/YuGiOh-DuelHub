@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { MediaAssetDto } from "@ygo/contracts";
 import { useEffect, useRef, useState } from "react";
 import type {
   CardCatalogItem,
@@ -26,6 +27,7 @@ import type {
   CollectionBinderPageDto,
   CollectionBinderSlotDto,
 } from "@/lib/collection-showcase";
+import { mediaClient } from "@/lib/media-client";
 import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { wishlistClient } from "@/lib/wishlist-client";
 
@@ -199,9 +201,15 @@ export function BinderCollectionEditor({
   const [draftCoverKey, setDraftCoverKey] = useState<BinderCoverKey>(
     normalizeBinderCoverKey(initialSnapshot?.binder.coverKey),
   );
+  const [draftCoverAssetId, setDraftCoverAssetId] = useState<string | null>(initialSnapshot?.binder.coverAssetId ?? null);
+  const [personalCovers, setPersonalCovers] = useState<MediaAssetDto[]>([]);
   const [activePageIndex, setActivePageIndex] = useState(
     initialPages[initialPageIndex] ? initialPageIndex : 0,
   );
+
+  useEffect(() => {
+    void mediaClient.list("BINDER_COVER").then(setPersonalCovers).catch(() => undefined);
+  }, []);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | null>(initialSelectedSlotIndex);
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryKind, setInventoryKind] = useState<EditorKindFilter>("ALL");
@@ -345,6 +353,7 @@ export function BinderCollectionEditor({
         setPages(typedPayload.binder.pages);
         setDraftBinderName(typedPayload.binder.name);
         setDraftCoverKey(normalizeBinderCoverKey(typedPayload.binder.coverKey));
+        setDraftCoverAssetId(typedPayload.binder.coverAssetId ?? null);
         const nextPageIndex = typedPayload.binder.pages[initialPageIndex] ? initialPageIndex : 0;
         setActivePageIndex(nextPageIndex);
         setSelectedSlotIndex(
@@ -663,6 +672,7 @@ export function BinderCollectionEditor({
         const payload = await collectionClient.updateBinder(binderId, {
           name: nextName,
           coverKey: draftCoverKey,
+          coverAssetId: draftCoverAssetId,
         });
 
         failedSaveTargetsRef.current.delete(`binder:${binderId}`);
@@ -681,6 +691,7 @@ export function BinderCollectionEditor({
           metadataDirtyRef.current = false;
           setDraftBinderName(payload.binder.name);
           setDraftCoverKey(normalizeBinderCoverKey(payload.binder.coverKey));
+          setDraftCoverAssetId(payload.binder.coverAssetId ?? null);
         }
         setLastSavedAt(new Date().toISOString());
         return true;
@@ -1234,12 +1245,15 @@ export function BinderCollectionEditor({
                   Cover
                 </p>
                 <div className="mt-2 flex flex-wrap gap-3">
+                  {personalCovers.map((asset) => (
+                    <button key={asset.id} type="button" onClick={() => { if (draftCoverAssetId === asset.id) return; metadataDirtyRef.current = true; metadataEditRevisionRef.current += 1; setDraftCoverAssetId(asset.id); }} className={classNames("relative h-[72px] w-[52px] overflow-hidden rounded-[5px] border", draftCoverAssetId === asset.id ? "border-teal-300/70 ring-1 ring-teal-300/30" : "border-white/10")} aria-label={`${asset.name} als Binder-Cover wählen`}><Image src={asset.imageUrl} alt={asset.name} fill sizes="52px" className="object-cover" unoptimized /></button>
+                  ))}
                   {binderCoverCatalog.map((cover) => (
                     <button
                       key={cover.key}
                       type="button"
                       onClick={() => {
-                        if (cover.key === draftCoverKey) return;
+                        if (cover.key === draftCoverKey && draftCoverAssetId === null) return;
                         metadataDirtyRef.current = true;
                         metadataEditRevisionRef.current += 1;
                         setCloseWarning(null);
@@ -1247,15 +1261,16 @@ export function BinderCollectionEditor({
                           setSaveStatus("idle");
                         }
                         setDraftCoverKey(cover.key);
+                        setDraftCoverAssetId(null);
                       }}
                       className={classNames(
                         "relative h-[72px] w-[52px] overflow-hidden rounded-[5px] border bg-[rgba(255,255,255,0.03)] transition",
-                        draftCoverKey === cover.key
+                        draftCoverAssetId === null && draftCoverKey === cover.key
                           ? "border-[#d05239] shadow-[0_0_0_1px_rgba(208,82,57,0.32),0_0_22px_rgba(208,82,57,0.24)]"
                           : "border-[rgba(255,255,255,0.1)] hover:border-[rgba(214,164,92,0.28)]",
                       )}
                       aria-label={`${cover.name} als Binder-Cover wählen`}
-                      aria-pressed={draftCoverKey === cover.key}
+                      aria-pressed={draftCoverAssetId === null && draftCoverKey === cover.key}
                     >
                       <Image
                         src={cover.imageUrl}

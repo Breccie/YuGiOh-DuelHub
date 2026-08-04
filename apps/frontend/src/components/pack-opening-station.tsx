@@ -33,6 +33,7 @@ import {
   type OpeningSpeed,
 } from "@/lib/pack-opening-flow";
 import { packOpeningClient } from "@/lib/pack-opening-client";
+import { customPackClient } from "@/lib/custom-pack-client";
 import { getPackRenderAssets } from "@/lib/pack-renders";
 import {
   getHighestRarityTier,
@@ -44,6 +45,10 @@ import {
 type PackOpeningStationProps = {
   initialSnapshot: PackDashboardSnapshotDto;
   setId: string;
+  customPack?: {
+    runId: string;
+    versionId: string;
+  };
 };
 
 type OpeningSummary = PackDashboardSnapshotDto["recentOpenings"][number];
@@ -233,6 +238,7 @@ function OpeningRevealCard({
 export function PackOpeningStation({
   initialSnapshot,
   setId,
+  customPack,
 }: PackOpeningStationProps) {
   const openingVariant = getPackOpeningVariant("master");
 
@@ -576,10 +582,31 @@ export function PackOpeningStation({
       setDisplayOpeningIndex(0);
       setIsSubmitting(true);
 
-      const payload = await packOpeningClient.open({
-        setId: packSetId,
-        idempotencyKey: crypto.randomUUID(),
-      });
+      const payload = customPack
+        ? {
+            opening: await customPackClient.open(customPack.runId, customPack.versionId, {
+              idempotencyKey: crypto.randomUUID(),
+            }).then((result) => ({
+              id: result.id,
+              openedAt: new Date().toISOString(),
+              addedToCollection: result.pulls.length,
+              set: {
+                id: customPack.versionId,
+                code: activeSet?.code ?? "CUSTOM",
+                name: activeSet?.name ?? "Custom Pack",
+                packSize: expectedPullCount,
+              },
+              pulls: result.pulls.map((pull) => ({
+                ...pull,
+                rarity: pull.rarity,
+                setCode: pull.setCode ?? activeSet?.code ?? "CUSTOM",
+              })),
+            })),
+          }
+        : await packOpeningClient.open({
+            setId: packSetId,
+            idempotencyKey: crypto.randomUUID(),
+          });
 
       if (!hasExpectedPullSlots(payload.opening.pulls, expectedPullCount)) {
         throw new Error(
@@ -864,8 +891,8 @@ export function PackOpeningStation({
     <section className="panel-surface opening-workbench rounded-[30px] p-4 sm:p-5 lg:p-6">
       <div className="opening-workbench-head">
         <div className="opening-workbench-title">
-          <Link href="/packs" className="opening-inline-back">
-            Zurück zu Packs
+          <Link href={customPack ? "/packs/custom" : "/packs"} className="opening-inline-back">
+            {customPack ? "Zurück zu Custom Packs" : "Zurück zu Packs"}
           </Link>
           <p className="ui-kicker">Pack-Workbench</p>
           <h1 className="mt-3 font-display inscription-text-soft text-[2rem] leading-[0.96] sm:text-[2.4rem] xl:text-[2.7rem]">
@@ -884,7 +911,7 @@ export function PackOpeningStation({
             <StatusPill tone="slate">
               Release {formatDate(activeSet.releaseDate)}
             </StatusPill>
-            <StatusPill tone="gold">{activeSet.cardPoolSize} Karten</StatusPill>
+            <StatusPill tone="gold">{activeSet.cardPoolSize} Karten im Pool</StatusPill>
             <StatusPill tone={activeSet.canBuy ? "teal" : "ember"}>
               {activeSet.canBuy
                 ? `${packPriceLabel} pro Pack`
@@ -941,7 +968,7 @@ export function PackOpeningStation({
                 ? `${revealedCount}/${currentOpening.pulls.length} aufgedeckt`
                 : `${activeSet.packSize} Karten pro Pack`}
             </StatusPill>
-            {activeSet.canBuy ? (
+            {activeSet.canBuy && !customPack ? (
               <StatusPill tone="slate">
                 Display öffnen ({displayCostLabel})
               </StatusPill>
@@ -978,22 +1005,24 @@ export function PackOpeningStation({
                 : `Booster öffnen (${packPriceLabel})`}
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                void handleOpenDisplay();
-              }}
-              disabled={
-                !activeSet.canBuy ||
-                isSubmitting ||
-                isFlowActive ||
-                isPending ||
-                (isDisplaySequenceActive && !displaySequenceComplete)
-              }
-              className="ui-button-neutral min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Display öffnen ({displayCostLabel})
-            </button>
+            {!customPack ? (
+              <button
+                type="button"
+                onClick={() => {
+                  void handleOpenDisplay();
+                }}
+                disabled={
+                  !activeSet.canBuy ||
+                  isSubmitting ||
+                  isFlowActive ||
+                  isPending ||
+                  (isDisplaySequenceActive && !displaySequenceComplete)
+                }
+                className="ui-button-neutral min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Display öffnen ({displayCostLabel})
+              </button>
+            ) : null}
 
             {isDisplaySequenceActive ? (
               <button

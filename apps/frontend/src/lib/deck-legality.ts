@@ -7,6 +7,7 @@ import {
 } from "@prisma/client";
 import type { CampaignRuleConfig } from "@ygo/contracts";
 import { getCardAssetUrl } from "@/lib/asset-urls";
+import { getMediaAssetUrl } from "@/lib/media-service";
 import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
@@ -88,6 +89,8 @@ export type DeckLegalitySnapshot = {
     id: string;
     name: string;
     deckBoxKey: string;
+    deckBoxAssetId: string | null;
+    deckBoxImageUrl: string | null;
     snapshotDate: string | null;
     updatedAt: string;
     cardCount: number;
@@ -104,6 +107,8 @@ export type DeckLegalitySnapshot = {
     id: string;
     name: string;
     deckBoxKey: string;
+    deckBoxAssetId: string | null;
+    deckBoxImageUrl: string | null;
     snapshotDate: string;
     updatedAt: string;
     formatName: string | null;
@@ -700,6 +705,8 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       id: deck.id,
       name: deck.name,
       deckBoxKey: deck.deckBoxKey,
+      deckBoxAssetId: deck.deckBoxAssetId,
+      deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId),
       snapshotDate: deck.snapshotDate?.toISOString() ?? evaluation.snapshotDate.toISOString(),
       updatedAt: deck.updatedAt.toISOString(),
       cardCount: evaluation.counts.cardCount,
@@ -856,6 +863,8 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       id: selectedDeck.id,
       name: selectedDeck.name,
       deckBoxKey: selectedDeck.deckBoxKey,
+      deckBoxAssetId: selectedDeck.deckBoxAssetId,
+      deckBoxImageUrl: getMediaAssetUrl(selectedDeck.deckBoxAssetId),
       snapshotDate:
         selectedDeck.snapshotDate?.toISOString() ??
         activeEvaluation.snapshotDate.toISOString(),

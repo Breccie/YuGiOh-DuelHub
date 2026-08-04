@@ -15,6 +15,7 @@ import {
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
 import { binderSlotCount } from "@/lib/binder-open-layout";
 import { getActiveRun } from "@/lib/run-service";
+import { getMediaAssetUrl, resolveOwnedMediaAsset } from "@/lib/media-service";
 
 type CollectionEntryRecord = Prisma.CollectionEntryGetPayload<{
   include: {
@@ -98,6 +99,7 @@ type CreateBinderInput = {
   coverKey: BinderCoverKey;
   description?: string | null;
   makeActive?: boolean;
+  coverAssetId?: string | null;
 };
 
 type UpdateBinderInput = {
@@ -105,6 +107,7 @@ type UpdateBinderInput = {
   coverKey?: BinderCoverKey;
   description?: string | null;
   isActive?: boolean;
+  coverAssetId?: string | null;
 };
 
 type CreatePresetInput = {
@@ -163,6 +166,7 @@ export type CollectionBinderDto = {
   coverKey: string;
   coverName: string;
   coverImageUrl: string;
+  coverAssetId?: string | null;
   description: string;
   accentColor: string;
   isActive: boolean;
@@ -478,7 +482,8 @@ function mapBinder(
     name: binder.name,
     coverKey: binder.coverKey,
     coverName: cover.name,
-    coverImageUrl: cover.imageUrl,
+    coverImageUrl: getMediaAssetUrl(binder.coverAssetId) ?? cover.imageUrl,
+    coverAssetId: binder.coverAssetId,
     description: binder.description ?? cover.description,
     accentColor: binder.accentColor ?? cover.accentColor,
     isActive: binder.isActive,
@@ -836,6 +841,7 @@ export async function createCollectionBinder(
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
   const cover = getBinderCoverMeta(input.coverKey);
   const activeRun = await getActiveRun(prisma, viewer.id);
+  await resolveOwnedMediaAsset(prisma, viewer.id, input.coverAssetId, "BINDER_COVER");
 
   const binder = await prisma.$transaction(async (tx) => {
     if (input.makeActive ?? true) {
@@ -851,6 +857,7 @@ export async function createCollectionBinder(
         runId: activeRun.id,
         name: input.name.trim(),
         coverKey: input.coverKey,
+        coverAssetId: input.coverAssetId ?? null,
         description: input.description?.trim() || cover.description,
         accentColor: cover.accentColor,
         isActive: input.makeActive ?? true,
@@ -994,6 +1001,9 @@ export async function updateCollectionBinder(
   }
 
   const cover = getBinderCoverMeta(input.coverKey ?? current.coverKey);
+  if (input.coverAssetId !== undefined) {
+    await resolveOwnedMediaAsset(prisma, viewer.id, input.coverAssetId, "BINDER_COVER");
+  }
 
   const binder = await prisma.$transaction(async (tx) => {
     if (input.isActive) {
@@ -1008,6 +1018,7 @@ export async function updateCollectionBinder(
       data: {
         name: input.name?.trim() || current.name,
         coverKey: input.coverKey ?? current.coverKey,
+        coverAssetId: input.coverAssetId === undefined ? current.coverAssetId : input.coverAssetId,
         description:
           input.description === undefined
             ? current.description

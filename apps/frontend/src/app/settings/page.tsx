@@ -28,6 +28,8 @@ export default async function SettingsPage() {
           bio: null,
           favoriteEra: session.favoriteEra,
           avatarKey: session.avatarKey,
+          avatarAssetId: session.avatarAssetId ?? null,
+          avatarImageUrl: session.avatarImageUrl ?? null,
           isPublic: session.isPublic,
           showcaseBinderId: session.showcaseBinderId,
         }}
@@ -67,6 +69,7 @@ export default async function SettingsPage() {
         bio: true,
         favoriteEra: true,
         avatarKey: true,
+        avatarAssetId: true,
         isPublic: true,
         showcaseBinderId: true,
       },

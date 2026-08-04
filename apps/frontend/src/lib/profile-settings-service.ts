@@ -2,6 +2,7 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 import type { UpdateProfileRequest } from "@ygo/contracts";
 import { DomainError } from "@ygo/domain";
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
+import { getMediaAssetUrl, resolveOwnedMediaAsset } from "@/lib/media-service";
 
 type ShowcaseCardSnapshot = {
   collectionEntryId: string | null;
@@ -17,6 +18,9 @@ export async function updateViewerProfile(
   input: UpdateProfileRequest,
 ) {
   return prisma.$transaction(async (tx) => {
+    if (input.avatarAssetId !== undefined) {
+      await resolveOwnedMediaAsset(tx as PrismaClient, viewerId, input.avatarAssetId, "AVATAR");
+    }
     if (input.showcaseBinderId !== undefined) {
       const sourceBinderId = input.showcaseBinderId?.trim() || null;
 
@@ -98,6 +102,7 @@ export async function updateViewerProfile(
         favoriteEra:
           input.favoriteEra === undefined ? undefined : input.favoriteEra?.trim() || null,
         avatarKey: input.avatarKey,
+        avatarAssetId: input.avatarAssetId,
         isPublic: input.isPublic,
         showcaseBinderId:
           input.showcaseBinderId === undefined
@@ -111,9 +116,13 @@ export async function updateViewerProfile(
         bio: true,
         favoriteEra: true,
         avatarKey: true,
+        avatarAssetId: true,
         isPublic: true,
         showcaseBinderId: true,
       },
-    });
+    }).then((profile) => ({
+      ...profile,
+      avatarImageUrl: getMediaAssetUrl(profile.avatarAssetId),
+    }));
   });
 }

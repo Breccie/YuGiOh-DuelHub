@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type { FriendRequestDto } from "@/lib/app-dtos";
+import { getMediaAssetUrl } from "@/lib/media-service";
 
 const friendshipInclude = {
   requester: {
@@ -59,12 +60,16 @@ function toFriendRequestDto(friendship: FriendshipRecord): FriendRequestDto {
       userId: friendship.requester.id,
       duelistId: friendship.requester.duelistId,
       displayName: friendship.requester.displayName,
+      avatarAssetId: friendship.requester.avatarAssetId,
+      avatarImageUrl: getMediaAssetUrl(friendship.requester.avatarAssetId),
       ...getPresence(friendship, friendship.requester),
     },
     addressee: {
       userId: friendship.addressee.id,
       duelistId: friendship.addressee.duelistId,
       displayName: friendship.addressee.displayName,
+      avatarAssetId: friendship.addressee.avatarAssetId,
+      avatarImageUrl: getMediaAssetUrl(friendship.addressee.avatarAssetId),
       ...getPresence(friendship, friendship.addressee),
     },
   };

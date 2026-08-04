@@ -2,6 +2,8 @@
 
 import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import type { MediaAssetDto, MediaAssetKind } from "@ygo/contracts";
 import { useRouter } from "next/navigation";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import {
@@ -19,6 +21,8 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import type { FriendRequestDto, ViewerSession } from "@/lib/app-dtos";
 import { friendClient } from "@/lib/friend-client";
 import { profileClient } from "@/lib/profile-client";
+import { ImageCropUpload } from "@/components/image-crop-upload";
+import { mediaClient } from "@/lib/media-client";
 
 type BinderOption = {
   id: string;
@@ -33,6 +37,45 @@ type DeviceSession = {
   expiresAt: string;
   lastSeenAt: string;
 };
+
+function DesignLibrary({
+  kind,
+  title,
+  aspect,
+  designs,
+  avatarAssetId,
+  onUploaded,
+  onSelectAvatar,
+  onRename,
+  onRemove,
+}: {
+  kind: MediaAssetKind;
+  title: string;
+  aspect: number;
+  designs: MediaAssetDto[];
+  avatarAssetId: string | null;
+  onUploaded: (asset: MediaAssetDto) => void;
+  onSelectAvatar: (assetId: string | null) => void;
+  onRename: (asset: MediaAssetDto) => void;
+  onRemove: (asset: MediaAssetDto) => void;
+}) {
+  const items = designs.filter((asset) => asset.kind === kind);
+  return (
+    <section className="rounded-xl border border-white/8 bg-white/[0.025] p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><p className="text-sm font-semibold text-[#f0dfcc]">{title}</p><p className="text-xs text-white/45">{items.length} eigene Designs</p></div>
+        <ImageCropUpload kind={kind} aspect={aspect} onUploaded={onUploaded} />
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+        {kind === "AVATAR" ? <button type="button" onClick={() => onSelectAvatar(null)} className={`grid aspect-square place-items-center rounded-lg border text-xs ${avatarAssetId === null ? "border-teal-300/60 bg-teal-300/10" : "border-white/10 bg-black/25"}`}>Standardsiegel</button> : null}
+        {items.map((asset) => <div key={asset.id} className={`group relative overflow-hidden rounded-lg border ${kind === "AVATAR" && avatarAssetId === asset.id ? "border-teal-300/70 ring-1 ring-teal-300/30" : "border-white/10"}`}>
+          <button type="button" className="relative block w-full bg-black/35" style={{ aspectRatio: String(aspect) }} onClick={() => kind === "AVATAR" && onSelectAvatar(asset.id)} aria-label={`${asset.name}${kind === "AVATAR" ? " als Profilbild wählen" : ""}`}><Image src={asset.imageUrl} alt={asset.name} fill sizes="130px" className="object-cover" unoptimized /></button>
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/80 p-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"><button type="button" className="px-1 text-[.65rem]" onClick={() => onRename(asset)}>Name</button><button type="button" disabled={!asset.deletable} className="px-1 text-[.65rem] text-red-300 disabled:text-white/25" onClick={() => onRemove(asset)}>Löschen</button></div>
+        </div>)}
+      </div>
+    </section>
+  );
+}
 
 function formatGermanDateTime(value: string) {
   return new Intl.DateTimeFormat("de-DE", {
@@ -72,6 +115,8 @@ export function SettingsConsole({
     bio: string | null;
     favoriteEra: string | null;
     avatarKey: string;
+    avatarAssetId: string | null;
+    avatarImageUrl?: string | null;
     isPublic: boolean;
     showcaseBinderId: string | null;
   };
@@ -85,6 +130,9 @@ export function SettingsConsole({
   const [favoriteEra, setFavoriteEra] = useState(profile.favoriteEra ?? "");
   const [isPublic, setIsPublic] = useState(profile.isPublic);
   const [showcaseBinderId, setShowcaseBinderId] = useState(profile.showcaseBinderId ?? "");
+  const [avatarAssetId, setAvatarAssetId] = useState<string | null>(profile.avatarAssetId);
+  const [designs, setDesigns] = useState<MediaAssetDto[]>([]);
+  const [designsLoading, setDesignsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [desktopFeedback, setDesktopFeedback] = useState<string | null>(null);
@@ -134,6 +182,16 @@ export function SettingsConsole({
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void mediaClient.list().then((assets) => {
+      if (active) setDesigns(assets);
+    }).catch((error) => {
+      if (active) setFeedback(getApiErrorMessage(error, "Persönliche Designs konnten nicht geladen werden."));
+    }).finally(() => active && setDesignsLoading(false));
+    return () => { active = false; };
+  }, []);
+
   async function saveProfile() {
     setSaving(true);
     setFeedback(null);
@@ -145,6 +203,7 @@ export function SettingsConsole({
         favoriteEra,
         isPublic,
         showcaseBinderId: showcaseBinderId || null,
+        avatarAssetId,
       });
       setFeedback("Profil gespeichert.");
       startTransition(() => router.refresh());
@@ -152,6 +211,27 @@ export function SettingsConsole({
       setFeedback(getApiErrorMessage(error, "Profil konnte nicht gespeichert werden."));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function removeDesign(asset: MediaAssetDto) {
+    if (!window.confirm(`„${asset.name}“ wirklich löschen?`)) return;
+    try {
+      await mediaClient.remove(asset.id);
+      setDesigns((current) => current.filter((item) => item.id !== asset.id));
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Das Design konnte nicht gelöscht werden."));
+    }
+  }
+
+  async function renameDesign(asset: MediaAssetDto) {
+    const name = window.prompt("Neuer Name", asset.name)?.trim();
+    if (!name || name === asset.name) return;
+    try {
+      const updated = await mediaClient.rename(asset.id, name);
+      setDesigns((current) => current.map((item) => item.id === updated.id ? updated : item));
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Das Design konnte nicht umbenannt werden."));
     }
   }
 
@@ -235,6 +315,7 @@ export function SettingsConsole({
       viewer={{
         displayName: session.displayName,
         duelistId: session.duelistId,
+        avatarImageUrl: session.avatarImageUrl,
       }}
       metrics={[
         { icon: "users", label: "Duelist-ID", value: session.duelistId },
@@ -432,6 +513,16 @@ export function SettingsConsole({
         </Panel>
 
         <div className="space-y-6">
+          <Panel kicker="Bildbibliothek" title="Meine Designs">
+            <p className="mb-4 text-sm leading-6 text-[#baa58a]">Eigene Bilder werden einmal hochgeladen und können anschließend für Profil, Binder und Deckboxen wiederverwendet werden. Verwendete Designs sind vor dem Löschen geschützt.</p>
+            {designsLoading ? <div className="ui-skeleton h-44 rounded-xl" /> : <div className="grid gap-3">
+              {([[
+                "AVATAR", "Profilbilder", 1,
+              ], ["BINDER_COVER", "Binder-Cover", 2 / 3], ["DECKBOX", "Deckboxen", 2 / 3]] as const).map(([kind, title, aspect]) => (
+                <DesignLibrary key={kind} kind={kind} title={title} aspect={aspect} designs={designs} avatarAssetId={avatarAssetId} onUploaded={(asset) => setDesigns((current) => [asset, ...current])} onSelectAvatar={setAvatarAssetId} onRename={(asset) => void renameDesign(asset)} onRemove={(asset) => void removeDesign(asset)} />
+              ))}
+            </div>}
+          </Panel>
           <Panel kicker="Freunde" title="Anfragen">
             <div className="space-y-3">
               {friendRequests.length > 0 ? (

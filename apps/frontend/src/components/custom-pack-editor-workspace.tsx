@@ -20,6 +20,7 @@ import type {
 } from "@ygo/contracts";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { FieldHelp } from "@/components/field-help";
+import { ImageCropUpload } from "@/components/image-crop-upload";
 import { Panel, StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { PlayGroupRunDto, ViewerSession } from "@/lib/app-dtos";
@@ -116,6 +117,7 @@ function draftSignature(input: {
   packSize: number;
   displaySize: number;
   price: number;
+  artworkAssetId: string | null;
 }) {
   return JSON.stringify({
     pool: input.pool
@@ -125,6 +127,7 @@ function draftSignature(input: {
     packSize: input.packSize,
     displaySize: input.displaySize,
     price: input.price,
+    artworkAssetId: input.artworkAssetId,
   });
 }
 
@@ -184,6 +187,7 @@ export function CustomPackEditorWorkspace({
   const [packSize, setPackSize] = useState(9);
   const [displaySize, setDisplaySize] = useState(24);
   const [price, setPrice] = useState(100);
+  const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
   const [savedSignature, setSavedSignature] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -218,8 +222,8 @@ export function CustomPackEditorWorkspace({
   const canMutate = Boolean(version?.status === "DRAFT");
 
   const currentSignature = useMemo(
-    () => draftSignature({ pool, slots, packSize, displaySize, price }),
-    [displaySize, packSize, pool, price, slots],
+    () => draftSignature({ pool, slots, packSize, displaySize, price, artworkAssetId }),
+    [artworkAssetId, displaySize, packSize, pool, price, slots],
   );
   const isDirty = Boolean(version && savedSignature && savedSignature !== currentSignature);
 
@@ -261,18 +265,21 @@ export function CustomPackEditorWorkspace({
     const nextPackSize = nextVersion?.packSize ?? 9;
     const nextDisplaySize = nextVersion?.displaySize ?? 24;
     const nextPrice = nextVersion?.price ?? 100;
+    const nextArtworkAssetId = nextVersion?.artworkAssetId ?? null;
     setSelectedId(pack?.id ?? null);
     setPool(nextPool);
     setSlots(nextSlots);
     setPackSize(nextPackSize);
     setDisplaySize(nextDisplaySize);
     setPrice(nextPrice);
+    setArtworkAssetId(nextArtworkAssetId);
     setSavedSignature(draftSignature({
       pool: nextPool,
       slots: nextSlots,
       packSize: nextPackSize,
       displaySize: nextDisplaySize,
       price: nextPrice,
+      artworkAssetId: nextArtworkAssetId,
     }));
     setSelectedPoolKey(null);
     setSimulation(null);
@@ -460,6 +467,7 @@ export function CustomPackEditorWorkspace({
       packSize,
       displaySize,
       price,
+      artworkAssetId,
     });
     setPacks((current) => current.map((pack) => pack.id !== selectedId
       ? pack
@@ -679,6 +687,13 @@ export function CustomPackEditorWorkspace({
                   <p className="mt-1 font-semibold text-[#e7d8c7]">{selected.code}</p>
                   <div className="mt-3 flex items-center gap-2 text-xs text-[#9aa8af]">Era-Vorlage <FieldHelp label="Era-Vorlage">Die Ära bestimmt nur die anfängliche, TCG-nahe Packverteilung. Sie begrenzt weder Kartenalter noch Kartenpool und überschreibt spätere Anpassungen nicht.</FieldHelp></div>
                   <p className="mt-1 text-sm">{ERA_LABELS[selected.era as CustomPackEra]}</p>
+                </div>
+                <div className="rounded-[8px] border border-white/8 bg-white/[0.025] p-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#aebbc1]">Booster-Motiv <FieldHelp label="Booster-Motiv">Das Bild wird als Hochformat zugeschnitten und mit Packname und Setcode in eine einheitliche metallische Boosterfolie eingesetzt. Veröffentlichte Versionen behalten ihr Motiv unverändert.</FieldHelp></div>
+                  <div className="relative mx-auto mt-3 aspect-[2/3] w-24 overflow-hidden rounded-lg border border-white/10 bg-black/35">
+                    {(version.packImageAssetId || artworkAssetId) ? <Image src={`/api/assets/media/${encodeURIComponent(artworkAssetId !== version.artworkAssetId ? artworkAssetId! : (version.packImageAssetId ?? artworkAssetId!))}`} alt="Booster-Motiv Vorschau" fill sizes="96px" className="object-cover" unoptimized /> : <div className="grid h-full place-items-center px-2 text-center text-[0.65rem] text-white/35">Standardmotiv</div>}
+                  </div>
+                  {canMutate ? <div className="mt-3 flex flex-wrap gap-2"><ImageCropUpload kind="PACK_ARTWORK" aspect={4 / 5} label={artworkAssetId ? "Motiv ersetzen" : "Motiv hochladen"} onUploaded={(asset) => setArtworkAssetId(asset.id)} />{artworkAssetId ? <button type="button" className="ui-button ui-button-secondary" onClick={() => setArtworkAssetId(null)}>Entfernen</button> : null}</div> : null}
                 </div>
                 <label className="text-xs font-semibold text-[#aebbc1]">Karten pro Pack <input className="ui-input mt-1.5" type="number" min={1} max={100} value={packSize} disabled={!canMutate} onChange={(event) => setPackSize(Math.max(1, Number(event.target.value) || 1))} /></label>
                 <label className="text-xs font-semibold text-[#aebbc1]">Packs pro Display <FieldHelp label="Displaygröße">Legt fest, wie viele Booster ein vollständiges Display enthält. Die Einstellung verändert nicht die Karten pro Booster.</FieldHelp><input className="ui-input mt-1.5" type="number" min={1} max={100} value={displaySize} disabled={!canMutate} onChange={(event) => setDisplaySize(Math.max(1, Number(event.target.value) || 1))} /></label>

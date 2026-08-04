@@ -7,6 +7,7 @@ import { requireViewerSession } from "@/lib/auth";
 import { createDeck } from "@/lib/deck-editor";
 import { getDeckLegalitySnapshot } from "@/lib/deck-legality";
 import { getDeckBoxMeta } from "@/lib/deckbox-config";
+import { getMediaAssetUrl } from "@/lib/media-service";
 import { getPrisma } from "@/lib/prisma";
 import { getActiveRun } from "@/lib/run-service";
 
@@ -135,7 +136,8 @@ export async function GET(request: Request) {
           formatName: summary?.formatName ?? null,
           banlistName: summary?.banlistName ?? null,
           deckBoxKey: deckBox.key,
-          deckBoxImageUrl: deckBox.imageUrl,
+          deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
+          deckBoxAssetId: deck.deckBoxAssetId,
           previewImageUrl: getCardAssetUrl(
             deck.cards[0]?.card.externalCardId ?? null,
           ),
@@ -190,7 +192,8 @@ export async function POST(request: Request) {
           id: deck.id,
           name: deck.name,
           deckBoxKey: deckBox.key,
-          deckBoxImageUrl: deckBox.imageUrl,
+          deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
+          deckBoxAssetId: deck.deckBoxAssetId,
         },
       },
       { status: 201 },

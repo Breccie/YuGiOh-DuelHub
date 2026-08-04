@@ -9,6 +9,7 @@ import type {
   DeckBoxKey,
   DeckSortMode,
   DeckSectionValue,
+  MediaAssetDto,
 } from "@ygo/contracts";
 import type { DragEvent, MouseEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -19,6 +20,7 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { deckClient } from "@/lib/deck-client";
 import { deckBoxCatalog, defaultDeckBoxKey } from "@/lib/deckbox-config";
+import { mediaClient } from "@/lib/media-client";
 import type { DeckIssueType, DeckLegalitySnapshot } from "@/lib/deck-legality";
 import {
   buildDeckCopyStartOffsets,
@@ -772,10 +774,15 @@ export function DeckEditorConsole({
   const [createDeckName, setCreateDeckName] = useState("");
   const [createDeckBoxKey, setCreateDeckBoxKey] =
     useState<DeckBoxKey>(defaultDeckBoxKey);
+  const [createDeckBoxAssetId, setCreateDeckBoxAssetId] = useState<string | null>(null);
   const [activeDeckName, setActiveDeckName] = useState(activeDeck?.name ?? "");
   const [activeDeckBoxKey, setActiveDeckBoxKey] = useState<DeckBoxKey>(
     (activeDeck?.deckBoxKey as DeckBoxKey | undefined) ?? defaultDeckBoxKey,
   );
+  const [activeDeckBoxAssetId, setActiveDeckBoxAssetId] = useState<string | null>(
+    activeDeck?.deckBoxAssetId ?? null,
+  );
+  const [personalDeckBoxes, setPersonalDeckBoxes] = useState<MediaAssetDto[]>([]);
   const [activeBanlistId, setActiveBanlistId] = useState(
     activeDeck?.banlistId ?? availableBanlists[0]?.id ?? "",
   );
@@ -818,6 +825,18 @@ export function DeckEditorConsole({
   useEffect(() => {
     activeDeckRef.current = activeDeck;
   }, [activeDeck]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void mediaClient.list("DECKBOX").then((assets) => {
+      if (!cancelled) setPersonalDeckBoxes(assets);
+    }).catch(() => {
+      if (!cancelled) setPersonalDeckBoxes([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const savedMode = window.localStorage.getItem(deckSortStorageKey);
@@ -1088,6 +1107,7 @@ export function DeckEditorConsole({
       setActiveDeckBoxKey(
         (payload.activeDeck.deckBoxKey as DeckBoxKey) ?? defaultDeckBoxKey,
       );
+      setActiveDeckBoxAssetId(payload.activeDeck.deckBoxAssetId ?? null);
     }
     setCatalogRevision((revision) => revision + 1);
   }
@@ -1133,6 +1153,7 @@ export function DeckEditorConsole({
       const payload = await deckClient.create({
         name: createDeckName,
         deckBoxKey: createDeckBoxKey,
+        deckBoxAssetId: createDeckBoxAssetId,
         banlistId: availableBanlists[0]?.id ?? null,
       });
 
@@ -1154,6 +1175,7 @@ export function DeckEditorConsole({
       const payload = await deckClient.update(activeDeck.id, {
         name: activeDeckName,
         deckBoxKey: activeDeckBoxKey,
+        deckBoxAssetId: activeDeckBoxAssetId,
         banlistId: activeBanlistId || null,
         snapshotDate: activeSnapshotDate || null,
       });
@@ -1178,6 +1200,7 @@ export function DeckEditorConsole({
       const payload = await deckClient.update(activeDeck.id, {
         name: activeDeckName,
         deckBoxKey: activeDeckBoxKey,
+        deckBoxAssetId: activeDeckBoxAssetId,
         banlistId: nextBanlistId || null,
         snapshotDate: activeSnapshotDate || null,
       });
@@ -1575,18 +1598,31 @@ export function DeckEditorConsole({
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-[#c6d0d5]">Deckbox</span>
               <select
-                value={createDeckBoxKey}
-                onChange={(event) =>
-                  setCreateDeckBoxKey(event.target.value as DeckBoxKey)
-                }
+                value={createDeckBoxAssetId ? `asset:${createDeckBoxAssetId}` : createDeckBoxKey}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value.startsWith("asset:")) {
+                    setCreateDeckBoxAssetId(value.slice(6));
+                  } else {
+                    setCreateDeckBoxAssetId(null);
+                    setCreateDeckBoxKey(value as DeckBoxKey);
+                  }
+                }}
                 className="ui-input"
                 disabled={isSubmitting}
               >
-                {deckBoxCatalog.map((deckBox) => (
-                  <option key={deckBox.key} value={deckBox.key}>
-                    {deckBox.name}
-                  </option>
-                ))}
+                {personalDeckBoxes.length ? (
+                  <optgroup label="Eigene Designs">
+                    {personalDeckBoxes.map((asset) => (
+                      <option key={asset.id} value={`asset:${asset.id}`}>{asset.name}</option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                <optgroup label="Standarddesigns">
+                  {deckBoxCatalog.map((deckBox) => (
+                    <option key={deckBox.key} value={deckBox.key}>{deckBox.name}</option>
+                  ))}
+                </optgroup>
               </select>
             </label>
           </div>
@@ -1706,18 +1742,31 @@ export function DeckEditorConsole({
             <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3">
               <span className="text-xs font-semibold text-[#95a4ae]">Deckbox</span>
               <select
-                value={activeDeckBoxKey}
-                onChange={(event) =>
-                  setActiveDeckBoxKey(event.target.value as DeckBoxKey)
-                }
+                value={activeDeckBoxAssetId ? `asset:${activeDeckBoxAssetId}` : activeDeckBoxKey}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value.startsWith("asset:")) {
+                    setActiveDeckBoxAssetId(value.slice(6));
+                  } else {
+                    setActiveDeckBoxAssetId(null);
+                    setActiveDeckBoxKey(value as DeckBoxKey);
+                  }
+                }}
                 className="ui-input min-w-0"
                 disabled={isSubmitting}
               >
-                {deckBoxCatalog.map((deckBox) => (
-                  <option key={deckBox.key} value={deckBox.key}>
-                    {deckBox.name}
-                  </option>
-                ))}
+                {personalDeckBoxes.length ? (
+                  <optgroup label="Eigene Designs">
+                    {personalDeckBoxes.map((asset) => (
+                      <option key={asset.id} value={`asset:${asset.id}`}>{asset.name}</option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                <optgroup label="Standarddesigns">
+                  {deckBoxCatalog.map((deckBox) => (
+                    <option key={deckBox.key} value={deckBox.key}>{deckBox.name}</option>
+                  ))}
+                </optgroup>
               </select>
             </div>
 

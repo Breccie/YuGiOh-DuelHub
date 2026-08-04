@@ -40,6 +40,10 @@ function getAssetCacheDirectory() {
   return join(app.getPath("sessionData"), "remote-assets");
 }
 
+function getUserMediaDirectory() {
+  return join(app.getPath("userData"), "user-media");
+}
+
 function ensureRuntimeDatabase() {
   const runtimeDbPath = getRuntimeDatabasePath();
 
@@ -101,6 +105,7 @@ async function startStandaloneServer() {
       PORT: String(DESKTOP_PORT),
       DATABASE_URL: `file:${runtimeDbPath}`,
       DESKTOP_ASSET_CACHE_DIR: getAssetCacheDirectory(),
+      DESKTOP_MEDIA_DIR: getUserMediaDirectory(),
       NODE_ENV: "production",
     },
     stdio: "pipe",

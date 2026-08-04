@@ -11,6 +11,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { getDeckBoxMeta } from "@/lib/deckbox-config";
+import { getMediaAssetUrl } from "@/lib/media-service";
 import {
   createDeck,
   deleteDeck,
@@ -186,7 +187,7 @@ async function buildDeckOverviewPayload(
         formatName: summary?.formatName ?? null,
         banlistName: summary?.banlistName ?? null,
         deckBoxKey: deckBox.key,
-        deckBoxImageUrl: deckBox.imageUrl,
+        deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
         previewImageUrl: getCardAssetUrl(deck.cards[0]?.card.externalCardId ?? null),
         previewLabel: deck.cards[0]?.card.name ?? deck.name,
       };
@@ -229,7 +230,8 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
           id: deck.id,
           name: deck.name,
           deckBoxKey: deckBox.key,
-          deckBoxImageUrl: deckBox.imageUrl,
+          deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
+          deckBoxAssetId: deck.deckBoxAssetId,
         },
       });
     } catch (error) {
@@ -255,7 +257,8 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
           id: deck.id,
           name: deck.name,
           deckBoxKey: deckBox.key,
-          deckBoxImageUrl: deckBox.imageUrl,
+          deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
+          deckBoxAssetId: deck.deckBoxAssetId,
         },
       });
     } catch (error) {
@@ -287,7 +290,8 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
           id: deck.id,
           name: deck.name,
           deckBoxKey: deckBox.key,
-          deckBoxImageUrl: deckBox.imageUrl,
+          deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
+          deckBoxAssetId: deck.deckBoxAssetId,
         },
       });
     } catch (error) {

@@ -84,6 +84,7 @@ export function ProfileConsole({
       viewer={{
         displayName: session.displayName,
         duelistId: session.duelistId,
+        avatarImageUrl: session.avatarImageUrl,
       }}
       metrics={[
         { icon: "users", label: "Profil", value: profile.duelistId },
@@ -95,8 +96,8 @@ export function ProfileConsole({
         <section className="relative overflow-hidden rounded-[28px] border border-[rgba(255,255,255,0.1)] bg-[linear-gradient(120deg,rgba(16,20,28,0.96),rgba(7,9,13,0.94))] p-6 shadow-[0_34px_80px_rgba(0,0,0,0.44)] sm:p-8">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(207,91,66,0.18),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(214,164,92,0.12),transparent_34%)]" />
           <div className="relative grid gap-7 lg:grid-cols-[auto_minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center">
-            <div className="grid h-28 w-28 place-items-center rounded-full border border-[rgba(214,164,92,0.32)] bg-[radial-gradient(circle,rgba(190,69,48,0.24),rgba(8,11,16,0.92)_68%)] text-[#e3bd82] shadow-[0_0_36px_rgba(190,69,48,0.18)]">
-              <AssetIcon name="profile-signet" className="h-14 w-14 text-current" />
+            <div className="relative grid h-28 w-28 place-items-center overflow-hidden rounded-full border border-[rgba(214,164,92,0.32)] bg-[radial-gradient(circle,rgba(190,69,48,0.24),rgba(8,11,16,0.92)_68%)] text-[#e3bd82] shadow-[0_0_36px_rgba(190,69,48,0.18)]">
+              {profile.avatarImageUrl ? <Image src={profile.avatarImageUrl} alt={`Profilbild von ${profile.displayName}`} fill sizes="112px" className="object-cover" unoptimized /> : <AssetIcon name="profile-signet" className="h-14 w-14 text-current" />}
             </div>
             <div>
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-[#d7654c]">

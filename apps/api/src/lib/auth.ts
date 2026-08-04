@@ -9,6 +9,7 @@ import {
   verifyPassword,
 } from "../../../../packages/domain/src";
 import { getPrisma } from "./prisma";
+import { getMediaAssetUrl } from "@/lib/media-service";
 
 const SESSION_COOKIE_NAME = "duelhub_session";
 const SHORT_SESSION_MS = 1000 * 60 * 60 * 12;
@@ -31,6 +32,8 @@ function toViewerSession(record: SessionRecord): ApiViewerSession {
     duelistId: record.user.duelistId,
     displayName: record.user.displayName,
     avatarKey: record.user.avatarKey,
+    avatarAssetId: record.user.avatarAssetId,
+    avatarImageUrl: getMediaAssetUrl(record.user.avatarAssetId),
     favoriteEra: record.user.favoriteEra ?? null,
     isPublic: record.user.isPublic,
     showcaseBinderId: record.user.showcaseBinderId ?? null,

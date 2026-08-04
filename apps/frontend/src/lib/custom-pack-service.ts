@@ -13,6 +13,9 @@ import {
   toPersistedCustomPackSlot,
 } from "@/lib/custom-pack-config";
 import { getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
+import { createCustomPackImage } from "@/lib/custom-pack-artwork";
+import { getCardAssetUrl } from "@/lib/asset-urls";
+import { resolveOwnedMediaAsset } from "@/lib/media-service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -184,6 +187,17 @@ export async function createCustomPack(
   input: CreateCustomPackRequest,
 ) {
   await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
+  if (input.artworkAssetId) {
+    await resolveOwnedMediaAsset(prisma, viewerId, input.artworkAssetId, "PACK_ARTWORK");
+  }
+  const packImage = input.artworkAssetId
+    ? await createCustomPackImage(prisma, {
+        ownerId: viewerId,
+        artworkAssetId: input.artworkAssetId,
+        name: input.name,
+        code: input.code,
+      })
+    : null;
   const slots = getCustomPackEraPreset(input.era).map(toPersistedCustomPackSlot);
   const packSize = input.era === "PROMO_CUSTOM" && input.packSize === 9 ? 1 : input.packSize;
   return prisma.customPackDefinition.create({
@@ -200,6 +214,8 @@ export async function createCustomPack(
           packSize,
           displaySize: input.displaySize,
           price: input.price,
+          artworkAssetId: input.artworkAssetId ?? null,
+          packImageAssetId: packImage?.id ?? null,
           slotConfig: { era: input.era, editable: true },
           slots: {
             create: slots.map((slot) => ({
@@ -225,6 +241,33 @@ export async function updateCustomPackDraft(
   input: UpdateCustomPackDraftRequest,
 ) {
   await requireRunMembership(prisma, { runId, userId: viewerId, organizerOnly: true });
+  const existingVersion = await prisma.customPackVersion.findFirst({
+    where: { id: versionId, definition: { runId } },
+    include: { definition: true },
+  });
+  if (!existingVersion) {
+    throw new DomainError({ code: "custom_pack_not_found", message: "Packversion nicht gefunden.", status: 404 });
+  }
+  assertDraft(existingVersion.status);
+  if (input.artworkAssetId) {
+    await resolveOwnedMediaAsset(prisma, viewerId, input.artworkAssetId, "PACK_ARTWORK");
+  }
+  let nextPackImageId = existingVersion.packImageAssetId;
+  if (input.artworkAssetId !== undefined) {
+    if (!input.artworkAssetId) {
+      nextPackImageId = null;
+    } else if (
+      input.artworkAssetId !== existingVersion.artworkAssetId
+      || !existingVersion.packImageAssetId
+    ) {
+      nextPackImageId = (await createCustomPackImage(prisma, {
+        ownerId: viewerId,
+        artworkAssetId: input.artworkAssetId,
+        name: existingVersion.definition.name,
+        code: existingVersion.definition.code,
+      })).id;
+    }
+  }
   return withSerializableTransaction(prisma, async (tx) => {
     const version = await tx.customPackVersion.findFirst({
       where: { id: versionId, definition: { runId } },
@@ -287,6 +330,10 @@ export async function updateCustomPackDraft(
         packSize: nextPackSize,
         displaySize: input.displaySize ?? version.displaySize,
         price: input.price ?? version.price,
+        ...(input.artworkAssetId !== undefined ? {
+          artworkAssetId: input.artworkAssetId,
+          packImageAssetId: nextPackImageId,
+        } : {}),
       },
     });
     return tx.customPackVersion.findUniqueOrThrow({
@@ -396,7 +443,12 @@ async function findExistingCustomPackOpening(
     include: {
       openings: {
         orderBy: { openedAt: "asc" },
-        include: { pulls: { orderBy: [{ slotIndex: "asc" }, { id: "asc" }] } },
+        include: {
+          pulls: {
+            orderBy: [{ slotIndex: "asc" }, { id: "asc" }],
+            include: { card: true, setCard: true },
+          },
+        },
       },
     },
   });
@@ -417,11 +469,15 @@ async function findExistingCustomPackOpening(
     seed: opening.randomSeed ?? "",
     auditHash: opening.auditHash ?? "",
     price: batch.totalCost,
-    pulls: opening.pulls.map((pull) => ({
+    pulls: opening.pulls.map((pull, index) => ({
       cardId: pull.cardId,
       setCardId: pull.setCardId,
+      id: pull.id,
+      cardName: pull.card.name,
+      cardImageUrl: getCardAssetUrl(pull.card.externalCardId),
+      setCode: pull.setCard?.setCode ?? null,
       rarity: pull.rarity ?? "Unknown",
-      slotIndex: pull.slotIndex,
+      slotIndex: index + 1,
     })),
   };
 }
@@ -458,7 +514,11 @@ export async function openCustomPackVersion(
         where: { runId_versionId: { runId, versionId } },
         include: {
           version: {
-            include: { definition: true, poolEntries: true, slots: true },
+            include: {
+              definition: true,
+              poolEntries: { include: { card: true, setCard: true } },
+              slots: true,
+            },
           },
         },
       });
@@ -496,7 +556,7 @@ export async function openCustomPackVersion(
             cardId: selected.cardId,
             setCardId: selected.setCardId!,
             rarity,
-            slotIndex: slot.slotIndex,
+            slotIndex: pulls.length + 1,
           });
         }
       }
@@ -575,7 +635,19 @@ export async function openCustomPackVersion(
         seed,
         auditHash,
         price,
-        pulls,
+        pulls: pulls.map((pull, index) => {
+          const source = version.poolEntries.find((entry) =>
+            entry.cardId === pull.cardId && entry.setCardId === pull.setCardId,
+          );
+          return {
+            ...pull,
+            id: `${opening.id}:${index + 1}`,
+            cardName: source?.card.name ?? "Unbekannte Karte",
+            cardImageUrl: getCardAssetUrl(source?.card.externalCardId ?? null),
+            setCode: source?.setCard?.setCode ?? null,
+            slotIndex: index + 1,
+          };
+        }),
       };
     });
   } catch (error) {
@@ -609,6 +681,8 @@ export async function createNextCustomPackDraft(prisma: PrismaClient, viewerId: 
         displaySize: source.displaySize,
         price: source.price,
         rewardOnly: source.rewardOnly,
+        artworkAssetId: source.artworkAssetId,
+        packImageAssetId: source.packImageAssetId,
         slotConfig: source.slotConfig as Prisma.InputJsonValue,
         poolEntries: { create: source.poolEntries.map((entry) => ({ cardId: entry.cardId, setCardId: entry.setCardId, rarity: entry.rarity, weight: entry.weight })) },
         slots: {

@@ -4,6 +4,7 @@ import type { PublicProfile } from "@/lib/app-dtos";
 import { getBinderCoverMeta } from "@/lib/collection-showcase-config";
 import { getDeckBoxMeta } from "@/lib/deckbox-config";
 import { getActiveRun } from "@/lib/run-service";
+import { getMediaAssetUrl } from "@/lib/media-service";
 
 export async function getPublicProfileByDuelistId(
   prisma: PrismaClient,
@@ -20,6 +21,7 @@ export async function getPublicProfileByDuelistId(
       showcaseBinder: {
         select: {
           coverKey: true,
+          coverAssetId: true,
           accentColor: true,
         },
       },
@@ -109,6 +111,8 @@ export async function getPublicProfileByDuelistId(
     duelistId: user.duelistId,
     displayName: user.displayName,
     avatarKey: user.avatarKey,
+    avatarAssetId: user.avatarAssetId ?? null,
+    avatarImageUrl: getMediaAssetUrl(user.avatarAssetId),
     bio: user.bio ?? null,
     favoriteEra: user.favoriteEra ?? null,
     isPublic: user.isPublic,
@@ -124,6 +128,10 @@ export async function getPublicProfileByDuelistId(
       coverKey: user.showcaseBinder?.coverKey ?? null,
       coverName: showcaseCover?.name ?? null,
       coverImageUrl: showcaseCover?.imageUrl ?? null,
+      coverAssetId: user.showcaseBinder?.coverAssetId ?? null,
+      ...(user.showcaseBinder?.coverAssetId
+        ? { coverImageUrl: getMediaAssetUrl(user.showcaseBinder.coverAssetId) }
+        : {}),
       accentColor:
         user.showcaseBinder?.accentColor ?? showcaseCover?.accentColor ?? null,
       publishedAt: user.showcaseSnapshot?.publishedAt.toISOString() ?? null,
@@ -146,7 +154,8 @@ export async function getPublicProfileByDuelistId(
         id: deck.id,
         name: deck.name,
         deckBoxKey: deckBox.key,
-        deckBoxImageUrl: deckBox.imageUrl,
+        deckBoxAssetId: deck.deckBoxAssetId ?? null,
+        deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
         updatedAt: deck.updatedAt.toISOString(),
         ...counts,
         formatName: deck.formatProfile?.name ?? null,

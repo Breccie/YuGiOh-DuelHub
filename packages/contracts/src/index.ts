@@ -15,6 +15,8 @@ export const viewerSessionSchema = z.object({
   duelistId: z.string(),
   displayName: z.string(),
   avatarKey: z.string(),
+  avatarAssetId: z.string().nullable().optional(),
+  avatarImageUrl: z.string().nullable().optional(),
   favoriteEra: z.string().nullable(),
   isPublic: z.boolean(),
   showcaseBinderId: z.string().nullable(),
@@ -52,6 +54,7 @@ export type DeckBoxKey = z.infer<typeof deckBoxKeySchema>;
 export const createDeckRequestSchema = z.object({
   name: z.string().trim().min(1),
   deckBoxKey: deckBoxKeySchema.optional(),
+  deckBoxAssetId: z.string().trim().min(1).nullable().optional(),
   banlistId: z.string().trim().min(1).nullable().optional(),
   snapshotDate: z.string().trim().min(1).nullable().optional(),
 });
@@ -285,6 +288,7 @@ export type CollectionSortModeValue = z.infer<typeof collectionSortModeSchema>;
 export const createCollectionBinderRequestSchema = z.object({
   name: z.string().trim().min(1),
   coverKey: z.string().trim().min(1),
+  coverAssetId: z.string().trim().min(1).nullable().optional(),
   description: z.string().trim().max(240).nullable().optional(),
 });
 export type CreateCollectionBinderRequest = z.infer<
@@ -294,6 +298,7 @@ export type CreateCollectionBinderRequest = z.infer<
 export const updateCollectionBinderRequestSchema = z.object({
   name: z.string().trim().min(1).optional(),
   coverKey: z.string().trim().min(1).optional(),
+  coverAssetId: z.string().trim().min(1).nullable().optional(),
   description: z.string().trim().max(240).nullable().optional(),
   isActive: z.boolean().optional(),
 });
@@ -349,6 +354,7 @@ export const updateProfileRequestSchema = z.object({
   bio: z.string().trim().max(320).nullable().optional(),
   favoriteEra: z.string().trim().max(40).nullable().optional(),
   avatarKey: z.string().trim().max(80).optional(),
+  avatarAssetId: z.string().trim().min(1).nullable().optional(),
   isPublic: z.boolean().optional(),
   showcaseBinderId: z.string().trim().min(1).nullable().optional(),
 });
@@ -391,6 +397,8 @@ export type PublicProfile = {
   duelistId: string;
   displayName: string;
   avatarKey: string;
+  avatarAssetId: string | null;
+  avatarImageUrl: string | null;
   bio: string | null;
   favoriteEra: string | null;
   isPublic: boolean;
@@ -406,6 +414,7 @@ export type PublicProfile = {
     coverKey: string | null;
     coverName: string | null;
     coverImageUrl: string | null;
+    coverAssetId: string | null;
     accentColor: string | null;
     publishedAt: string | null;
     highlightedCards: Array<{
@@ -421,6 +430,7 @@ export type PublicProfile = {
     name: string;
     deckBoxKey: DeckBoxKey;
     deckBoxImageUrl: string;
+    deckBoxAssetId: string | null;
     updatedAt: string;
     cardCount: number;
     mainCount: number;
@@ -440,6 +450,8 @@ export type FriendRequestDto = {
     userId: string;
     duelistId: string;
     displayName: string;
+    avatarAssetId?: string | null;
+    avatarImageUrl?: string | null;
     lastSeenAt: string | null;
     isOnline: boolean;
   };
@@ -447,6 +459,8 @@ export type FriendRequestDto = {
     userId: string;
     duelistId: string;
     displayName: string;
+    avatarAssetId?: string | null;
+    avatarImageUrl?: string | null;
     lastSeenAt: string | null;
     isOnline: boolean;
   };
@@ -457,6 +471,8 @@ export const publicProfileSchema = z.object({
   duelistId: z.string(),
   displayName: z.string(),
   avatarKey: z.string(),
+  avatarAssetId: z.string().nullable(),
+  avatarImageUrl: z.string().nullable(),
   bio: z.string().nullable(),
   favoriteEra: z.string().nullable(),
   isPublic: z.boolean(),
@@ -472,6 +488,7 @@ export const publicProfileSchema = z.object({
     coverKey: z.string().nullable(),
     coverName: z.string().nullable(),
     coverImageUrl: z.string().nullable(),
+    coverAssetId: z.string().nullable(),
     accentColor: z.string().nullable(),
     publishedAt: z.string().nullable(),
     highlightedCards: z.array(
@@ -490,6 +507,7 @@ export const publicProfileSchema = z.object({
       name: z.string(),
       deckBoxKey: deckBoxKeySchema,
       deckBoxImageUrl: z.string(),
+      deckBoxAssetId: z.string().nullable(),
       updatedAt: z.string(),
       cardCount: z.number().int(),
       mainCount: z.number().int(),
@@ -513,6 +531,8 @@ export const updatedProfileSchema = z.object({
   bio: z.string().nullable(),
   favoriteEra: z.string().nullable(),
   avatarKey: z.string(),
+  avatarAssetId: z.string().nullable(),
+  avatarImageUrl: z.string().nullable(),
   isPublic: z.boolean(),
   showcaseBinderId: z.string().nullable(),
 });
@@ -531,6 +551,8 @@ export const friendRequestDtoSchema = z.object({
     userId: z.string(),
     duelistId: z.string(),
     displayName: z.string(),
+    avatarAssetId: z.string().nullable().optional(),
+    avatarImageUrl: z.string().nullable().optional(),
     lastSeenAt: z.string().nullable(),
     isOnline: z.boolean(),
   }),
@@ -538,6 +560,8 @@ export const friendRequestDtoSchema = z.object({
     userId: z.string(),
     duelistId: z.string(),
     displayName: z.string(),
+    avatarAssetId: z.string().nullable().optional(),
+    avatarImageUrl: z.string().nullable().optional(),
     lastSeenAt: z.string().nullable(),
     isOnline: z.boolean(),
   }),
@@ -1719,6 +1743,7 @@ export const createCustomPackRequestSchema = z.object({
   packSize: z.number().int().min(1).max(100).default(9),
   displaySize: z.number().int().min(1).max(100).default(24),
   price: z.number().int().min(0).default(100),
+  artworkAssetId: z.string().trim().min(1).nullable().optional(),
 });
 export type CreateCustomPackRequest = z.infer<typeof createCustomPackRequestSchema>;
 export const updateCustomPackDraftRequestSchema = z.object({
@@ -1727,6 +1752,7 @@ export const updateCustomPackDraftRequestSchema = z.object({
   packSize: z.number().int().min(1).max(100).optional(),
   displaySize: z.number().int().min(1).max(100).optional(),
   price: z.number().int().min(0).max(1_000_000).optional(),
+  artworkAssetId: z.string().trim().min(1).nullable().optional(),
 }).superRefine((draft, context) => {
   const slotIndexes = new Set<number>();
   draft.slots.forEach((slot, index) => {
@@ -1764,6 +1790,46 @@ export const updateCustomPackDraftRequestSchema = z.object({
   });
 });
 export type UpdateCustomPackDraftRequest = z.infer<typeof updateCustomPackDraftRequestSchema>;
+
+export const mediaAssetKindSchema = z.enum([
+  "AVATAR",
+  "PACK_ARTWORK",
+  "BINDER_COVER",
+  "DECKBOX",
+]);
+export type MediaAssetKind = z.infer<typeof mediaAssetKindSchema>;
+
+export const mediaAssetDtoSchema = z.object({
+  id: z.string(),
+  kind: mediaAssetKindSchema,
+  name: z.string(),
+  imageUrl: z.string(),
+  width: z.number().int(),
+  height: z.number().int(),
+  byteSize: z.number().int(),
+  createdAt: z.string(),
+  usageCount: z.number().int().nonnegative(),
+  deletable: z.boolean(),
+});
+export type MediaAssetDto = z.infer<typeof mediaAssetDtoSchema>;
+
+export const createMediaUploadIntentRequestSchema = z.object({
+  kind: mediaAssetKindSchema,
+  name: z.string().trim().min(1).max(80),
+  contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+  byteSize: z.number().int().min(1).max(5 * 1024 * 1024),
+});
+export type CreateMediaUploadIntentRequest = z.infer<typeof createMediaUploadIntentRequestSchema>;
+
+export const finalizeMediaUploadRequestSchema = z.object({
+  uploadToken: z.string().trim().min(1),
+});
+export type FinalizeMediaUploadRequest = z.infer<typeof finalizeMediaUploadRequestSchema>;
+
+export const updateMediaAssetRequestSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
+export type UpdateMediaAssetRequest = z.infer<typeof updateMediaAssetRequestSchema>;
 export const simulateCustomPackRequestSchema = z.object({
   iterations: z.number().int().min(1).max(10_000).default(10_000),
   seed: z.string().trim().min(1).max(200).default("duel-hub-simulation"),

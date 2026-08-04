@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { MediaAssetDto } from "@ygo/contracts";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
 import { BinderCollectionEditor } from "@/components/binder-collection-editor";
@@ -14,6 +15,7 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { binderSlotCount } from "@/lib/binder-open-layout";
 import { collectionClient } from "@/lib/collection-client";
 import { wishlistClient } from "@/lib/wishlist-client";
+import { mediaClient } from "@/lib/media-client";
 import {
   binderCoverCatalog,
   getCollectionSortLabel,
@@ -434,12 +436,18 @@ export function CollectionBinderConsole({
   const [binderOptions, setBinderOptions] = useState(binders);
   const [draftBinderName, setDraftBinderName] = useState("");
   const [draftCoverKey, setDraftCoverKey] = useState<BinderCoverKey>(binderCoverCatalog[0].key);
+  const [draftCoverAssetId, setDraftCoverAssetId] = useState<string | null>(null);
+  const [personalCovers, setPersonalCovers] = useState<MediaAssetDto[]>([]);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [activePreviewPageIndex, setActivePreviewPageIndex] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"binder" | null>(null);
   const [collectionView, setCollectionView] = useState<"CARDS" | "BINDERS">("CARDS");
   const [collectionSearch, setCollectionSearch] = useState("");
+
+  useEffect(() => {
+    void mediaClient.list("BINDER_COVER").then(setPersonalCovers).catch(() => undefined);
+  }, []);
   const [collectionKind, setCollectionKind] = useState("ALL");
   const [collectionRarity, setCollectionRarity] = useState("ALL");
   const [collectionSort, setCollectionSort] =
@@ -627,6 +635,7 @@ export function CollectionBinderConsole({
       const payload = await collectionClient.createBinder({
         name: draftBinderName.trim(),
         coverKey: draftCoverKey,
+        coverAssetId: draftCoverAssetId,
       });
 
       startTransition(() => {
@@ -637,7 +646,8 @@ export function CollectionBinderConsole({
             isActive: false,
           })),
         ]);
-        setDraftBinderName("");
+      setDraftBinderName("");
+      setDraftCoverAssetId(null);
         setCreatorOpen(false);
         updateEditorRoute(payload.binder.id, {
           pageIndex: 0,
@@ -812,15 +822,17 @@ export function CollectionBinderConsole({
                     />
                   </label>
 
+                  {personalCovers.length ? <div><p className="mb-2 text-xs font-semibold text-[#bca98f]">Eigene Designs</p><div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-5">{personalCovers.map((asset) => <button key={asset.id} type="button" onClick={() => setDraftCoverAssetId(asset.id)} className={classes("overflow-hidden rounded-xl border p-1", draftCoverAssetId === asset.id ? "border-teal-300/60 bg-teal-300/10" : "border-white/10 bg-white/[.02]")}><div className="relative aspect-[2/3]"><Image src={asset.imageUrl} alt={asset.name} fill sizes="100px" className="rounded-lg object-cover" unoptimized /></div><span className="mt-1 block truncate text-[.65rem]">{asset.name}</span></button>)}</div></div> : null}
+                  <p className="mb-2 text-xs font-semibold text-[#bca98f]">Standarddesigns</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {binderCoverCatalog.map((cover) => (
                       <button
                         key={cover.key}
                         type="button"
-                        onClick={() => setDraftCoverKey(cover.key)}
+                        onClick={() => { setDraftCoverKey(cover.key); setDraftCoverAssetId(null); }}
                         className={classes(
                           "group rounded-[16px] border p-2 text-left transition",
-                          draftCoverKey === cover.key
+                          draftCoverAssetId === null && draftCoverKey === cover.key
                             ? "border-[rgba(207,91,66,0.34)] bg-[rgba(255,255,255,0.05)]"
                             : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(207,91,66,0.18)]",
                         )}

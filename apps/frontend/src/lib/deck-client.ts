@@ -22,6 +22,7 @@ type DeckMutationResponse = {
     name: string;
     deckBoxKey: string;
     deckBoxImageUrl: string;
+    deckBoxAssetId: string | null;
   };
 };
 

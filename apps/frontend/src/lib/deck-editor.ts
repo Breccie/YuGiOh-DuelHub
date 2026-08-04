@@ -2,6 +2,7 @@ import { DeckSection, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
 import { getActiveRun } from "@/lib/run-service";
 import { defaultDeckBoxKey } from "@/lib/deckbox-config";
+import { resolveOwnedMediaAsset } from "@/lib/media-service";
 
 const MAX_COPIES_PER_CARD_IDENTITY = 3;
 
@@ -78,6 +79,7 @@ export async function createDeck(
   input: {
     name: string;
     deckBoxKey?: string;
+    deckBoxAssetId?: string | null;
     banlistId?: string | null;
     snapshotDate?: string | null;
   },
@@ -102,6 +104,7 @@ export async function createDeck(
   const snapshotDate =
     parseSnapshotDate(input.snapshotDate) ?? banlist?.effectiveFrom ?? null;
   const activeRun = await getActiveRun(prisma, viewer.id);
+  await resolveOwnedMediaAsset(prisma, viewer.id, input.deckBoxAssetId, "DECKBOX");
 
   const deck = await prisma.deck.create({
     data: {
@@ -109,6 +112,7 @@ export async function createDeck(
       runId: activeRun.id,
       name,
       deckBoxKey: input.deckBoxKey ?? defaultDeckBoxKey,
+      deckBoxAssetId: input.deckBoxAssetId ?? null,
       formatProfileId: banlist?.formatProfileId ?? null,
       banlistId: banlist?.id ?? null,
       snapshotDate,
@@ -125,6 +129,7 @@ export async function updateDeckMetadata(
   input: {
     name: string;
     deckBoxKey?: string;
+    deckBoxAssetId?: string | null;
     banlistId?: string | null;
     snapshotDate?: string | null;
   },
@@ -141,6 +146,9 @@ export async function updateDeckMetadata(
 
   const activeRun = await getActiveRun(prisma, viewer.id);
   await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
+  if (input.deckBoxAssetId !== undefined) {
+    await resolveOwnedMediaAsset(prisma, viewer.id, input.deckBoxAssetId, "DECKBOX");
+  }
 
   const name = input.name.trim();
 
@@ -159,6 +167,7 @@ export async function updateDeckMetadata(
     data: {
       name,
       deckBoxKey: input.deckBoxKey ?? defaultDeckBoxKey,
+      ...(input.deckBoxAssetId !== undefined ? { deckBoxAssetId: input.deckBoxAssetId } : {}),
       formatProfileId: banlist?.formatProfileId ?? null,
       banlistId: banlist?.id ?? null,
       snapshotDate,
@@ -240,6 +249,7 @@ export async function duplicateDeck(
       runId: activeRun.id,
       name: `${sourceDeck.name} Kopie`,
       deckBoxKey: sourceDeck.deckBoxKey,
+      deckBoxAssetId: sourceDeck.deckBoxAssetId,
       formatProfileId: sourceDeck.formatProfileId,
       banlistId: sourceDeck.banlistId,
       snapshotDate: sourceDeck.snapshotDate,
@@ -448,7 +458,6 @@ export async function moveDeckCard(
   }
 
   const activeRun = await getActiveRun(prisma, viewer.id);
-
   return prisma.$transaction(async (tx) => {
     const lockedDeck = await tx.deck.updateMany({
       where: {

@@ -15,6 +15,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { InteractiveBoosterPack } from "@/components/interactive-booster-pack";
+import { PackSectionNav } from "@/components/pack-section-nav";
 import { apiGetJson, apiPostJson, getApiErrorMessage } from "@/lib/api-client";
 import { getPreferredPackHeroImage } from "@/lib/pack-renders";
 
@@ -706,32 +707,7 @@ export function PackSelectionConsole({
                       </strong>
                     </div>
 
-                    <nav
-                      aria-label="Packbereiche"
-                      className="grid max-w-[440px] grid-cols-3 rounded-full border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-1 text-xs uppercase tracking-[0.1em]"
-                    >
-                      <Link
-                        href="/packs"
-                        aria-current="page"
-                        className="rounded-full bg-[rgba(207,91,66,0.18)] px-2 py-2 text-center text-[#fff0df]"
-                      >
-                        Booster
-                      </Link>
-                      <Link
-                        href="/packs/promos"
-                        prefetch
-                        className="rounded-full px-2 py-2 text-center text-[#bfa88e] transition hover:bg-white/[0.04] hover:text-[#fff0df]"
-                      >
-                        Promo-Karten
-                      </Link>
-                      <Link
-                        href="/campaigns/custom-packs"
-                        prefetch
-                        className="rounded-full px-2 py-2 text-center text-[#bfa88e] transition hover:bg-white/[0.04] hover:text-[#fff0df]"
-                      >
-                        Custom Packs
-                      </Link>
-                    </nav>
+                    <PackSectionNav active="packs" />
 
                     {selectedSet.canBuy ? (
                       <>

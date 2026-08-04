@@ -20,6 +20,18 @@ export type CustomPackRecord = {
     packSize: number;
     displaySize: number;
     price: number;
+    rewardOnly?: boolean;
+    artworkAssetId: string | null;
+    packImageAssetId: string | null;
+    publishedAt?: string | null;
+    accesses?: Array<{
+      runId: string;
+      price: number | null;
+      rewardOnly: boolean;
+      availabilityStatus: "AVAILABLE" | "LOCKED" | "SCHEDULED";
+      availableFrom: string | null;
+      availableUntil: string | null;
+    }>;
     poolEntries: Array<{
       cardId: string;
       setCardId: string | null;
@@ -84,7 +96,23 @@ export const customPackClient = {
     );
   },
   open(runId: string, versionId: string, input: OpenCustomPackRequest) {
-    return apiPostJson<{ id: string; versionId: string; seed: string; auditHash: string; price: number; pulls: unknown[] }, OpenCustomPackRequest>(
+    return apiPostJson<{
+      id: string;
+      versionId: string;
+      seed: string;
+      auditHash: string;
+      price: number;
+      pulls: Array<{
+        id: string;
+        cardId: string;
+        cardName: string;
+        cardImageUrl: string | null;
+        setCardId: string;
+        setCode: string | null;
+        rarity: string;
+        slotIndex: number;
+      }>;
+    }, OpenCustomPackRequest>(
       `/api/custom-packs/${versionId}/open?${runQuery(runId)}`,
       input,
     );
