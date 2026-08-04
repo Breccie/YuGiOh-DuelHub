@@ -706,18 +706,32 @@ export function PackSelectionConsole({
                       </strong>
                     </div>
 
-                    <div className="flex rounded-full border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-1 text-xs uppercase tracking-[0.16em]">
-                      <span className="flex-1 rounded-full bg-[rgba(207,91,66,0.18)] px-3 py-2 text-center text-[#fff0df]">
+                    <nav
+                      aria-label="Packbereiche"
+                      className="grid max-w-[440px] grid-cols-3 rounded-full border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.03)] p-1 text-xs uppercase tracking-[0.1em]"
+                    >
+                      <Link
+                        href="/packs"
+                        aria-current="page"
+                        className="rounded-full bg-[rgba(207,91,66,0.18)] px-2 py-2 text-center text-[#fff0df]"
+                      >
                         Booster
-                      </span>
+                      </Link>
                       <Link
                         href="/packs/promos"
                         prefetch
-                        className="flex-1 rounded-full px-3 py-2 text-center text-[#bfa88e] transition hover:text-[#fff0df]"
+                        className="rounded-full px-2 py-2 text-center text-[#bfa88e] transition hover:bg-white/[0.04] hover:text-[#fff0df]"
                       >
                         Promo-Karten
                       </Link>
-                    </div>
+                      <Link
+                        href="/campaigns/custom-packs"
+                        prefetch
+                        className="rounded-full px-2 py-2 text-center text-[#bfa88e] transition hover:bg-white/[0.04] hover:text-[#fff0df]"
+                      >
+                        Custom Packs
+                      </Link>
+                    </nav>
 
                     {selectedSet.canBuy ? (
                       <>
