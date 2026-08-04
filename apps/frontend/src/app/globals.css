@@ -2228,6 +2228,12 @@ html[data-graphics="low"] .pack-opening-image-shell {
   min-height: 0;
 }
 
+.custom-pack-panel-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 .custom-pack-panel ::-webkit-scrollbar {
   width: 0.42rem;
 }
@@ -2247,6 +2253,11 @@ html[data-graphics="low"] .pack-opening-image-shell {
   .custom-pack-panel {
     min-height: 640px;
     overflow: visible;
+  }
+
+  .custom-pack-panel-scroll {
+    overflow: visible;
+    padding-right: 0;
   }
 }
 
