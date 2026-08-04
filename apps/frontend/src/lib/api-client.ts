@@ -84,7 +84,7 @@ export async function apiDeleteJson<TResponse, TBody = undefined>(
   return requestApiJson<TResponse>(input, {
     ...init,
     method: "DELETE",
-    headers: createJsonHeaders(init?.headers),
+    headers: body === undefined ? init?.headers : createJsonHeaders(init?.headers),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }

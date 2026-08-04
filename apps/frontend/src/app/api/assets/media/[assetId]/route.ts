@@ -7,11 +7,17 @@ import { getPrisma } from "@/lib/prisma";
 
 type Context = { params: Promise<{ assetId: string }> };
 
-export async function GET(_request: Request, context: Context) {
+export async function GET(request: Request, context: Context) {
   try {
     const { assetId } = await context.params;
     if (shouldProxyToApiService()) {
-      const response = await fetchApiService(`/api/v1/media/${encodeURIComponent(assetId)}/content`);
+      const response = await fetchApiService(
+        `/api/v1/media/${encodeURIComponent(assetId)}/content`,
+        {
+          cookieHeader: request.headers.get("cookie"),
+          userAgent: request.headers.get("user-agent"),
+        },
+      );
       return toProxiedNextResponse(response);
     }
     const prisma = getPrisma();

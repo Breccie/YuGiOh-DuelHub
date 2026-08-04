@@ -48,6 +48,7 @@ export default async function SettingsPage() {
           },
         ]}
         friendRequests={friendPayload.requests}
+        desktopAssetCacheEnabled={false}
       />
     );
   }
@@ -120,6 +121,7 @@ export default async function SettingsPage() {
         lastSeenAt: deviceSession.lastSeenAt.toISOString(),
       }))}
       friendRequests={friendRequests}
+      desktopAssetCacheEnabled
     />
   );
 }

@@ -7,6 +7,7 @@ import type { MediaAssetDto, MediaAssetKind } from "@ygo/contracts";
 import { useRouter } from "next/navigation";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import {
+  defaultDesktopPreferences,
   readDesktopPreferencesFromStorage,
   writeDesktopPreferencesToStorage,
   type GraphicsMode,
@@ -81,6 +82,7 @@ function formatGermanDateTime(value: string) {
   return new Intl.DateTimeFormat("de-DE", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Europe/Berlin",
   }).format(new Date(value));
 }
 
@@ -108,6 +110,7 @@ export function SettingsConsole({
   binderOptions,
   deviceSessions,
   friendRequests,
+  desktopAssetCacheEnabled,
 }: {
   session: ViewerSession;
   profile: {
@@ -123,6 +126,7 @@ export function SettingsConsole({
   binderOptions: BinderOption[];
   deviceSessions: DeviceSession[];
   friendRequests: FriendRequestDto[];
+  desktopAssetCacheEnabled: boolean;
 }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState(profile.displayName);
@@ -136,18 +140,28 @@ export function SettingsConsole({
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [desktopFeedback, setDesktopFeedback] = useState<string | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(
-    () => readDesktopPreferencesFromStorage().reducedMotion,
-  );
-  const [graphicsMode, setGraphicsMode] = useState<GraphicsMode>(
-    () => readDesktopPreferencesFromStorage().graphicsMode,
-  );
+  const [reducedMotion, setReducedMotion] = useState(defaultDesktopPreferences.reducedMotion);
+  const [graphicsMode, setGraphicsMode] = useState<GraphicsMode>(defaultDesktopPreferences.graphicsMode);
   const [assetCache, setAssetCache] = useState<AssetCacheSnapshot | null>(null);
-  const [assetCacheLoading, setAssetCacheLoading] = useState(true);
+  const [assetCacheLoading, setAssetCacheLoading] = useState(desktopAssetCacheEnabled);
   const [assetCacheBusy, setAssetCacheBusy] = useState(false);
   const [assetCacheFeedback, setAssetCacheFeedback] = useState<string | null>(null);
   const [assetCacheError, setAssetCacheError] = useState<string | null>(null);
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const preferences = readDesktopPreferencesFromStorage();
+      setReducedMotion(preferences.reducedMotion);
+      setGraphicsMode(preferences.graphicsMode);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (!desktopAssetCacheEnabled) {
+      return;
+    }
+
     let active = true;
 
     async function loadAssetCache() {
@@ -180,7 +194,7 @@ export function SettingsConsole({
     return () => {
       active = false;
     };
-  }, []);
+  }, [desktopAssetCacheEnabled]);
 
   useEffect(() => {
     let active = true;
@@ -324,7 +338,7 @@ export function SettingsConsole({
       ]}
     >
       <section className="grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
-        <Panel kicker="Profil" title="Desktop-Einstellungen">
+        <Panel kicker="Profil" title="Profil-Einstellungen">
           <div className="grid gap-4">
             <label className="block">
               <span className="ui-kicker">Anzeigename</span>
@@ -375,7 +389,7 @@ export function SettingsConsole({
               />
             </label>
 
-            <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+            {desktopAssetCacheEnabled ? <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
               <p className="ui-kicker">Performance</p>
               <div className="mt-4 grid gap-4">
                 <label className="block">
@@ -400,7 +414,7 @@ export function SettingsConsole({
                   />
                 </label>
               </div>
-            </div>
+            </div> : null}
 
             <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
               <p className="ui-kicker">Asset-Cache</p>
@@ -500,7 +514,7 @@ export function SettingsConsole({
                 {saving ? "Speichert..." : "Profil speichern"}
               </button>
               <button className="ui-button-secondary" type="button" onClick={saveDesktopPreferences}>
-                Desktop-Einstellungen speichern
+                Darstellung speichern
               </button>
               <Link className="ui-button-neutral" href={`/profiles/${session.duelistId}`}>
                 Eigenes Profil öffnen

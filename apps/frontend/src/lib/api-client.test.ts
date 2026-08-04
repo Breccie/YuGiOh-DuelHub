@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  apiDeleteJson,
   apiPatchJson,
   apiPost,
   apiPostJson,
@@ -105,6 +106,26 @@ describe("api-client", () => {
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({ slots: [] }),
+      }),
+    );
+  });
+
+  it("does not advertise an empty DELETE request as JSON", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ deleted: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await apiDeleteJson<{ deleted: true }>("/api/media/asset-1");
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/media/asset-1",
+      expect.objectContaining({
+        method: "DELETE",
+        body: undefined,
+        headers: undefined,
       }),
     );
   });
