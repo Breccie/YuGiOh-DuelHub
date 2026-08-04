@@ -389,7 +389,7 @@ export function SettingsConsole({
               />
             </label>
 
-            {desktopAssetCacheEnabled ? <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+            <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
               <p className="ui-kicker">Performance</p>
               <div className="mt-4 grid gap-4">
                 <label className="block">
@@ -414,9 +414,9 @@ export function SettingsConsole({
                   />
                 </label>
               </div>
-            </div> : null}
+            </div>
 
-            <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+            {desktopAssetCacheEnabled ? <div className="rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
               <p className="ui-kicker">Asset-Cache</p>
               <p className="mt-3 text-sm leading-7 text-[#baa58a]">
                 Karten- und Packbilder werden bei Bedarf geladen und lokal zwischengespeichert.
@@ -496,7 +496,7 @@ export function SettingsConsole({
                   {assetCacheBusy ? "Löscht..." : "Cache leeren"}
                 </button>
               </div>
-            </div>
+            </div> : null}
 
             {feedback ? (
               <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[#f0dfcc]">
