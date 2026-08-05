@@ -132,6 +132,12 @@ describe("campaign join approval", () => {
         setId: startingSets[0]!.id,
       })).rejects.toMatchObject({ status: 409 });
     } finally {
+      await prisma.rewardGrant.deleteMany({ where: { runId: run.id } });
+      await prisma.playGroupRun.update({
+        where: { id: run.id },
+        data: { activeRuleVersionId: null },
+      });
+      await prisma.campaignRuleVersion.deleteMany({ where: { runId: run.id } });
       await prisma.playGroupRun.delete({ where: { id: run.id } });
       await prisma.cardSet.deleteMany({ where: { id: { in: startingSets.map((set) => set.id) } } });
       await prisma.user.deleteMany({ where: { id: { in: [owner.id, applicant.id] } } });

@@ -84,6 +84,11 @@ describe("collection binder saving", () => {
         }),
       );
     } finally {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { activeRunId: null },
+      });
+      await prisma.playGroupRun.deleteMany({ where: { ownerId: user.id } });
       await prisma.user.delete({ where: { id: user.id } });
     }
   });
@@ -248,11 +253,17 @@ describe("collection binder saving", () => {
         }),
       ).toBe(0);
     } finally {
+      if (createdIds.runId) {
+        if (createdIds.userId) {
+          await prisma.user.updateMany({
+            where: { id: createdIds.userId },
+            data: { activeRunId: null },
+          });
+        }
+        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
+      }
       if (createdIds.userId) {
         await prisma.user.deleteMany({ where: { id: createdIds.userId } });
-      }
-      if (createdIds.runId) {
-        await prisma.playGroupRun.deleteMany({ where: { id: createdIds.runId } });
       }
       if (createdIds.setId) {
         await prisma.cardSet.deleteMany({ where: { id: createdIds.setId } });
