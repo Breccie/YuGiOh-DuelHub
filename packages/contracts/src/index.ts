@@ -275,6 +275,24 @@ export const tradeDecisionRequestSchema = z.object({
 });
 export type TradeDecisionRequest = z.infer<typeof tradeDecisionRequestSchema>;
 
+export const createAuctionRequestSchema = z.object({
+  collectionEntryId: z.string().trim().min(1),
+  startingBid: z.number().int().min(1).max(999_999),
+  minIncrement: z.number().int().min(1).max(999_999).default(1),
+  endsAt: z.string().datetime({ offset: true }),
+});
+export type CreateAuctionRequest = z.infer<typeof createAuctionRequestSchema>;
+
+export const placeAuctionBidRequestSchema = z.object({
+  amount: z.number().int().min(1).max(999_999),
+});
+export type PlaceAuctionBidRequest = z.infer<typeof placeAuctionBidRequestSchema>;
+
+export const auctionDecisionRequestSchema = z.object({
+  action: z.enum(["settle", "cancel"]),
+});
+export type AuctionDecisionRequest = z.infer<typeof auctionDecisionRequestSchema>;
+
 export const createFriendRequestSchema = z.object({
   duelistId: z.string().trim().min(1),
 });
@@ -718,6 +736,48 @@ export type TradeListItemDto = {
   receivingPreview: string[];
   awaitingYourResponse: boolean;
   waitingForYourConfirmation: boolean;
+};
+
+export type AuctionCardDto = {
+  collectionEntryId: string;
+  cardId: string;
+  name: string;
+  imageUrl: string | null;
+  setCode: string | null;
+  rarity: string | null;
+};
+
+export type AuctionListItemDto = {
+  id: string;
+  status: "OPEN" | "SETTLED" | "CANCELLED" | "NO_SALE";
+  card: AuctionCardDto;
+  seller: TradeParticipantDto;
+  highestBidder: TradeParticipantDto | null;
+  startingBid: number;
+  minIncrement: number;
+  currentBid: number | null;
+  minimumNextBid: number;
+  bidCount: number;
+  endsAt: string;
+  createdAt: string;
+  settledAt: string | null;
+  isSeller: boolean;
+  isHighestBidder: boolean;
+  canBid: boolean;
+  canSettle: boolean;
+  canCancel: boolean;
+};
+
+export type AuctionOverviewDto = {
+  viewer: TradeParticipantDto;
+  wallet: {
+    balance: number;
+    reservedBalance: number;
+    availableBalance: number;
+  };
+  auctionsEnabled: boolean;
+  availableCards: AuctionCardDto[];
+  auctions: AuctionListItemDto[];
 };
 
 export type TradeDetailDto = {

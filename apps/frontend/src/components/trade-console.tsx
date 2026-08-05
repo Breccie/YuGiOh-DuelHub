@@ -314,6 +314,13 @@ export function TradeConsole({
               <span>Angebot erstellen</span>
             </Link>
             <Link
+              href="/trade/auctions"
+              className="inline-flex min-h-[54px] items-center justify-center gap-3 rounded-[6px] border border-[rgba(208,170,110,0.28)] bg-[rgba(19,16,12,0.78)] px-6 text-sm font-semibold uppercase tracking-[0.16em] text-[#f0d5a6] transition hover:border-[rgba(208,170,110,0.48)]"
+            >
+              <AssetIcon name="cart" className="h-5 w-5 text-current" />
+              <span>Auktionen</span>
+            </Link>
+            <Link
               href="/settings"
               className="inline-flex min-h-[54px] items-center justify-center gap-3 rounded-[6px] border border-[rgba(255,255,255,0.12)] bg-[rgba(10,13,18,0.66)] px-6 text-sm font-semibold uppercase tracking-[0.16em] text-[#ead9c3] transition hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(18,22,28,0.82)]"
             >

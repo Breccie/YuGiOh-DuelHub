@@ -133,7 +133,6 @@ export function BinderHero3D({
           aria-hidden
           draggable={false}
           className="pointer-events-none select-none mx-auto h-auto w-[88%] scale-y-[-1] [-webkit-user-drag:none]"
-          unoptimized
         />
       </div>
 
@@ -168,7 +167,6 @@ export function BinderHero3D({
               height={1360}
               priority
               draggable={false}
-              unoptimized
               className="pointer-events-none select-none h-auto w-full drop-shadow-[0_30px_40px_rgba(0,0,0,0.42)] [-webkit-user-drag:none]"
             />
             <div

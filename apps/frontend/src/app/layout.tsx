@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { DesktopPreferencesHydrator } from "@/components/desktop-preferences-hydrator";
 import { SyncCacheHydrator } from "@/components/sync-cache-hydrator";
 import "./globals.css";
+import "@/styles/workspace.css";
+import "@/styles/campaign.css";
+import "@/styles/tournaments.css";
 
 export const metadata: Metadata = {
   title: {

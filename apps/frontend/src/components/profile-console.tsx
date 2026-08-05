@@ -98,7 +98,7 @@ export function ProfileConsole({
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_18%,rgba(207,91,66,0.18),transparent_32%),radial-gradient(circle_at_85%_20%,rgba(214,164,92,0.12),transparent_34%)]" />
           <div className="relative grid gap-7 lg:grid-cols-[auto_minmax(0,1fr)_minmax(320px,0.72fr)] lg:items-center">
             <div className="relative grid h-28 w-28 place-items-center overflow-hidden rounded-full border border-[rgba(214,164,92,0.32)] bg-[radial-gradient(circle,rgba(190,69,48,0.24),rgba(8,11,16,0.92)_68%)] text-[#e3bd82] shadow-[0_0_36px_rgba(190,69,48,0.18)]">
-              {profile.avatarImageUrl ? <Image src={profile.avatarImageUrl} alt={`Profilbild von ${profile.displayName}`} fill sizes="112px" className="object-cover" unoptimized /> : <AssetIcon name="profile-signet" className="h-14 w-14 text-current" />}
+              {profile.avatarImageUrl ? <Image src={profile.avatarImageUrl} alt={`Profilbild von ${profile.displayName}`} fill sizes="112px" className="object-cover" /> : <AssetIcon name="profile-signet" className="h-14 w-14 text-current" />}
             </div>
             <div>
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-[#d7654c]">

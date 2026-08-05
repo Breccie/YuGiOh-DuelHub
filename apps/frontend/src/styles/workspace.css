@@ -1,0 +1,164 @@
+/* Dense workspace surfaces used by the deck editor. The cinematic presentation
+   stays available to packs and showcases; editing prioritizes scan speed. */
+.deck-editor-root {
+  --deck-panel: rgba(8, 14, 22, 0.82);
+  --deck-panel-raised: rgba(14, 23, 34, 0.88);
+  --deck-line: rgba(147, 177, 201, 0.14);
+  height: 100%;
+}
+
+.deck-editor-toolbar {
+  padding: 0.65rem 0.75rem !important;
+  border-radius: 0.65rem !important;
+  background:
+    linear-gradient(180deg, rgba(18, 27, 39, 0.88), rgba(9, 15, 23, 0.86)) !important;
+}
+
+.deck-editor-toolbar > div:first-child {
+  display: none;
+}
+
+.deck-editor-root .ui-input {
+  min-height: 2.45rem;
+  border-radius: 0.38rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.deck-editor-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.65rem !important;
+  border-color: var(--deck-line) !important;
+  background:
+    linear-gradient(180deg, var(--deck-panel-raised), var(--deck-panel)) !important;
+  padding: 0.65rem !important;
+}
+
+.deck-editor-panel > div:first-child {
+  margin-bottom: 0.5rem;
+}
+
+.deck-editor-panel > div:first-child p {
+  display: none;
+}
+
+.deck-editor-panel > div:first-child h2 {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.deck-editor-panel > div:last-child {
+  min-height: 0;
+}
+
+.deck-editor-catalog > div:last-child {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.deck-editor-deck > div:last-child {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.deck-editor-details > div:last-child {
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.deck-editor-panel ::-webkit-scrollbar {
+  width: 0.42rem;
+}
+
+.deck-editor-panel ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.deck-editor-panel ::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(151, 178, 199, 0.22);
+}
+
+.custom-pack-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-color: rgba(144, 174, 198, 0.13) !important;
+  background: linear-gradient(180deg, rgba(11, 16, 23, 0.86), rgba(7, 11, 17, 0.82)) !important;
+}
+
+.custom-pack-panel > div:first-child {
+  margin-bottom: 0.55rem;
+}
+
+.custom-pack-panel > div:first-child p {
+  display: none;
+}
+
+.custom-pack-panel > div:first-child h2 {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.custom-pack-panel > div:last-child {
+  min-height: 0;
+}
+
+.custom-pack-panel-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.custom-pack-panel ::-webkit-scrollbar {
+  width: 0.42rem;
+}
+
+.custom-pack-panel ::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(151, 178, 199, 0.22);
+}
+
+@media (max-width: 1279px) {
+  .custom-pack-workspace {
+    height: auto;
+    min-height: calc(100dvh - 164px);
+    overflow: visible;
+  }
+
+  .custom-pack-panel {
+    min-height: 640px;
+    overflow: visible;
+  }
+
+  .custom-pack-panel-scroll {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 1279px) {
+  .deck-editor-panel {
+    overflow: visible;
+  }
+
+  .deck-editor-catalog > div:last-child,
+  .deck-editor-deck > div:last-child {
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
+

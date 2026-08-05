@@ -210,24 +210,26 @@ export function TournamentsConsole({
             </div>
             <div className="tournament-ranking-table" role="table" aria-label="Kampagnenrangliste">
               <div className="tournament-ranking-row is-header" role="row">
-                <span>Rang</span><span>Duellant</span><span>Titel</span><span>Podium</span>
-                <span>Siege</span><span>Punkte</span><span>Quote</span><span>Byes</span>
+                <span role="columnheader">Rang</span><span role="columnheader">Duellant</span><span role="columnheader">Titel</span><span role="columnheader">Podium</span>
+                <span role="columnheader">Siege</span><span role="columnheader">Punkte</span><span role="columnheader">Quote</span><span role="columnheader">Byes</span>
               </div>
               {sortedRows.map((row, index) => (
                 <div className="tournament-ranking-row" role="row" key={row.userId}>
-                  <strong data-label="Rang">#{index + 1}</strong>
-                  <span><b>{row.displayName}</b><small>{row.duelistId}</small></span>
-                  <span data-label="Titel">{row.tournamentWins}</span>
-                  <span data-label="Podium">{row.podiumFinishes}</span>
-                  <span data-label="Siege">{row.matchWins}</span>
-                  <span data-label="Punkte">{row.matchPoints}</span>
-                  <span data-label="Quote">{Math.round(row.winRate * 100)}%</span>
-                  <span data-label="Byes">{row.byes}</span>
+                  <strong role="cell" data-label="Rang">#{index + 1}</strong>
+                  <span role="cell"><b>{row.displayName}</b><small>{row.duelistId}</small></span>
+                  <span role="cell" data-label="Titel">{row.tournamentWins}</span>
+                  <span role="cell" data-label="Podium">{row.podiumFinishes}</span>
+                  <span role="cell" data-label="Siege">{row.matchWins}</span>
+                  <span role="cell" data-label="Punkte">{row.matchPoints}</span>
+                  <span role="cell" data-label="Quote">{Math.round(row.winRate * 100)}%</span>
+                  <span role="cell" data-label="Byes">{row.byes}</span>
                 </div>
               ))}
               {sortedRows.length === 0 ? (
-                <div className="ui-empty rounded-[18px] px-4 py-8 text-center text-sm">
-                  Die Rangliste füllt sich nach dem ersten abgeschlossenen Turnier.
+                <div className="ui-empty rounded-[18px] px-4 py-8 text-center text-sm" role="row">
+                  <span role="cell" aria-colspan={8}>
+                    Die Rangliste füllt sich nach dem ersten abgeschlossenen Turnier.
+                  </span>
                 </div>
               ) : null}
             </div>

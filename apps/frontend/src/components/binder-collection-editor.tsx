@@ -8,7 +8,6 @@ import type {
   CardCatalogResponse,
   CardCatalogSort,
 } from "@ygo/contracts";
-import { AppSidebar } from "@/components/app-sidebar";
 import { AssetIcon } from "@/components/asset-icon";
 import {
   buildCardCatalogFilterQuery,
@@ -19,7 +18,6 @@ import {
 } from "@/components/card-catalog-controls";
 import { ImageCropUpload } from "@/components/image-crop-upload";
 import { BinderDesignPreview } from "@/components/personal-design-preview";
-import { ConsoleWindowChromeButton as WindowChromeButton } from "@/components/console-shell-primitives";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { collectionClient } from "@/lib/collection-client";
 import { BinderOpenSpread, type BinderEntryDragPayload } from "@/components/binder-open-spread";
@@ -1144,7 +1142,7 @@ export function BinderCollectionEditor({
   return (
     <div
       className={classNames(
-        "pointer-events-none fixed inset-0 z-[120] transition",
+        "binder-editor-overlay pointer-events-none fixed z-[120] transition",
         isOpen ? "opacity-100" : "opacity-0",
       )}
     >
@@ -1155,23 +1153,13 @@ export function BinderCollectionEditor({
         aria-labelledby="binder-editor-title"
         tabIndex={-1}
         className={classNames(
-          "app-shell pointer-events-auto absolute inset-0 overflow-hidden bg-transparent text-[#f2e5d1]",
+          "pointer-events-auto absolute inset-0 overflow-hidden border border-white/10 bg-[rgba(5,8,12,0.9)] text-[#f2e5d1] shadow-[-18px_0_50px_rgba(0,0,0,0.34)] backdrop-blur-xl",
           !isOpen && "hidden",
         )}
       >
-        <div className="app-background" />
-
-        <AppSidebar />
-
-        <main className="app-main relative z-10 h-screen min-w-0 overflow-y-auto pb-20 lg:ml-[176px] lg:pb-0">
+        <main className="relative z-10 h-full min-w-0 overflow-y-auto">
           <div className="flex min-h-full flex-col px-5 pb-5 pt-4 sm:px-7 xl:px-8">
-            <div className="flex justify-end gap-3">
-              <WindowChromeButton label="Minimieren" name="window-min" />
-              <WindowChromeButton label="Fenster" name="window-max" />
-              <WindowChromeButton label="Schließen" name="window-close" />
-            </div>
-
-            <header className="mt-3 grid gap-5 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1fr)] xl:items-start">
+            <header className="grid gap-5 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1fr)] xl:items-start">
               <div>
                 <p className="text-[0.78rem] uppercase tracking-[0.26em] text-[#cb5c44]">
                   Sammlung

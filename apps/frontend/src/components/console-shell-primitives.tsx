@@ -347,7 +347,7 @@ export function ConsoleProfileMenuChip({
         className="flex h-[48px] shrink-0 items-center gap-2.5 rounded-[10px] border border-[rgba(255,255,255,0.1)] bg-[rgba(10,13,18,0.62)] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md sm:min-w-[172px]"
       >
         <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-[rgba(255,255,255,0.12)] bg-[radial-gradient(circle,rgba(35,49,68,0.92),rgba(10,12,16,0.98))] text-[#d9c5ac]">
-          {presentedViewer.avatarImageUrl ? <Image src={presentedViewer.avatarImageUrl} alt="" fill sizes="32px" className="object-cover" unoptimized /> : <AssetIcon name="profile-signet" className="h-5 w-5 text-current" />}
+          {presentedViewer.avatarImageUrl ? <Image src={presentedViewer.avatarImageUrl} alt="" fill sizes="32px" className="object-cover" /> : <AssetIcon name="profile-signet" className="h-5 w-5 text-current" />}
           <span className="absolute right-0 top-0 h-2 w-2 rounded-full bg-[#d34d39] shadow-[0_0_8px_rgba(211,77,57,0.85)]" />
         </div>
         <div className="hidden text-left sm:block">
