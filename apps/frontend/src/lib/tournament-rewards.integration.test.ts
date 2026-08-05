@@ -574,7 +574,15 @@ describe("tournament rewards and progression", () => {
       await completeTournament(prisma, owner.id, tournament.id);
       const leaderboard = await getCampaignLeaderboard(prisma, owner.id);
       expect(leaderboard.winnerArchive).toEqual(expect.arrayContaining([
-        expect.objectContaining({ tournamentId: tournament.id }),
+        expect.objectContaining({
+          tournamentId: tournament.id,
+          rewardSummary: {
+            totalCredits: 300,
+            totalPacks: 2,
+            packSetNames: [rewardPackSet.name],
+            grantCount: 1,
+          },
+        }),
       ]));
       expect(leaderboard.rows.some((row) => row.userId === owner.id)).toBe(true);
       await expect(prisma.tournamentResult.count({ where: { tournamentId: tournament.id } }))

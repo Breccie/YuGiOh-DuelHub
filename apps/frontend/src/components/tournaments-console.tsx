@@ -11,6 +11,7 @@ import type {
   UpdateTournamentMvpCardsRequest,
 } from "@ygo/contracts";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
+import { AssetIcon } from "@/components/asset-icon";
 import { Panel, StatusPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { TournamentOverviewDto, ViewerSession } from "@/lib/app-dtos";
@@ -93,6 +94,10 @@ export function TournamentsConsole({
   const [pending, setPending] = useState(false);
   const [editingMvpTournamentId, setEditingMvpTournamentId] = useState<string | null>(null);
   const [mvpDraft, setMvpDraft] = useState<UpdateTournamentMvpCardsRequest["cards"]>([]);
+  const [archiveOverride, setArchiveOverride] = useState<typeof leaderboard.winnerArchive | null>(null);
+  const [selectedArchiveId, setSelectedArchiveId] = useState(
+    leaderboard.winnerArchive[0]?.tournamentId ?? null,
+  );
 
   const sortedRows = useMemo(
     () => [...leaderboard.rows].sort((left, right) => compareRankingRows(left, right, rankingSort)),
@@ -100,6 +105,10 @@ export function TournamentsConsole({
   );
   const canCurateMvp = leaderboard.viewerRole === "OWNER" || leaderboard.viewerRole === "ORGANIZER";
   const canManageTournaments = canCurateMvp;
+  const archiveEntries = archiveOverride ?? leaderboard.winnerArchive;
+  const selectedArchive = archiveEntries.find((entry) => entry.tournamentId === selectedArchiveId)
+    ?? archiveEntries[0]
+    ?? null;
 
   async function createTournamentFlow() {
     setPending(true);
@@ -120,7 +129,8 @@ export function TournamentsConsole({
     setPending(true);
     setFeedback(null);
     try {
-      await tournamentClient.updateMvpCards(tournamentId, { cards: mvpDraft });
+      const data = await tournamentClient.updateMvpCards(tournamentId, { cards: mvpDraft });
+      setArchiveOverride(data.winnerArchive);
       setEditingMvpTournamentId(null);
       startTransition(() => router.refresh());
     } catch (error) {
@@ -266,101 +276,192 @@ export function TournamentsConsole({
         ) : null}
 
         {activeTab === "ARCHIVE" ? (
-          <div className="tournament-archive-grid">
-            {leaderboard.winnerArchive.map((entry) => {
-              const isEditing = editingMvpTournamentId === entry.tournamentId;
-              return (
-                <article className="tournament-archive-card" key={entry.tournamentId}>
-                  <header>
-                    <div>
-                      <p className="ui-kicker">{formatDate(entry.completedAt)}</p>
-                      <h2>{entry.title}</h2>
-                      <span>{entry.formatLabel ?? "Ohne Format"} · {entry.participantCount} Teilnehmer</span>
-                    </div>
-                    <Link href={`/tournaments/${entry.tournamentId}`} className="ui-button-secondary">Details</Link>
-                  </header>
-                  <ol className="tournament-podium">
-                    {entry.podium.map((player) => (
-                      <li key={player.userId}><b>#{player.rank}</b><span>{player.displayName}<small>{player.duelistId}</small></span></li>
-                    ))}
-                  </ol>
+          <div className="tournament-result-workspace">
+            {archiveEntries.length > 1 ? (
+              <nav className="tournament-result-picker" aria-label="Abgeschlossene Turniere">
+                {archiveEntries.map((entry) => (
+                  <button
+                    key={entry.tournamentId}
+                    type="button"
+                    className={selectedArchive?.tournamentId === entry.tournamentId ? "is-active" : ""}
+                    onClick={() => setSelectedArchiveId(entry.tournamentId)}
+                  >
+                    <span>{entry.title}</span>
+                    <small>{formatDate(entry.completedAt)}</small>
+                  </button>
+                ))}
+              </nav>
+            ) : null}
 
-                  <div className="tournament-mvp-grid">
-                    {entry.mvpCards.map((card) => (
-                      <div className="tournament-mvp-card" key={card.id}>
-                        {card.imageUrl ? <Image src={card.imageUrl} alt={card.cardName} width={84} height={123} /> : null}
-                        <div><strong>{card.cardName}</strong><span>{card.featuredDisplayName}</span>{card.note ? <p>{card.note}</p> : null}</div>
+            {selectedArchive ? (() => {
+              const champion = selectedArchive.podium.find((player) => player.rank === 1);
+              const runnerUp = selectedArchive.podium.find((player) => player.rank === 2);
+              const thirdPlace = selectedArchive.podium.find((player) => player.rank === 3);
+              const isEditing = editingMvpTournamentId === selectedArchive.tournamentId;
+              const rewardSummary = selectedArchive.rewardSummary ?? {
+                totalCredits: 0,
+                totalPacks: 0,
+                packSetNames: [],
+                grantCount: 0,
+              };
+              return (
+                <article className="tournament-result-scene">
+                  <header className="tournament-result-heading">
+                    <div>
+                      <p className="ui-kicker">Turnier abgeschlossen</p>
+                      <h2>{selectedArchive.title}</h2>
+                      <div className="tournament-result-rule" aria-hidden="true">
+                        <AssetIcon name="divider-mark" className="h-3 w-3" />
                       </div>
-                    ))}
-                    {entry.mvpCards.length === 0 && !isEditing ? (
-                      <p className="ui-empty rounded-[16px] px-4 py-5 text-sm">Noch keine MVP-Karte kuratiert.</p>
-                    ) : null}
+                      <p>{selectedArchive.formatLabel ?? "Offenes Format"} · {formatDate(selectedArchive.completedAt)}</p>
+                    </div>
+                    <Link href={`/tournaments/${selectedArchive.tournamentId}`} className="ui-button-secondary">
+                      Turnierdetails
+                    </Link>
+                  </header>
+
+                  <div className="tournament-result-stage">
+                    <section className="tournament-champion-panel" aria-label="Turniersieger">
+                      <div className="tournament-champion-crest">
+                        <Image
+                          src="/app-assets/tournaments/champion-crest.png"
+                          alt=""
+                          width={320}
+                          height={320}
+                          priority
+                        />
+                        <b>1</b>
+                      </div>
+                      <p>Champion</p>
+                      <h3>{champion?.displayName ?? "Kein Sieger ermittelt"}</h3>
+                      {champion ? <span>{champion.duelistId}</span> : null}
+                      <div className="tournament-champion-reward">
+                        <AssetIcon name="package" className="h-5 w-5" />
+                        <span>
+                          {rewardSummary.totalCredits > 0
+                            ? `${rewardSummary.totalCredits} Credits im Turnier vergeben`
+                            : "Ergebnis dauerhaft archiviert"}
+                        </span>
+                      </div>
+                    </section>
+
+                    <div className="tournament-result-side">
+                      <div className="tournament-runner-grid">
+                        {[runnerUp, thirdPlace].map((player, index) => (
+                          <section className="tournament-runner-card" key={player?.userId ?? index}>
+                            <div className="tournament-place-emblem is-small"><b>{index + 2}</b></div>
+                            <div>
+                              <p>{index === 0 ? "Zweiter Platz" : "Dritter Platz"}</p>
+                              <h3>{player?.displayName ?? "Nicht belegt"}</h3>
+                              {player ? <span>{player.duelistId}</span> : null}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+
+                      <section className="tournament-result-mvp" aria-label="MVP-Karten">
+                        <header>
+                          <div>
+                            <p className="ui-kicker">Entscheidende Karten</p>
+                            <h3>MVP-Karten</h3>
+                          </div>
+                          {canCurateMvp && selectedArchive.mvpCandidates.length > 0 && !isEditing ? (
+                            <button
+                              type="button"
+                              className="ui-button-secondary"
+                              onClick={() => {
+                                setEditingMvpTournamentId(selectedArchive.tournamentId);
+                                setMvpDraft(selectedArchive.mvpCards.map((card) => ({ cardId: card.cardId, featuredUserId: card.featuredUserId, note: card.note })));
+                              }}
+                            >
+                              Auswahl bearbeiten
+                            </button>
+                          ) : null}
+                        </header>
+
+                        {!isEditing ? (
+                          <div className="tournament-result-mvp-grid">
+                            {selectedArchive.mvpCards.map((card) => (
+                              <article className="tournament-result-mvp-card" key={card.id}>
+                                {card.imageUrl ? <Image src={card.imageUrl} alt={card.cardName} width={150} height={219} /> : null}
+                                <div>
+                                  <strong>{card.cardName}</strong>
+                                  <span>{card.featuredDisplayName}</span>
+                                  {card.note ? <p>{card.note}</p> : null}
+                                </div>
+                              </article>
+                            ))}
+                            {selectedArchive.mvpCards.length === 0 ? (
+                              <div className="tournament-result-mvp-empty">
+                                <AssetIcon name="shield" className="h-7 w-7" />
+                                <p>Noch keine MVP-Karten ausgezeichnet.</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="tournament-mvp-editor">
+                            {[0, 1, 2].map((position) => {
+                              const selected = mvpDraft[position];
+                              return (
+                                <div key={position} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                                  <select
+                                    className="ui-input"
+                                    aria-label={`MVP-Karte ${position + 1}`}
+                                    value={selected ? `${selected.featuredUserId}:${selected.cardId}` : ""}
+                                    onChange={(event) => {
+                                      const [featuredUserId, cardId] = event.target.value.split(":");
+                                      setMvpDraft((current) => {
+                                        const next = [...current];
+                                        if (!event.target.value) next.splice(position, 1);
+                                        else next[position] = { featuredUserId, cardId, note: next[position]?.note ?? null };
+                                        return next.filter(Boolean);
+                                      });
+                                    }}
+                                  >
+                                    <option value="">Keine Karte</option>
+                                    {selectedArchive.mvpCandidates.map((candidate) => (
+                                      <option key={`${candidate.featuredUserId}:${candidate.cardId}`} value={`${candidate.featuredUserId}:${candidate.cardId}`}>
+                                        {candidate.cardName} · {candidate.featuredDisplayName}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    className="ui-input"
+                                    aria-label={`Begründung für MVP-Karte ${position + 1}`}
+                                    value={selected?.note ?? ""}
+                                    disabled={!selected}
+                                    placeholder="Begründung (optional)"
+                                    onChange={(event) => setMvpDraft((current) => current.map((item, index) => index === position ? { ...item, note: event.target.value } : item))}
+                                  />
+                                  <span className="self-center text-xs text-[#9f8c77]">#{position + 1}</span>
+                                </div>
+                              );
+                            })}
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" className="ui-button-primary" disabled={pending} onClick={() => void saveMvpCards(selectedArchive.tournamentId)}>Speichern</button>
+                              <button type="button" className="ui-button-secondary" onClick={() => setEditingMvpTournamentId(null)}>Abbrechen</button>
+                            </div>
+                          </div>
+                        )}
+                      </section>
+                    </div>
                   </div>
 
-                  {canCurateMvp && entry.mvpCandidates.length > 0 ? (
-                    <div className="mt-4">
-                      {!isEditing ? (
-                        <button
-                          type="button"
-                          className="ui-button-secondary"
-                          onClick={() => {
-                            setEditingMvpTournamentId(entry.tournamentId);
-                            setMvpDraft(entry.mvpCards.map((card) => ({ cardId: card.cardId, featuredUserId: card.featuredUserId, note: card.note })));
-                          }}
-                        >
-                          MVP-Karten kuratieren
-                        </button>
-                      ) : (
-                        <div className="tournament-mvp-editor">
-                          {[0, 1, 2].map((position) => {
-                            const selected = mvpDraft[position];
-                            return (
-                              <div key={position} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                                <select
-                                  className="ui-input"
-                                  value={selected ? `${selected.featuredUserId}:${selected.cardId}` : ""}
-                                  onChange={(event) => {
-                                    const [featuredUserId, cardId] = event.target.value.split(":");
-                                    setMvpDraft((current) => {
-                                      const next = [...current];
-                                      if (!event.target.value) next.splice(position, 1);
-                                      else next[position] = { featuredUserId, cardId, note: next[position]?.note ?? null };
-                                      return next.filter(Boolean);
-                                    });
-                                  }}
-                                >
-                                  <option value="">Keine Karte</option>
-                                  {entry.mvpCandidates.map((candidate) => (
-                                    <option key={`${candidate.featuredUserId}:${candidate.cardId}`} value={`${candidate.featuredUserId}:${candidate.cardId}`}>
-                                      {candidate.cardName} · {candidate.featuredDisplayName}
-                                    </option>
-                                  ))}
-                                </select>
-                                <input
-                                  className="ui-input"
-                                  value={selected?.note ?? ""}
-                                  disabled={!selected}
-                                  placeholder="Begründung (optional)"
-                                  onChange={(event) => setMvpDraft((current) => current.map((item, index) => index === position ? { ...item, note: event.target.value } : item))}
-                                />
-                                <span className="self-center text-xs text-[#9f8c77]">#{position + 1}</span>
-                              </div>
-                            );
-                          })}
-                          <div className="flex flex-wrap gap-2">
-                            <button type="button" className="ui-button-primary" disabled={pending} onClick={() => void saveMvpCards(entry.tournamentId)}>Speichern</button>
-                            <button type="button" className="ui-button-secondary" onClick={() => setEditingMvpTournamentId(null)}>Abbrechen</button>
-                          </div>
-                        </div>
-                      )}
+                  <footer className="tournament-result-footer">
+                    <div className="tournament-result-footer-copy">
+                      <AssetIcon name="package" className="h-7 w-7" />
+                      <div><p className="ui-kicker">Belohnungsübersicht</p><strong>{rewardSummary.grantCount > 0 ? "Turnier-Rewards wurden verteilt" : "Keine Rewards für dieses Turnier"}</strong></div>
                     </div>
-                  ) : null}
+                    <div className="tournament-result-stat"><AssetIcon name="package" className="h-6 w-6" /><span>Reward-Packs<b>{rewardSummary.totalPacks}</b></span></div>
+                    <div className="tournament-result-stat"><AssetIcon name="profile-signet" className="h-6 w-6" /><span>Credits<b>{rewardSummary.totalCredits}</b></span></div>
+                    <div className="tournament-result-stat"><AssetIcon name="shield" className="h-6 w-6" /><span>MVP-Karten<b>{selectedArchive.mvpCards.length}</b></span></div>
+                    <Link href="/packs" className="ui-button-ember">Reward-Inbox öffnen</Link>
+                  </footer>
                 </article>
               );
-            })}
-            {leaderboard.winnerArchive.length === 0 ? (
+            })() : (
               <div className="ui-empty rounded-[22px] px-5 py-10 text-center text-sm">Abgeschlossene Turniere erscheinen hier dauerhaft.</div>
-            ) : null}
+            )}
           </div>
         ) : null}
       </section>

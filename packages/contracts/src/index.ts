@@ -827,6 +827,12 @@ export type TournamentWinnerArchiveDto = {
     featuredUserId: string;
     featuredDisplayName: string;
   }>;
+  rewardSummary: {
+    totalCredits: number;
+    totalPacks: number;
+    packSetNames: string[];
+    grantCount: number;
+  };
 };
 
 export type CampaignLeaderboardResponse = {

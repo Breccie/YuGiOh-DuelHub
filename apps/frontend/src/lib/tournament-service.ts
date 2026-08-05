@@ -1306,7 +1306,7 @@ export async function getCampaignLeaderboard(
       }
     });
   }
-  const [memberships, completedTournaments] = await Promise.all([
+  const [memberships, completedTournaments, tournamentRewards] = await Promise.all([
     prisma.runMembership.findMany({
       where: { runId: activeRun.id },
       include: { user: true },
@@ -1323,6 +1323,18 @@ export async function getCampaignLeaderboard(
         },
       },
       orderBy: [{ completedAt: "desc" }, { updatedAt: "desc" }],
+    }),
+    prisma.rewardGrant.findMany({
+      where: {
+        runId: activeRun.id,
+        reason: { startsWith: "TOURNAMENT_REWARD | " },
+      },
+      select: {
+        reason: true,
+        amountCredits: true,
+        packQuantity: true,
+        packSet: { select: { name: true } },
+      },
     }),
   ]);
 
@@ -1342,6 +1354,14 @@ export async function getCampaignLeaderboard(
     byes: 0,
     latestTitleAt: null as string | null,
   }]));
+  const rewardsByTournament = new Map<string, typeof tournamentRewards>();
+  for (const reward of tournamentRewards) {
+    const tournamentId = reward.reason?.split(" | ")[1];
+    if (!tournamentId) continue;
+    const current = rewardsByTournament.get(tournamentId) ?? [];
+    current.push(reward);
+    rewardsByTournament.set(tournamentId, current);
+  }
 
   const archive: CampaignLeaderboardResponse["winnerArchive"] = [];
   for (const tournament of completedTournaments) {
@@ -1428,6 +1448,15 @@ export async function getCampaignLeaderboard(
           featuredDisplayName: user.displayName,
         }] : [];
       }),
+      rewardSummary: (() => {
+        const rewards = rewardsByTournament.get(tournament.id) ?? [];
+        return {
+          totalCredits: rewards.reduce((total, reward) => total + reward.amountCredits, 0),
+          totalPacks: rewards.reduce((total, reward) => total + reward.packQuantity, 0),
+          packSetNames: [...new Set(rewards.flatMap((reward) => reward.packSet?.name ? [reward.packSet.name] : []))],
+          grantCount: rewards.length,
+        };
+      })(),
     });
   }
 
