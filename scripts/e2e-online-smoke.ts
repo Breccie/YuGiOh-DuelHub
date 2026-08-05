@@ -69,6 +69,7 @@ function startApiServer() {
           process.env.COOKIE_SECRET ??
           "codex-online-smoke-cookie-secret-at-least-32-chars",
       },
+      detached: process.platform !== "win32",
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -99,6 +100,7 @@ function startFrontendServer() {
         DATABASE_URL: frontendDatabaseUrl,
         NEXT_TELEMETRY_DISABLED: "1",
       },
+      detached: process.platform !== "win32",
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -109,26 +111,48 @@ function startFrontendServer() {
 }
 
 async function stopProcess(child: ChildProcessWithoutNullStreams | null) {
-  if (!child || child.killed) {
+  if (!child) {
     return;
   }
 
-  if (process.platform === "win32") {
+  if (child.exitCode === null && process.platform === "win32") {
     spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
       shell: true,
       stdio: "ignore",
     });
-  } else {
-    child.kill();
+  } else if (child.exitCode === null && child.pid) {
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch {
+      child.kill("SIGTERM");
+    }
   }
 
-  await new Promise<void>((resolve) => {
+  const exited = await new Promise<boolean>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve(true);
+      return;
+    }
     const timeout = setTimeout(resolve, 3_000);
     child.once("exit", () => {
       clearTimeout(timeout);
-      resolve();
+      resolve(true);
     });
   });
+
+  if (!exited && child.exitCode === null && child.pid && process.platform !== "win32") {
+    try {
+      process.kill(-child.pid, "SIGKILL");
+    } catch {
+      child.kill("SIGKILL");
+    }
+  }
+
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.stdin?.destroy();
+  child.removeAllListeners();
+  child.unref();
 }
 
 async function waitForHttp(url: string, label: string) {
@@ -1113,7 +1137,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main().then(
+  () => process.exit(0),
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  },
+);
