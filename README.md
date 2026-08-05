@@ -22,6 +22,7 @@ Die App funktioniert direkt in einem aktuellen Desktop-Browser. Für Duelle und 
 - Decks als `.ydk` für EDOPro exportieren
 - Karten zwischen Spielern anbieten, reservieren und nach beidseitiger Bestätigung tauschen
 - Karten und Credits atomar tauschen; auf Wunsch bestätigt ein Organizer den Abschluss
+- Physische Kartenkopien in Mehrbieter-Auktionen mit reservierten Geboten handeln
 - Eigene Packs erstellen, simulieren, veröffentlichen, planen und als Belohnung vergeben
 - Swiss-, Round-Robin-, Single-Elimination- und manuelle Turniere in BO1/BO3/BO5 verwalten
 - Turnierdecks einchecken, beim Start unveränderlich snapshotten und MVP-Karten ausstellen

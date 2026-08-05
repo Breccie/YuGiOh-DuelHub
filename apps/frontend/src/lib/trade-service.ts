@@ -1295,6 +1295,19 @@ async function finalizeAcceptedTrade(
   now: Date,
 ) {
   for (const item of acceptedVersion.items) {
+    await tx.collectionBinderSlot.updateMany({
+      where: { collectionEntryId: item.collectionEntryId },
+      data: {
+        collectionEntryId: null,
+        entryReferenceId: null,
+        snapshotCardId: null,
+        snapshotCardName: null,
+        snapshotImageUrl: null,
+        snapshotPrintingLabel: null,
+        snapshotSetCode: null,
+        snapshotRarity: null,
+      },
+    });
     const { count } = await tx.collectionEntry.updateMany({
       where: {
         id: item.collectionEntryId,

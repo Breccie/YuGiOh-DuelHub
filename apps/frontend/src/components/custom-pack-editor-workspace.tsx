@@ -746,7 +746,7 @@ export function CustomPackEditorWorkspace({
             <div className="custom-pack-panel-scroll flex min-h-0 flex-1 flex-col gap-2 pr-1">
               <div className="grid gap-4 rounded-[10px] border border-[rgba(214,164,92,0.18)] bg-[linear-gradient(125deg,rgba(116,72,32,0.14),rgba(255,255,255,0.025))] p-4 md:grid-cols-[180px_minmax(0,1fr)]">
                 <div className="relative mx-auto aspect-[2/3] w-full max-w-[180px] overflow-hidden rounded-[12px] border border-white/12 bg-[linear-gradient(180deg,rgba(20,26,34,0.9),rgba(7,10,15,0.96))] shadow-[0_24px_48px_rgba(0,0,0,0.42)]">
-                  {previewAssetId ? <Image src={`/api/assets/media/${encodeURIComponent(previewAssetId)}`} alt="Booster-Motiv Vorschau" fill sizes="180px" className="object-cover" unoptimized /> : <div className="grid h-full place-items-center px-3 text-center text-xs text-white/40">Standardmotiv</div>}
+                  {previewAssetId ? <Image src={`/api/assets/media/${encodeURIComponent(previewAssetId)}`} alt="Booster-Motiv Vorschau" fill sizes="180px" className="object-cover" /> : <div className="grid h-full place-items-center px-3 text-center text-xs text-white/40">Standardmotiv</div>}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-3 pb-3 pt-10 text-center"><p className="text-sm font-semibold text-white">{selected?.name}</p><p className="mt-1 text-[0.62rem] uppercase tracking-[0.16em] text-white/65">{selected?.code}</p></div>
                 </div>
                 <div className="min-w-0">

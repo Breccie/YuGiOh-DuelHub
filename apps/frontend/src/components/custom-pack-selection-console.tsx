@@ -41,7 +41,7 @@ export function CustomPackSelectionConsole({ session, activeRun, packs }: {
             return (
               <article key={version.id} className="group overflow-hidden rounded-2xl border border-white/10 bg-[rgba(7,10,14,.82)] p-4 shadow-xl backdrop-blur-xl">
                 <div className="relative mx-auto aspect-[2/3] w-[72%] overflow-hidden rounded-xl bg-black/40 shadow-[0_18px_42px_rgba(0,0,0,.5)] transition duration-300 group-hover:-translate-y-1">
-                  <Image src={imageUrl(version.packImageAssetId)} alt={`${pack.name} Booster`} fill sizes="(max-width: 640px) 65vw, 20vw" className="object-contain" unoptimized />
+                  <Image src={imageUrl(version.packImageAssetId)} alt={`${pack.name} Booster`} fill sizes="(max-width: 640px) 65vw, 20vw" className="object-contain" />
                 </div>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-[.16em] text-[#c96449]">{pack.code}</p>
                 <h2 className="mt-1 text-lg font-semibold text-[#f5e4ca]">{pack.name}</h2>

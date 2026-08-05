@@ -1,6 +1,7 @@
 import { copyFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { AxeBuilder } from "@axe-core/playwright";
 import { PrismaClient } from "@prisma/client";
 import { chromium, type Locator, type Page } from "playwright";
 
@@ -127,6 +128,26 @@ async function resetSmokeDatabase() {
   await copyFile(sourceDbPath, smokeDbPath);
 }
 
+async function synchronizeSmokeDatabase() {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(
+      "npx",
+      ["prisma", "db", "push", "--schema", "prisma/schema.prisma", "--skip-generate"],
+      {
+        cwd: repoRoot,
+        env: process.env,
+        shell: process.platform === "win32",
+        stdio: "inherit",
+      },
+    );
+    child.once("error", reject);
+    child.once("exit", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Smoke database schema sync failed with exit code ${code}.`));
+    });
+  });
+}
+
 async function cleanupSmokeDatabase() {
   const paths = [
     smokeDbPath,
@@ -214,6 +235,20 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
   const browser = await chromium.launch({
     headless: process.env.HEADED !== "1",
   });
+  const mobileContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const mobilePage = await mobileContext.newPage();
+  await mobilePage.goto(`${baseUrl}/login`);
+  const mobileLoginForm = mobilePage.locator("form").first();
+  await assertVisible(mobileLoginForm, "mobile login form");
+  const mobileLoginBox = await mobileLoginForm.boundingBox();
+  if (!mobileLoginBox || mobileLoginBox.y >= 844 || mobileLoginBox.y + 120 > 844) {
+    throw new Error("Mobile login form is not available in the first viewport.");
+  }
+  await assertNoCriticalAccessibilityViolations(mobilePage, "mobile login");
+  await mobileContext.close();
+
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
   });
@@ -269,6 +304,7 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
       page.getByText("Nächster chronologischer Booster").first(),
       "packs page",
     );
+    await assertNoCriticalAccessibilityViolations(page, "pack selection");
     const hasSeededSet = await page.evaluate(async (setId) => {
       const response = await fetch("/api/pack-openings");
       const body = await response.json();
@@ -313,6 +349,7 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
     console.log("[e2e] Verifying collection page");
     await page.goto(`${baseUrl}/collection`);
     await assertVisible(page.getByText("Karten").first(), "collection page");
+    await assertNoCriticalAccessibilityViolations(page, "collection");
     await assertCollectionEntries(owner.duelistId, 3);
 
     console.log("[e2e] Creating a deck and validating draft export protection");
@@ -407,9 +444,18 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
       "duels page",
     );
 
+    console.log("[e2e] Verifying auction workspace");
+    await page.goto(`${baseUrl}/trade/auctions`);
+    await assertVisible(
+      page.getByRole("heading", { name: "Kartenauktionen" }),
+      "auction workspace",
+    );
+    await assertNoCriticalAccessibilityViolations(page, "auction workspace");
+
     console.log("[e2e] Verifying tournament page");
     await page.goto(`${baseUrl}/tournaments`);
     await assertVisible(page.getByText("Turniere").first(), "tournaments page");
+    await assertNoCriticalAccessibilityViolations(page, "tournaments");
 
     console.log("[e2e] Creating and completing a two-player tournament");
     const tournament = await apiJson<{
@@ -481,6 +527,26 @@ async function assertVisible(locator: Locator, label: string) {
 
   if (!(await locator.isVisible())) {
     throw new Error(`${label} was not visible.`);
+  }
+}
+
+async function assertNoCriticalAccessibilityViolations(page: Page, label: string) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  const criticalViolations = results.violations.filter(
+    (violation) => violation.impact === "critical",
+  );
+
+  if (criticalViolations.length > 0) {
+    const details = criticalViolations.map((violation) => ({
+      id: violation.id,
+      help: violation.help,
+      targets: violation.nodes.flatMap((node) => node.target).slice(0, 6),
+    }));
+    throw new Error(
+      `${label} has critical WCAG violations: ${JSON.stringify(details)}`,
+    );
   }
 }
 
@@ -805,6 +871,7 @@ async function main() {
   try {
     console.log(`[e2e] Preparing smoke database ${databaseUrl}`);
     await resetSmokeDatabase();
+    await synchronizeSmokeDatabase();
     const catalog = await seedCatalog();
 
     console.log(`[e2e] Starting Next dev server at ${baseUrl}`);

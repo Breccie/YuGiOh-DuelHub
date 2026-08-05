@@ -169,6 +169,29 @@ describe("trade service", () => {
           },
         }),
       ]);
+      const proposerBinder = await prisma.collectionBinder.create({
+        data: {
+          userId: proposer.id,
+          runId: run.id,
+          name: "Trade binder",
+          coverKey: "inferno-vortex",
+          pages: {
+            create: {
+              pageIndex: 0,
+              slots: {
+                create: {
+                  slotIndex: 0,
+                  collectionEntryId: proposerEntryB.id,
+                  entryReferenceId: proposerEntryB.id,
+                  snapshotCardId: proposerCardB.id,
+                  snapshotCardName: proposerCardB.name,
+                },
+              },
+            },
+          },
+        },
+        include: { pages: { include: { slots: true } } },
+      });
 
       const createdTrade = await createTradeOffer(prisma, proposer.id, {
         responderDuelistId: responder.duelistId,
@@ -300,6 +323,15 @@ describe("trade service", () => {
       expect(finalWallets.find((wallet) => wallet.userId === proposer.id)).toMatchObject({ balance: 1150, reservedBalance: 0 });
       expect(finalWallets.find((wallet) => wallet.userId === responder.id)).toMatchObject({ balance: 850, reservedBalance: 0 });
       expect(await prisma.creditLedgerEntry.count({ where: { runId: run.id, source: "TRADE_TRANSFER" } })).toBe(4);
+      expect(
+        await prisma.collectionBinderSlot.findUniqueOrThrow({
+          where: { id: proposerBinder.pages[0].slots[0].id },
+        }),
+      ).toMatchObject({
+        collectionEntryId: null,
+        entryReferenceId: null,
+        snapshotCardId: null,
+      });
     } finally {
       if (createdIds.runId) {
         await prisma.playGroupRun.deleteMany({

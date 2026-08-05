@@ -3,7 +3,7 @@
 import Image from "next/image";
 
 function Artwork({ imageUrl, alt }: { imageUrl: string; alt: string }) {
-  return <Image src={imageUrl} alt={alt} fill sizes="320px" className="object-cover" unoptimized />;
+  return <Image src={imageUrl} alt={alt} fill sizes="320px" className="object-cover" />;
 }
 
 export function BinderDesignPreview({
@@ -20,7 +20,7 @@ export function BinderDesignPreview({
   if (!custom) {
     return (
       <div className={`relative aspect-[2/3] ${className}`}>
-        <Image src={imageUrl} alt={alt} fill sizes="320px" className="object-contain" unoptimized />
+        <Image src={imageUrl} alt={alt} fill sizes="320px" className="object-contain" />
       </div>
     );
   }
@@ -59,7 +59,7 @@ export function DeckBoxDesignPreview({
   if (!custom) {
     return (
       <div className={`relative aspect-[2/3] ${className}`}>
-        <Image src={imageUrl} alt={alt} fill sizes="320px" className="object-contain" unoptimized />
+        <Image src={imageUrl} alt={alt} fill sizes="320px" className="object-contain" />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export function DeckBoxDesignPreview({
         style={{ inset: "12.2% 22% 81% 18.5%", clipPath: "polygon(5% 0, 96% 8%, 100% 94%, 0 100%)" }}
         aria-hidden="true"
       >
-        <Image src={imageUrl} alt="" fill sizes="220px" className="object-cover" unoptimized />
+        <Image src={imageUrl} alt="" fill sizes="220px" className="object-cover" />
       </div>
       <Image
         src="/app-assets/custom-shells/deckbox-custom-shell.webp"

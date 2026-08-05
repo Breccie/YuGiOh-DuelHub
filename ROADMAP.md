@@ -41,7 +41,7 @@ Stand: 2026-08-05
 - Pack-/Promo-Daten weiter vervollstaendigen.
 - Nicht matchbare offizielle Genesys-Karten als Known Issue pflegen.
 - E-Mail/Passwort-Reset oder bessere Account-Wiederherstellung ergaenzen.
-- Auktionen und zeitlich moderierte Draft-Tauschfenster als eigene Produkte auf dem vorhandenen Trade-Regelmodell aufbauen.
+- Mehrbieter-Auktionen sind als eigenes, kampagnengebundenes Produkt mit Karten- und Creditreservierung, Überbieten, Abbruch ohne Gebot und atomarem Abschluss umgesetzt. Zeitlich moderierte Draft-Tauschfenster bleiben über die versionierten Tauschfensterregeln steuerbar.
 - Beitrittsanfragen mit Owner-/Organizer-Freigabe und die einmalige `PLAYER_CHOICE`-Startpackauswahl sind umgesetzt und integriert getestet.
 
 ## Nicht-Ziel

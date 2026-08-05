@@ -1092,7 +1092,7 @@ export function CampaignSettingsConsole({
               <div className="campaign-identity-form">
                 <div className="sm:col-span-2 grid gap-3 rounded-[12px] border border-white/10 bg-black/20 p-3 sm:grid-cols-[180px_1fr] sm:items-center">
                   <div className="relative aspect-video overflow-hidden rounded-[8px] border border-white/10 bg-black/35">
-                    {campaignImageUrl ? <Image src={campaignImageUrl} alt="Kampagnenmotiv" fill className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-xs text-white/45">Kein Kampagnenmotiv</div>}
+                    {campaignImageUrl ? <Image src={campaignImageUrl} alt="Kampagnenmotiv" fill className="object-cover" /> : <div className="grid h-full place-items-center text-xs text-white/45">Kein Kampagnenmotiv</div>}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-[#f0dfcc]">Kampagnenbild</p>

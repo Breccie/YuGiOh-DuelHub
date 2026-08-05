@@ -415,7 +415,7 @@ export function FriendsConsole() {
                 <article key={friend.userId} className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.04]">
-                      {friend.avatarImageUrl ? <Image src={friend.avatarImageUrl} alt="" fill sizes="36px" className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-xs font-semibold text-[#d8c3a5]">{friend.displayName.slice(0, 1).toUpperCase()}</div>}
+                      {friend.avatarImageUrl ? <Image src={friend.avatarImageUrl} alt="" fill sizes="36px" className="object-cover" /> : <div className="grid h-full place-items-center text-xs font-semibold text-[#d8c3a5]">{friend.displayName.slice(0, 1).toUpperCase()}</div>}
                     </div>
                     <span className={friend.isOnline ? "h-2.5 w-2.5 shrink-0 rounded-full bg-[#55d6ab] shadow-[0_0_12px_rgba(85,214,171,0.72)]" : "h-2.5 w-2.5 shrink-0 rounded-full bg-[#665d53]"} />
                     <div className="min-w-0">

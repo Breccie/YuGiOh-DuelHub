@@ -61,6 +61,13 @@ enum TradeStatus {
   COMPLETED
 }
 
+enum AuctionStatus {
+  OPEN
+  SETTLED
+  CANCELLED
+  NO_SALE
+}
+
 enum FriendshipStatus {
   PENDING
   ACCEPTED
@@ -294,6 +301,9 @@ model User {
   tradesApproved               Trade[]                  @relation("TradeApprovedBy")
   tradeVersionsSent            TradeVersion[]           @relation("TradeVersionSender")
   tradeVersionsReceived        TradeVersion[]           @relation("TradeVersionRecipient")
+  auctionListings              Auction[]                @relation("AuctionSeller")
+  auctionBids                  AuctionBid[]             @relation("AuctionBidder")
+  auctionWins                  Auction[]                @relation("AuctionHighestBidder")
   duelRequestsSent             DuelRequest[]            @relation("DuelRequester")
   duelRequestsReceived         DuelRequest[]            @relation("DuelOpponent")
   tournamentsHosted            Tournament[]             @relation("TournamentHost")
@@ -414,6 +424,7 @@ model PlayGroupRun {
   collectionBinders              CollectionBinder[]
   decks                          Deck[]
   trades                         Trade[]
+  auctions                       Auction[]
   duelRequests                   DuelRequest[]
   tournaments                    Tournament[]
   wishlistItems                  CampaignWishlistItem[]
@@ -880,6 +891,7 @@ model CollectionEntry {
   run               PlayGroupRun?          @relation(fields: [runId], references: [id], onDelete: Cascade)
   tradeItems        TradeItem[]
   tradeVersionItems TradeVersionItem[]
+  auctionListings   Auction[]
   binderSlots       CollectionBinderSlot[]
   promoClaims       PromoClaim[]
 
@@ -1217,36 +1229,36 @@ model DeckCard {
 }
 
 model Trade {
-  id                   String         @id @default(cuid())
-  runId                String?
-  proposerId           String
-  responderId          String
-  status               TradeStatus    @default(PENDING)
-  proposedAt           DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  resolvedAt           DateTime?
-  note                 String?
-  activeVersionId      String?        @unique
-  acceptedVersionId    String?        @unique
-  acceptedAt           DateTime?
-  reservationExpiresAt DateTime?
-  proposerConfirmedAt  DateTime?
-  responderConfirmedAt DateTime?
-  requiresOrganizerApproval Boolean      @default(false)
-  approvedByUserId       String?
-  approvedAt             DateTime?
-  cancelledByUserId    String?
-  rejectedByUserId     String?
-  proposer             User           @relation("TradeProposer", fields: [proposerId], references: [id], onDelete: Cascade)
-  responder            User           @relation("TradeResponder", fields: [responderId], references: [id], onDelete: Cascade)
-  cancelledBy          User?          @relation("TradeCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
-  rejectedBy           User?          @relation("TradeRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
-  approvedBy           User?          @relation("TradeApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
-  run                  PlayGroupRun?  @relation(fields: [runId], references: [id], onDelete: Cascade)
-  activeVersion        TradeVersion?  @relation("TradeActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
-  acceptedVersion      TradeVersion?  @relation("TradeAcceptedVersion", fields: [acceptedVersionId], references: [id], onDelete: SetNull)
-  versions             TradeVersion[] @relation("TradeVersions")
-  items                TradeItem[]
+  id                        String         @id @default(cuid())
+  runId                     String?
+  proposerId                String
+  responderId               String
+  status                    TradeStatus    @default(PENDING)
+  proposedAt                DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  resolvedAt                DateTime?
+  note                      String?
+  activeVersionId           String?        @unique
+  acceptedVersionId         String?        @unique
+  acceptedAt                DateTime?
+  reservationExpiresAt      DateTime?
+  proposerConfirmedAt       DateTime?
+  responderConfirmedAt      DateTime?
+  requiresOrganizerApproval Boolean        @default(false)
+  approvedByUserId          String?
+  approvedAt                DateTime?
+  cancelledByUserId         String?
+  rejectedByUserId          String?
+  proposer                  User           @relation("TradeProposer", fields: [proposerId], references: [id], onDelete: Cascade)
+  responder                 User           @relation("TradeResponder", fields: [responderId], references: [id], onDelete: Cascade)
+  cancelledBy               User?          @relation("TradeCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  rejectedBy                User?          @relation("TradeRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+  approvedBy                User?          @relation("TradeApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  run                       PlayGroupRun?  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  activeVersion             TradeVersion?  @relation("TradeActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  acceptedVersion           TradeVersion?  @relation("TradeAcceptedVersion", fields: [acceptedVersionId], references: [id], onDelete: SetNull)
+  versions                  TradeVersion[] @relation("TradeVersions")
+  items                     TradeItem[]
 
   @@index([proposerId, proposedAt])
   @@index([responderId, proposedAt])
@@ -1302,6 +1314,46 @@ model TradeVersionItem {
 
   @@index([tradeVersionId])
   @@index([collectionEntryId])
+}
+
+model Auction {
+  id                String          @id @default(cuid())
+  runId             String
+  sellerId          String
+  collectionEntryId String
+  status            AuctionStatus   @default(OPEN)
+  startingBid       Int
+  minIncrement      Int             @default(1)
+  currentBid        Int?
+  highestBidderId   String?
+  endsAt            DateTime
+  settledAt         DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  run               PlayGroupRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  seller            User            @relation("AuctionSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  collectionEntry   CollectionEntry @relation(fields: [collectionEntryId], references: [id], onDelete: Restrict)
+  highestBidder     User?           @relation("AuctionHighestBidder", fields: [highestBidderId], references: [id], onDelete: SetNull)
+  bids              AuctionBid[]
+
+  @@index([runId, status, endsAt])
+  @@index([sellerId, createdAt])
+  @@index([highestBidderId])
+  @@index([collectionEntryId, status])
+}
+
+model AuctionBid {
+  id        String   @id @default(cuid())
+  auctionId String
+  bidderId  String
+  amount    Int
+  createdAt DateTime @default(now())
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  bidder    User     @relation("AuctionBidder", fields: [bidderId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId, amount, createdAt])
+  @@index([bidderId, createdAt])
 }
 
 model DeckExport {

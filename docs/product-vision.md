@@ -50,9 +50,10 @@ Als externe Abnahme verbleiben der PostgreSQL-Smoke und der verifizierte
 Produktions-Cutover gegen die tatsächlichen Render-/Vercel-Dienste. Persistierte
 Beitrittsanträge mit Owner-/Organizer-Entscheidung sowie die einmalige
 `PLAYER_CHOICE`-Auswahl von Startpacks sind aktive UI- und API-Funktionen.
-Eigenständige Mehrbieter-Auktionen bleiben ein Ausbau des bereits versionierten
-Tauschregelmodells; direkte Trades und moderierte Tauschfenster werden
-serverseitig erzwungen.
+Eigenständige Mehrbieter-Auktionen bauen auf dem versionierten Tauschregelmodell
+auf. Karten und Gebote werden reserviert; Überbieten gibt die vorherigen Credits
+frei und der Abschluss überträgt Karte und Credits in einer Transaktion. Direkte
+Trades und moderierte Tauschfenster werden ebenfalls serverseitig erzwungen.
 
 ## Produktversprechen
 

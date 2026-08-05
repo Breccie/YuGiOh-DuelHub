@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import { getPrisma } from "./lib/prisma";
 import { getAllowedCorsOrigins, getApiBuildMetadata, getCookieSecret } from "./lib/runtime-config";
 import authRoutes from "./routes/auth";
+import auctionRoutes from "./routes/auctions";
 import cardRoutes from "./routes/cards";
 import campaignRulesRoutes from "./routes/campaign-rules";
 import collectionRoutes from "./routes/collection";
@@ -107,6 +108,7 @@ export function createServer() {
   });
 
   app.register(authRoutes, { prefix: "/api/v1/auth" });
+  app.register(auctionRoutes, { prefix: "/api/v1/auctions" });
   app.register(cardRoutes, { prefix: "/api/v1/cards" });
   app.register(campaignRulesRoutes, { prefix: "/api/v1/runs" });
   app.register(collectionRoutes, { prefix: "/api/v1/collection" });
