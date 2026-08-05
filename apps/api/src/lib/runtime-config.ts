@@ -1,7 +1,7 @@
 const appModes = ["desktop-demo", "online-dev", "production"] as const;
 type AppMode = (typeof appModes)[number];
 
-export const DATABASE_SCHEMA_VERSION = "20260804210000_personal_media_assets";
+export const DATABASE_SCHEMA_VERSION = "20260805172000_campaign_auctions";
 
 export type ApiBuildMetadata = {
   buildSha: string;

@@ -15,6 +15,8 @@ services:
         value: 0.0.0.0
       - key: API_PORT
         value: 10000
+      - key: REGION
+        value: oregon
       - key: API_DATABASE_URL
         sync: false
       - key: COOKIE_SECRET
@@ -46,6 +48,8 @@ services:
         value: 0.0.0.0
       - key: API_PORT
         value: 10000
+      - key: REGION
+        value: frankfurt
       - key: API_DATABASE_URL
         sync: false
       - key: COOKIE_SECRET
