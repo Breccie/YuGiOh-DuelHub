@@ -55,6 +55,30 @@ async function stopProcess(child) {
   child.kill("SIGTERM");
 }
 
+async function stopChrome(chrome) {
+  if (!chrome) return;
+
+  if (!chrome.pid) return;
+
+  if (process.platform === "win32") {
+    const killer = spawn("taskkill", ["/pid", String(chrome.pid), "/T", "/F"], {
+      shell: true,
+      stdio: "ignore",
+    });
+    await Promise.race([
+      new Promise((resolve) => killer.once("exit", resolve)),
+      new Promise((resolve) => setTimeout(resolve, 5_000)),
+    ]);
+    return;
+  }
+
+  try {
+    process.kill(chrome.pid, "SIGKILL");
+  } catch {
+    // Chromium wurde bereits beendet.
+  }
+}
+
 async function waitForServer() {
   const deadline = Date.now() + 60_000;
 
@@ -118,6 +142,7 @@ async function main() {
     await waitForServer();
 
     chrome = await chromeLauncher.launch({
+      chromePath: chromium.executablePath(),
       chromeFlags: ["--headless=new", "--no-sandbox", "--disable-gpu"],
     });
 
@@ -142,7 +167,7 @@ async function main() {
 
     await browser.close();
   } finally {
-    await chrome?.kill();
+    await stopChrome(chrome);
     await stopProcess(server);
   }
 }
