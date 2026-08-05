@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -199,6 +199,7 @@ export function ConsoleGlobalStatusBar({
   viewer: DesktopViewer;
   fallback?: ConsoleTopbarFallback;
 }) {
+  const pathname = usePathname();
   const [remoteStatus, setRemoteStatus] = useState(initialTopbarState);
   const status = {
     activeRunName: fallback?.activeRunName ?? remoteStatus.activeRunName,
@@ -209,6 +210,10 @@ export function ConsoleGlobalStatusBar({
   };
 
   useEffect(() => {
+    if (pathname === "/campaigns") {
+      return;
+    }
+
     let mounted = true;
 
     queueMicrotask(() => {
@@ -239,7 +244,7 @@ export function ConsoleGlobalStatusBar({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <div className="flex min-w-0 flex-1 items-center justify-end gap-2">

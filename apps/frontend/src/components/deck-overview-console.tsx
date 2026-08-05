@@ -59,6 +59,13 @@ type DeckOverviewConsoleProps = {
   detailsLoading?: boolean;
   onSelectDeck?: (deckId: string) => void;
   onPrefetchDeck?: (deckId: string) => void;
+  onDeckCreated?: (deck: {
+    id: string;
+    name: string;
+    deckBoxKey: string;
+    deckBoxAssetId: string | null;
+    deckBoxImageUrl: string;
+  }) => Promise<void> | void;
 };
 
 function classes(...tokens: Array<string | false | null | undefined>) {
@@ -188,6 +195,7 @@ export function DeckOverviewConsole({
   detailsLoading = false,
   onSelectDeck,
   onPrefetchDeck,
+  onDeckCreated,
 }: DeckOverviewConsoleProps) {
   const router = useRouter();
   const [isExporting, setIsExporting] = useState(false);
@@ -329,8 +337,12 @@ export function DeckOverviewConsole({
         throw new Error("Deck wurde dupliziert, aber die Deck-ID fehlt.");
       }
 
-      router.push(`/decks?deck=${payload.deck.id}`);
-      router.refresh();
+      if (onDeckCreated) {
+        await onDeckCreated(payload.deck);
+      } else {
+        router.push(`/decks?deck=${payload.deck.id}`);
+        router.refresh();
+      }
     } catch (error) {
       setExportFeedback(getApiErrorMessage(error, "Deck konnte nicht dupliziert werden."));
     } finally {
@@ -364,8 +376,12 @@ export function DeckOverviewConsole({
       setDraftDeckName("");
       setDraftDeckBoxAsset(null);
       setCreatorOpen(false);
-      router.push(`/decks?deck=${payload.deck.id}`);
-      router.refresh();
+      if (onDeckCreated) {
+        await onDeckCreated(payload.deck);
+      } else {
+        router.push(`/decks?deck=${payload.deck.id}`);
+        router.refresh();
+      }
     } catch (error) {
       setCreatorFeedback(getApiErrorMessage(error, "Deck konnte nicht erstellt werden."));
     } finally {

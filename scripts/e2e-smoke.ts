@@ -3,7 +3,7 @@ import path from "node:path";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { AxeBuilder } from "@axe-core/playwright";
 import { PrismaClient } from "@prisma/client";
-import { chromium, type Locator, type Page } from "playwright";
+import { chromium, type Locator, type Page, type Response } from "playwright";
 
 const repoRoot = process.cwd();
 const port = Number(process.env.E2E_PORT ?? 3210);
@@ -273,6 +273,13 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
       "register tab",
     );
     console.log("[e2e] Registering smoke account");
+    const failedDashboardResponses: number[] = [];
+    const trackDashboardResponse = (response: Response) => {
+      if (response.url().endsWith("/api/dashboard/summary") && response.status() >= 400) {
+        failedDashboardResponses.push(response.status());
+      }
+    };
+    page.on("response", trackDashboardResponse);
     await page.getByRole("button", { name: "Account anlegen" }).first().click();
     await page.getByLabel("Duelist-ID").fill(owner.duelistId);
     await page.getByLabel("Anzeigename").fill(owner.displayName);
@@ -282,6 +289,13 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
 
     await page.waitForURL(`${baseUrl}/campaigns`, { timeout: 20_000 });
     await assertVisible(page.getByText(owner.displayName).first(), "smoke user");
+    await page.waitForTimeout(250);
+    page.off("response", trackDashboardResponse);
+    if (failedDashboardResponses.length > 0) {
+      throw new Error(
+        `Campaign selection requested dashboard summary without an active campaign: ${failedDashboardResponses.join(", ")}`,
+      );
+    }
 
     console.log("[e2e] Creating the initial campaign");
     await apiJson(page, "/api/v1/runs", "POST", {
@@ -436,6 +450,19 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
     console.log("[e2e] Verifying deck page");
     await page.goto(`${baseUrl}/decks`);
     await assertVisible(page.getByText("Decks").first(), "decks page");
+
+    console.log("[e2e] Creating a deck through the library UI");
+    await page.getByRole("button", { name: "Neues Deck erstellen" }).click();
+    await page.getByRole("textbox", { name: "Deckname" }).fill("Smoke UI Deck");
+    await page.getByRole("button", { name: "Erstellen", exact: true }).click();
+    await assertVisible(
+      page.getByRole("heading", { name: "Smoke UI Deck" }),
+      "newly created deck heading",
+    );
+    await assertVisible(
+      page.getByText("Smoke UI Deck", { exact: true }).first(),
+      "newly created deck library item",
+    );
 
     console.log("[e2e] Verifying duel page");
     await page.goto(`${baseUrl}/duels`);
