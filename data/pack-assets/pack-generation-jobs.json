@@ -1,7 +1,99 @@
 {
-  "generatedAt": "2026-06-30T16:48:53.460Z",
-  "count": 24,
+  "generatedAt": "2026-08-05T14:10:23.642Z",
+  "count": 35,
   "jobs": [
+    {
+      "code": "VITEST-RUN-ISOLATION-1783466950258-SET",
+      "setName": "vitest-run-isolation-1783466950258 Booster",
+      "seedImageUrl": null,
+      "sourceName": null,
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"vitest-run-isolation-1783466950258 Booster\" (VITEST-RUN-ISOLATION-1783466950258-SET). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "VITEST-RUN-ISOLATION-1783625481414-SET",
+      "setName": "vitest-run-isolation-1783625481414 Booster",
+      "seedImageUrl": null,
+      "sourceName": null,
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"vitest-run-isolation-1783625481414 Booster\" (VITEST-RUN-ISOLATION-1783625481414-SET). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "VITEST-RUN-ISOLATION-1783674587225-SET",
+      "setName": "vitest-run-isolation-1783674587225 Booster",
+      "seedImageUrl": null,
+      "sourceName": null,
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"vitest-run-isolation-1783674587225 Booster\" (VITEST-RUN-ISOLATION-1783674587225-SET). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "VITEST-BINDER-RESERVED-1783674587226-SET",
+      "setName": "vitest-binder-reserved-1783674587226 Test Booster",
+      "seedImageUrl": null,
+      "sourceName": null,
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"vitest-binder-reserved-1783674587226 Test Booster\" (VITEST-BINDER-RESERVED-1783674587226-SET). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
     {
       "code": "PGD",
       "setName": "Pharaonic Guardian",
@@ -601,6 +693,84 @@
       ]
     },
     {
+      "code": "PGL2",
+      "setName": "Premium Gold: Return of the Bling",
+      "seedImageUrl": "https://images.ygoprog.com/pack/PGL2.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "sourceDimensions": {
+        "width": 159,
+        "height": 306
+      },
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"Premium Gold: Return of the Bling\" (PGL2). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "CORE",
+      "setName": "Clash of Rebellions",
+      "seedImageUrl": "https://images.ygoprog.com/pack/CORE.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "sourceDimensions": {
+        "width": 200,
+        "height": 351
+      },
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"Clash of Rebellions\" (CORE). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "RATE",
+      "setName": "Raging Tempest",
+      "seedImageUrl": "https://images.ygoprog.com/pack/RATE.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "sourceDimensions": {
+        "width": 239,
+        "height": 426
+      },
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"Raging Tempest\" (RATE). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
       "code": "PEVO",
       "setName": "Pendulum Evolution",
       "seedImageUrl": "https://images.ygoprog.com/pack/PEVO.jpg",
@@ -616,6 +786,101 @@
         "background": "transparent"
       },
       "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"Pendulum Evolution\" (PEVO). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "GEIM",
+      "setName": "Genesis Impact",
+      "seedImageUrl": "https://images.ygoprog.com/pack/GEIM.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "sourceDimensions": {
+        "width": 144,
+        "height": 253
+      },
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"Genesis Impact\" (GEIM). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "TBC1",
+      "setName": "The Pot Collection",
+      "seedImageUrl": "https://images.ygoprodeck.com/images/sets/TBC1.jpg",
+      "sourceName": "Seed image from imported set metadata",
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"The Pot Collection\" (TBC1). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "KC01",
+      "setName": "25th Anniversary Ultimate Kaiba Set",
+      "seedImageUrl": null,
+      "sourceName": null,
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"25th Anniversary Ultimate Kaiba Set\" (KC01). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
+      "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
+      "reviewChecklist": [
+        "English booster pack only",
+        "No box, display, blister, hand, or table",
+        "Visible top and bottom foil crimps",
+        "Set name and core labels are readable enough for app hero usage",
+        "Transparent or cleanly removable background",
+        "Consistent scale with LOB/MRD/SRL/PSV/IOC reference renders"
+      ]
+    },
+    {
+      "code": "MAMO",
+      "setName": "Magnificent Monsters",
+      "seedImageUrl": "https://images.ygoprodeck.com/images/sets/MAMO.jpg",
+      "sourceName": "Seed image from imported set metadata",
+      "sourceDimensions": null,
+      "targetOutput": {
+        "width": 420,
+        "height": 650,
+        "format": "png",
+        "background": "transparent"
+      },
+      "prompt": "Create a clean front-facing English Yu-Gi-Oh! TCG booster pack render for \"Magnificent Monsters\" (MAMO). Use the supplied seed image only as composition and label reference. Match the app reference style: sealed foil wrapper, visible silver crimp at the top and bottom, straight-on product render, no display box, no hand, no table, no white product-photo background, no perspective tilt. Preserve the original set colors, monster artwork composition, Konami logo position, English Edition badge, Yu-Gi-Oh! logo, set title, and cards-per-pack text as closely as possible. Output a single centered booster pack with transparent background.",
       "negativePrompt": "display box, booster box, blister packaging, card single, loose cards, hand, table, shelf, white border, product photo background, watermark, distorted text, misspelled logo, wrong language, Japanese pack, fake set name, extra packs, cropped wrapper, angled perspective",
       "reviewChecklist": [
         "English booster pack only",

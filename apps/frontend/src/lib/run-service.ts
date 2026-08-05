@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { campaignRuleConfigSchema } from "@ygo/contracts";
 import { DomainError, applyLedgerAmount, normalizeDuelistId } from "@ygo/domain";
 import { isStandardProgressionPack } from "@/lib/pack-product-classification";
+import { resolveOwnedMediaAsset } from "@/lib/media-service";
 
 const DEFAULT_RUN_NAME = "DM Progression 2002";
 const DEFAULT_RUN_DESCRIPTION =
@@ -66,6 +67,18 @@ export function serializeRun(run: RunWithMemberships, viewerId: string) {
     name: run.name,
     inviteCode: run.inviteCode,
     description: run.description ?? null,
+    campaignImageAssetId: run.campaignImageAssetId ?? null,
+    campaignImageUrl: run.campaignImageAssetId
+      ? `/api/assets/media/${encodeURIComponent(run.campaignImageAssetId)}`
+      : null,
+    region: run.region as "TCG" | "OCG" | "GLOBAL" | "CUSTOM",
+    language: run.language,
+    timeZone: run.timeZone,
+    visibility: run.visibility as "PRIVATE" | "UNLISTED" | "PUBLIC",
+    joinType: run.joinType as "INVITE_CODE" | "APPROVAL" | "OPEN",
+    maxPlayers: run.maxPlayers,
+    startsAt: run.startsAt?.toISOString() ?? null,
+    endsAt: run.endsAt?.toISOString() ?? null,
     status: run.status,
     historyCursor: run.historyCursor?.toISOString() ?? null,
     defaultPackPrice: run.defaultPackPrice,
@@ -93,6 +106,7 @@ export function serializeWallet(
     runId: wallet.runId,
     userId: wallet.userId,
     balance: wallet.balance,
+    reservedBalance: wallet.reservedBalance,
     updatedAt: wallet.updatedAt.toISOString(),
   };
 }
@@ -732,8 +746,39 @@ export async function addRunMember(
     runId: options.runId,
     userId: user.id,
   });
+  await ensureCampaignStartingAssets(prisma, {
+    runId: options.runId,
+    userId: user.id,
+  });
 
   return member;
+}
+
+type RunJoinRequestWithUser = Prisma.RunJoinRequestGetPayload<{
+  include: {
+    user: {
+      select: {
+        duelistId: true;
+        displayName: true;
+      };
+    };
+  };
+}>;
+
+export function serializeRunJoinRequest(request: RunJoinRequestWithUser) {
+  return {
+    id: request.id,
+    runId: request.runId,
+    userId: request.userId,
+    duelistId: request.user.duelistId,
+    displayName: request.user.displayName,
+    status: request.status,
+    message: request.message ?? null,
+    createdAt: request.createdAt.toISOString(),
+    updatedAt: request.updatedAt.toISOString(),
+    resolvedAt: request.resolvedAt?.toISOString() ?? null,
+    resolvedById: request.resolvedById ?? null,
+  };
 }
 
 export async function createRun(
@@ -742,6 +787,15 @@ export async function createRun(
   input: {
     name: string;
     description?: string | null;
+    campaignImageAssetId?: string | null;
+    region?: "TCG" | "OCG" | "GLOBAL" | "CUSTOM";
+    language?: string;
+    timeZone?: string;
+    visibility?: "PRIVATE" | "UNLISTED" | "PUBLIC";
+    joinType?: "INVITE_CODE" | "APPROVAL" | "OPEN";
+    maxPlayers?: number | null;
+    startsAt?: string | null;
+    endsAt?: string | null;
     startingCredits?: number;
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
@@ -754,6 +808,9 @@ export async function createRun(
     tournamentParticipationCredits?: number;
   },
 ) {
+  if (input.campaignImageAssetId) {
+    await resolveOwnedMediaAsset(prisma, userId, input.campaignImageAssetId, "CAMPAIGN_IMAGE");
+  }
   return prisma.$transaction(
     async (tx) => {
       const run = await tx.playGroupRun.create({
@@ -762,6 +819,15 @@ export async function createRun(
         name: input.name.trim(),
         inviteCode: createInviteCode(),
         description: input.description?.trim() || null,
+        campaignImageAssetId: input.campaignImageAssetId ?? null,
+        region: input.region ?? "TCG",
+        language: input.language ?? "de",
+        timeZone: input.timeZone ?? "Europe/Berlin",
+        visibility: input.visibility ?? "PRIVATE",
+        joinType: input.joinType ?? "INVITE_CODE",
+        maxPlayers: input.maxPlayers ?? null,
+        startsAt: input.startsAt ? new Date(input.startsAt) : null,
+        endsAt: input.endsAt ? new Date(input.endsAt) : null,
         startingCredits: input.startingCredits ?? 2400,
         defaultPackPrice: input.defaultPackPrice ?? 100,
         defaultDisplaySize: input.defaultDisplaySize ?? 24,
@@ -816,6 +882,7 @@ export async function joinRunByInviteCode(
   prisma: PrismaClient,
   userId: string,
   inviteCode: string,
+  message?: string | null,
 ) {
   const normalizedCode = inviteCode.trim().replace(/[-\s]/g, "").toUpperCase();
   const run = await prisma.playGroupRun.findUnique({
@@ -830,6 +897,56 @@ export async function joinRunByInviteCode(
     });
   }
 
+  const now = new Date();
+  if (run.startsAt && run.startsAt > now) {
+    throw new DomainError({ code: "campaign_not_started", message: "Diese Kampagne hat noch nicht begonnen.", status: 409 });
+  }
+  if (run.endsAt && run.endsAt <= now) {
+    throw new DomainError({ code: "campaign_ended", message: "Diese Kampagne ist bereits beendet.", status: 409 });
+  }
+  if (run.maxPlayers !== null) {
+    const [memberCount, alreadyMember] = await Promise.all([
+      prisma.runMembership.count({ where: { runId: run.id } }),
+      prisma.runMembership.findUnique({
+        where: { runId_userId: { runId: run.id, userId } },
+        select: { id: true },
+      }),
+    ]);
+    if (!alreadyMember && memberCount >= run.maxPlayers) {
+      throw new DomainError({ code: "campaign_full", message: "Diese Kampagne hat ihr Spielerlimit erreicht.", status: 409 });
+    }
+  }
+
+  const existingMembership = await prisma.runMembership.findUnique({
+    where: { runId_userId: { runId: run.id, userId } },
+    select: { id: true },
+  });
+  if (existingMembership) {
+    await prisma.user.update({ where: { id: userId }, data: { activeRunId: run.id } });
+    return { kind: "JOINED" as const, run: await getActiveRun(prisma, userId) };
+  }
+
+  if (run.joinType === "APPROVAL") {
+    const joinRequest = await prisma.runJoinRequest.upsert({
+      where: { runId_userId: { runId: run.id, userId } },
+      create: {
+        runId: run.id,
+        userId,
+        message: message?.trim() || null,
+      },
+      update: {
+        status: "PENDING",
+        message: message?.trim() || null,
+        resolvedAt: null,
+        resolvedById: null,
+      },
+      include: {
+        user: { select: { duelistId: true, displayName: true } },
+      },
+    });
+    return { kind: "PENDING" as const, joinRequest: serializeRunJoinRequest(joinRequest) };
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.runMembership.upsert({
       where: { runId_userId: { runId: run.id, userId } },
@@ -840,7 +957,94 @@ export async function joinRunByInviteCode(
   });
 
   await getOrCreateWallet(prisma, { runId: run.id, userId });
-  return getActiveRun(prisma, userId);
+  await ensureCampaignStartingAssets(prisma, { runId: run.id, userId });
+  return { kind: "JOINED" as const, run: await getActiveRun(prisma, userId) };
+}
+
+export async function listRunJoinRequests(
+  prisma: PrismaClient,
+  options: { runId: string; viewerId: string },
+) {
+  await requireRunMembership(prisma, {
+    runId: options.runId,
+    userId: options.viewerId,
+    organizerOnly: true,
+  });
+  const requests = await prisma.runJoinRequest.findMany({
+    where: { runId: options.runId, status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    include: { user: { select: { duelistId: true, displayName: true } } },
+  });
+  return requests.map(serializeRunJoinRequest);
+}
+
+export async function decideRunJoinRequest(
+  prisma: PrismaClient,
+  options: {
+    runId: string;
+    requestId: string;
+    viewerId: string;
+    decision: "APPROVE" | "REJECT";
+  },
+) {
+  await requireRunMembership(prisma, {
+    runId: options.runId,
+    userId: options.viewerId,
+    organizerOnly: true,
+  });
+  const request = await prisma.runJoinRequest.findFirst({
+    where: { id: options.requestId, runId: options.runId },
+    include: {
+      run: { select: { status: true, maxPlayers: true, startsAt: true, endsAt: true } },
+      user: { select: { duelistId: true, displayName: true } },
+    },
+  });
+  if (!request || request.status !== "PENDING") {
+    throw new DomainError({
+      code: "join_request_not_pending",
+      message: "Dieser Beitrittsantrag ist nicht mehr offen.",
+      status: 409,
+    });
+  }
+
+  if (options.decision === "REJECT") {
+    const rejected = await prisma.runJoinRequest.update({
+      where: { id: request.id },
+      data: { status: "REJECTED", resolvedAt: new Date(), resolvedById: options.viewerId },
+      include: { user: { select: { duelistId: true, displayName: true } } },
+    });
+    return serializeRunJoinRequest(rejected);
+  }
+
+  const now = new Date();
+  if (request.run.status !== "ACTIVE" || (request.run.endsAt && request.run.endsAt <= now)) {
+    throw new DomainError({ code: "campaign_closed", message: "Diese Kampagne ist geschlossen.", status: 409 });
+  }
+  if (request.run.startsAt && request.run.startsAt > now) {
+    throw new DomainError({ code: "campaign_not_started", message: "Diese Kampagne hat noch nicht begonnen.", status: 409 });
+  }
+  if (request.run.maxPlayers !== null) {
+    const memberCount = await prisma.runMembership.count({ where: { runId: options.runId } });
+    if (memberCount >= request.run.maxPlayers) {
+      throw new DomainError({ code: "campaign_full", message: "Diese Kampagne hat ihr Spielerlimit erreicht.", status: 409 });
+    }
+  }
+
+  const approved = await prisma.$transaction(async (tx) => {
+    await tx.runMembership.upsert({
+      where: { runId_userId: { runId: options.runId, userId: request.userId } },
+      create: { runId: options.runId, userId: request.userId, role: "PLAYER" },
+      update: {},
+    });
+    return tx.runJoinRequest.update({
+      where: { id: request.id },
+      data: { status: "APPROVED", resolvedAt: now, resolvedById: options.viewerId },
+      include: { user: { select: { duelistId: true, displayName: true } } },
+    });
+  });
+  await getOrCreateWallet(prisma, { runId: options.runId, userId: request.userId });
+  await ensureCampaignStartingAssets(prisma, { runId: options.runId, userId: request.userId });
+  return serializeRunJoinRequest(approved);
 }
 
 export async function updateRunSettings(
@@ -851,6 +1055,15 @@ export async function updateRunSettings(
     name?: string;
     description?: string | null;
     status?: "ACTIVE" | "ARCHIVED";
+    campaignImageAssetId?: string | null;
+    region?: "TCG" | "OCG" | "GLOBAL" | "CUSTOM";
+    language?: string;
+    timeZone?: string;
+    visibility?: "PRIVATE" | "UNLISTED" | "PUBLIC";
+    joinType?: "INVITE_CODE" | "APPROVAL" | "OPEN";
+    maxPlayers?: number | null;
+    startsAt?: string | null;
+    endsAt?: string | null;
     defaultPackPrice?: number;
     defaultDisplaySize?: number;
     freePacksPerSetUnlock?: number;
@@ -871,13 +1084,39 @@ export async function updateRunSettings(
   if (
     (options.name !== undefined
       || options.description !== undefined
-      || options.status !== undefined)
+      || options.status !== undefined
+      || options.campaignImageAssetId !== undefined
+      || options.region !== undefined
+      || options.language !== undefined
+      || options.timeZone !== undefined
+      || options.visibility !== undefined
+      || options.joinType !== undefined
+      || options.maxPlayers !== undefined
+      || options.startsAt !== undefined
+      || options.endsAt !== undefined)
     && membership.role !== "OWNER"
   ) {
     throw new DomainError({
       code: "campaign_identity_owner_only",
       message: "Nur der Owner kann Name, Beschreibung oder Status der Kampagne ändern.",
       status: 403,
+    });
+  }
+
+  if (options.campaignImageAssetId) {
+    await resolveOwnedMediaAsset(prisma, options.viewerId, options.campaignImageAssetId, "CAMPAIGN_IMAGE");
+  }
+  const startsAt = options.startsAt === undefined
+    ? undefined
+    : options.startsAt ? new Date(options.startsAt) : null;
+  const endsAt = options.endsAt === undefined
+    ? undefined
+    : options.endsAt ? new Date(options.endsAt) : null;
+  if (startsAt && endsAt && startsAt >= endsAt) {
+    throw new DomainError({
+      code: "invalid_campaign_window",
+      message: "Das Kampagnenende muss nach dem Beginn liegen.",
+      status: 400,
     });
   }
 
@@ -890,6 +1129,15 @@ export async function updateRunSettings(
         name: options.name,
         description: options.description,
         status: options.status,
+        campaignImageAssetId: options.campaignImageAssetId,
+        region: options.region,
+        language: options.language,
+        timeZone: options.timeZone,
+        visibility: options.visibility,
+        joinType: options.joinType,
+        maxPlayers: options.maxPlayers,
+        startsAt,
+        endsAt,
         defaultPackPrice: options.defaultPackPrice,
         defaultDisplaySize: options.defaultDisplaySize,
         freePacksPerSetUnlock: options.freePacksPerSetUnlock,
@@ -909,7 +1157,11 @@ export async function updateRunSettings(
         },
       },
     });
-    if (options.name !== undefined || options.description !== undefined || options.status !== undefined) {
+    if (options.name !== undefined || options.description !== undefined || options.status !== undefined
+      || options.campaignImageAssetId !== undefined || options.region !== undefined
+      || options.language !== undefined || options.timeZone !== undefined
+      || options.visibility !== undefined || options.joinType !== undefined
+      || options.maxPlayers !== undefined || options.startsAt !== undefined || options.endsAt !== undefined) {
       await tx.historyEvent.create({
         data: {
           runId: options.runId,
@@ -1040,6 +1292,210 @@ export async function getOrCreateWallet(
   return ensureDebugWalletBalance(prisma, wallet);
 }
 
+export async function ensureCampaignStartingAssets(
+  prisma: PrismaLike,
+  options: { runId: string; userId: string },
+) {
+  const run = await prisma.playGroupRun.findUnique({
+    where: { id: options.runId },
+    include: { activeRuleVersion: { select: { id: true, config: true } } },
+  });
+  const rules = parseStoredCampaignRules(run?.activeRuleVersion?.config);
+  if (!run || !rules) return;
+  const sourceReferenceId = `CAMPAIGN_START:${options.runId}`;
+
+  if (rules.progression.startingCardIds.length > 0) {
+    const existing = await prisma.collectionEntry.count({
+      where: { runId: options.runId, userId: options.userId, sourceReferenceId },
+    });
+    if (existing === 0) {
+      const cards = await prisma.card.findMany({
+        where: { id: { in: rules.progression.startingCardIds } },
+        select: { id: true },
+      });
+      if (cards.length > 0) {
+        await prisma.collectionEntry.createMany({
+          data: cards.map((card) => ({
+            runId: options.runId,
+            userId: options.userId,
+            cardId: card.id,
+            source: "MANUAL_GRANT" as const,
+            sourceReferenceId,
+            notes: "Startkarte aus den Kampagnenregeln.",
+          })),
+        });
+      }
+    }
+  }
+
+  if (rules.progression.starterDeckIds.length > 0) {
+    const sourceDecks = await prisma.deck.findMany({
+      where: { id: { in: rules.progression.starterDeckIds }, runId: options.runId },
+      include: { cards: true },
+    });
+    for (const source of sourceDecks) {
+      const starterName = `[Starter] ${source.name}`;
+      const exists = await prisma.deck.findFirst({
+        where: { runId: options.runId, userId: options.userId, name: starterName },
+        select: { id: true },
+      });
+      if (!exists) {
+        await prisma.deck.create({
+          data: {
+            runId: options.runId,
+            userId: options.userId,
+            name: starterName,
+            deckBoxKey: source.deckBoxKey,
+            deckBoxAssetId: source.deckBoxAssetId,
+            formatProfileId: source.formatProfileId,
+            banlistId: source.banlistId,
+            snapshotDate: source.snapshotDate,
+            cards: {
+              create: source.cards.map((card) => ({
+                cardId: card.cardId,
+                section: card.section,
+                quantity: card.quantity,
+              })),
+            },
+          },
+        });
+      }
+    }
+  }
+
+  if (
+    rules.progression.startingPackCount > 0
+    && rules.progression.startingSetIds.length > 0
+    && rules.progression.startingPackMode !== "NONE"
+    && rules.progression.startingPackMode !== "PLAYER_CHOICE"
+  ) {
+    const selectedIndex = rules.progression.startingPackMode === "RANDOM"
+      ? [...options.userId].reduce((sum, char) => sum + char.charCodeAt(0), 0)
+        % rules.progression.startingSetIds.length
+      : 0;
+    const packSetId = rules.progression.startingSetIds[selectedIndex]!;
+    const [set, existing] = await Promise.all([
+      prisma.cardSet.findUnique({ where: { id: packSetId }, select: { id: true } }),
+      prisma.rewardGrant.findFirst({
+        where: {
+          runId: options.runId,
+          recipientId: options.userId,
+          reason: `CAMPAIGN_START_PACKS | ${sourceReferenceId}`,
+        },
+        select: { id: true },
+      }),
+    ]);
+    if (set && !existing) {
+      await prisma.rewardGrant.create({
+        data: {
+          runId: options.runId,
+          recipientId: options.userId,
+          grantedById: run.ownerId,
+          packSetId: set.id,
+          packQuantity: rules.progression.startingPackCount,
+          status: "PENDING",
+          reason: `CAMPAIGN_START_PACKS | ${sourceReferenceId}`,
+          ruleVersionId: run.activeRuleVersion?.id ?? null,
+        },
+      });
+    }
+  }
+}
+
+export async function getCampaignStartingPackChoice(
+  prisma: PrismaClient,
+  options: { runId: string; userId: string },
+) {
+  await requireRunMembership(prisma, options);
+  const run = await prisma.playGroupRun.findUnique({
+    where: { id: options.runId },
+    include: { activeRuleVersion: { select: { config: true } } },
+  });
+  const rules = parseStoredCampaignRules(run?.activeRuleVersion?.config);
+  if (
+    !run
+    || !rules
+    || rules.progression.startingPackMode !== "PLAYER_CHOICE"
+    || rules.progression.startingPackCount <= 0
+  ) {
+    return { enabled: false, packQuantity: 0, selectedSetId: null, options: [] };
+  }
+  const reason = `CAMPAIGN_START_PACKS | CAMPAIGN_START:${options.runId}`;
+  const [sets, existing] = await Promise.all([
+    prisma.cardSet.findMany({
+      where: { id: { in: rules.progression.startingSetIds }, isOpenable: true },
+      orderBy: [{ releaseDate: "asc" }, { name: "asc" }],
+      select: { id: true, code: true, name: true },
+    }),
+    prisma.rewardGrant.findFirst({
+      where: { runId: options.runId, recipientId: options.userId, reason },
+      select: { packSetId: true },
+    }),
+  ]);
+  return {
+    enabled: true,
+    packQuantity: rules.progression.startingPackCount,
+    selectedSetId: existing?.packSetId ?? null,
+    options: sets.map((set) => ({
+      setId: set.id,
+      code: set.code,
+      name: set.name,
+      imageUrl: `/api/assets/packs/${encodeURIComponent(set.code)}?name=${encodeURIComponent(set.name)}`,
+    })),
+  };
+}
+
+export async function chooseCampaignStartingPack(
+  prisma: PrismaClient,
+  options: { runId: string; userId: string; setId: string },
+) {
+  const choice = await getCampaignStartingPackChoice(prisma, options);
+  if (!choice.enabled) {
+    throw new DomainError({
+      code: "starting_pack_choice_disabled",
+      message: "In dieser Kampagne ist keine Startpack-Auswahl aktiv.",
+      status: 409,
+    });
+  }
+  if (choice.selectedSetId) {
+    throw new DomainError({
+      code: "starting_pack_already_selected",
+      message: "Dein Startpack wurde bereits ausgewählt.",
+      status: 409,
+    });
+  }
+  if (!choice.options.some((option) => option.setId === options.setId)) {
+    throw new DomainError({
+      code: "starting_pack_not_allowed",
+      message: "Dieses Set ist nicht als Startpack freigegeben.",
+      status: 409,
+    });
+  }
+  const run = await prisma.playGroupRun.findUniqueOrThrow({
+    where: { id: options.runId },
+    select: { ownerId: true, activeRuleVersionId: true },
+  });
+  const reason = `CAMPAIGN_START_PACKS | CAMPAIGN_START:${options.runId}`;
+  try {
+    await prisma.rewardGrant.create({
+      data: {
+        id: `starting-pack:${options.runId}:${options.userId}`,
+        runId: options.runId,
+        recipientId: options.userId,
+        grantedById: run.ownerId,
+        packSetId: options.setId,
+        packQuantity: choice.packQuantity,
+        status: "PENDING",
+        reason,
+        ruleVersionId: run.activeRuleVersionId,
+      },
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "P2002") throw error;
+  }
+  return getCampaignStartingPackChoice(prisma, options);
+}
+
 export async function creditWallet(
   prisma: PrismaLike,
   options: {
@@ -1050,7 +1506,8 @@ export async function creditWallet(
       | "DUEL_REWARD"
       | "TOURNAMENT_REWARD"
       | "ORGANIZER_ADJUSTMENT"
-      | "MANUAL_GRANT";
+      | "MANUAL_GRANT"
+      | "DUST_CONVERSION";
     referenceType?: string | null;
     referenceId?: string | null;
     note?: string | null;

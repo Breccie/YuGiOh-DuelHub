@@ -1,6 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
-  OwnershipSource,
   type Prisma,
   type PrismaClient,
 } from "@prisma/client";
@@ -10,7 +9,10 @@ import {
   normalizePackEconomy,
 } from "@ygo/domain";
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
-import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
+import {
+  getActiveCampaignRuleConfig,
+  getActiveCampaignRuleVersionId,
+} from "@/lib/campaign-rule-service";
 import {
   assertPackAccessAvailable,
   isCampaignPackAvailableNow,
@@ -27,6 +29,9 @@ import {
   requireRunMembership,
   serializeWallet,
 } from "@/lib/run-service";
+import { openCustomPackVersion } from "@/lib/custom-pack-service";
+import { getMediaAssetUrl } from "@/lib/media-service";
+import { addPulledCardsToCollection } from "@/lib/collection-rule-service";
 
 async function debitWalletAtomically(
   tx: Prisma.TransactionClient,
@@ -114,11 +119,57 @@ type PackOpeningBatchSummary = {
   createdAt: string;
 };
 
-type RewardGrantWithPackSet = Prisma.RewardGrantGetPayload<{
+type RewardGrantWithPackSource = Prisma.RewardGrantGetPayload<{
   include: {
     packSet: true;
+    customPackVersion: {
+      include: {
+        definition: true;
+      };
+    };
   };
 }>;
+
+async function enforcePackPurchaseRules(
+  tx: Prisma.TransactionClient,
+  options: {
+    runId: string;
+    userId: string;
+    type: "PACK" | "DISPLAY";
+  },
+) {
+  const rules = await getActiveCampaignRuleConfig(tx, options.runId);
+  if (!rules.economy.purchaseTypes.includes(options.type)) {
+    throw new DomainError({
+      code: "pack_purchase_type_disabled",
+      message: options.type === "DISPLAY"
+        ? "Displaykäufe sind in dieser Kampagne deaktiviert."
+        : "Einzelpackkäufe sind in dieser Kampagne deaktiviert.",
+      status: 409,
+    });
+  }
+  const limit = options.type === "DISPLAY"
+    ? rules.economy.displayPurchaseLimitPerDay
+    : rules.economy.packPurchaseLimitPerDay;
+  if (limit === null) return;
+  const dayStart = new Date();
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const purchases = await tx.packOpeningBatch.count({
+    where: {
+      runId: options.runId,
+      userId: options.userId,
+      type: options.type === "DISPLAY" ? "DISPLAY" : "SINGLE_PACK",
+      createdAt: { gte: dayStart },
+    },
+  });
+  if (purchases >= limit) {
+    throw new DomainError({
+      code: "daily_pack_purchase_limit_reached",
+      message: `Das tägliche Kauflimit von ${limit} ${options.type === "DISPLAY" ? "Displays" : "Packs"} ist erreicht.`,
+      status: 409,
+    });
+  }
+}
 
 type CachedPackCatalogSet = {
   id: string;
@@ -547,7 +598,7 @@ function serializeBatch(
   };
 }
 
-function serializeRewardGrant(grant: RewardGrantWithPackSet) {
+function serializeRewardGrant(grant: RewardGrantWithPackSource) {
   return {
     id: grant.id,
     runId: grant.runId,
@@ -555,6 +606,7 @@ function serializeRewardGrant(grant: RewardGrantWithPackSet) {
     grantedById: grant.grantedById,
     amountCredits: grant.amountCredits,
     packSetId: grant.packSetId,
+    customPackVersionId: grant.customPackVersionId,
     packQuantity: grant.packQuantity,
     reason: grant.reason,
     status: grant.status,
@@ -567,6 +619,16 @@ function serializeRewardGrant(grant: RewardGrantWithPackSet) {
           name: grant.packSet.name,
           packSize: grant.packSet.packSize,
           imageUrl: resolveAppImageUrl(grant.packSet.imageUrl),
+        }
+      : null,
+    customPack: grant.customPackVersion
+      ? {
+          id: grant.customPackVersion.id,
+          code: grant.customPackVersion.definition.code,
+          name: grant.customPackVersion.definition.name,
+          version: grant.customPackVersion.version,
+          packSize: grant.customPackVersion.packSize,
+          imageUrl: getMediaAssetUrl(grant.customPackVersion.packImageAssetId),
         }
       : null,
   };
@@ -605,7 +667,7 @@ async function fetchBatchResult(prisma: PrismaClient, batchId: string) {
   return batch;
 }
 
-async function fetchRewardGrantWithPackSet(
+async function fetchRewardGrantWithPackSource(
   prisma: PackOpeningPrisma,
   rewardGrantId: string,
 ) {
@@ -615,12 +677,17 @@ async function fetchRewardGrantWithPackSet(
     },
     include: {
       packSet: true,
+      customPackVersion: {
+        include: {
+          definition: true,
+        },
+      },
     },
   });
 }
 
 function ensureRewardPackGrant(
-  grant: RewardGrantWithPackSet,
+  grant: RewardGrantWithPackSource,
   options: {
     runId: string;
     viewerId: string;
@@ -658,7 +725,7 @@ function ensureRewardPackGrant(
     });
   }
 
-  if (!grant.packSetId || grant.packQuantity <= 0) {
+  if ((!grant.packSetId && !grant.customPackVersionId) || grant.packQuantity <= 0) {
     throw new DomainError({
       code: "reward_not_pack",
       message: "Diese Belohnung enthält kein Tournament-Pack.",
@@ -666,7 +733,7 @@ function ensureRewardPackGrant(
     });
   }
 
-  if (!grant.packSet) {
+  if ((grant.packSetId && !grant.packSet) || (grant.customPackVersionId && !grant.customPackVersion)) {
     throw new DomainError({
       code: "reward_pack_unavailable",
       message: "Das Reward-Pack ist nicht mehr verfügbar.",
@@ -1018,6 +1085,11 @@ export async function listRunRewardGrants(
     ],
     include: {
       packSet: true,
+      customPackVersion: {
+        include: {
+          definition: true,
+        },
+      },
     },
   });
 
@@ -1034,6 +1106,7 @@ export async function createRunRewardGrant(
     recipientDuelistId: string;
     amountCredits?: number;
     packSetId?: string | null;
+    customPackVersionId?: string | null;
     packQuantity?: number;
     reason?: string | null;
   },
@@ -1047,6 +1120,15 @@ export async function createRunRewardGrant(
   const amountCredits = options.amountCredits ?? 0;
   const packQuantity = options.packQuantity ?? 0;
   const packSetId = options.packSetId ?? null;
+  const customPackVersionId = options.customPackVersionId ?? null;
+
+  if (packSetId && customPackVersionId) {
+    throw new DomainError({
+      code: "reward_pack_source_conflict",
+      message: "Ein Reward kann nur eine Packquelle verwenden.",
+      status: 400,
+    });
+  }
 
   if (amountCredits <= 0 && packQuantity <= 0) {
     throw new DomainError({
@@ -1076,7 +1158,7 @@ export async function createRunRewardGrant(
   });
 
   if (packQuantity > 0) {
-    if (!packSetId) {
+    if (!packSetId && !customPackVersionId) {
       throw new DomainError({
         code: "reward_pack_required",
         message: "Für Pack-Rewards muss ein Pack-Set angegeben werden.",
@@ -1084,7 +1166,34 @@ export async function createRunRewardGrant(
       });
     }
 
-    await loadSetOrThrow(prisma, packSetId);
+    if (packSetId) {
+      await loadSetOrThrow(prisma, packSetId);
+    } else {
+      const [version, rules] = await Promise.all([
+        prisma.customPackVersion.findFirst({
+          where: {
+            id: customPackVersionId!,
+            status: "PUBLISHED",
+            definition: { runId: options.runId },
+          },
+        }),
+        getActiveCampaignRuleConfig(prisma, options.runId),
+      ]);
+      if (!version) {
+        throw new DomainError({
+          code: "reward_custom_pack_unavailable",
+          message: "Diese veröffentlichte Custom-Pack-Version ist nicht verfügbar.",
+          status: 409,
+        });
+      }
+      if (!rules.tournaments.rewardSources.includes("CUSTOM_PACK")) {
+        throw new DomainError({
+          code: "reward_source_disabled",
+          message: "Custom Packs sind in dieser Kampagne nicht als Rewardquelle erlaubt.",
+          status: 409,
+        });
+      }
+    }
   }
 
   const grant = await prisma.$transaction(async (tx) => {
@@ -1096,6 +1205,7 @@ export async function createRunRewardGrant(
         grantedById: options.organizerId,
         amountCredits,
         packSetId,
+        customPackVersionId,
         packQuantity,
         reason: options.reason?.trim() || null,
         status: packQuantity > 0 ? "PENDING" : "CLAIMED",
@@ -1104,6 +1214,11 @@ export async function createRunRewardGrant(
       },
       include: {
         packSet: true,
+        customPackVersion: {
+          include: {
+            definition: true,
+          },
+        },
       },
     });
 
@@ -1135,13 +1250,107 @@ export async function claimRewardPack(
     rewardGrantId: string;
   },
 ) {
+  const sourceGrant = await fetchRewardGrantWithPackSource(prisma, options.rewardGrantId);
+  if (!sourceGrant) {
+    throw new DomainError({
+      code: "reward_not_found",
+      message: "Diese Belohnung wurde nicht gefunden.",
+      status: 404,
+    });
+  }
+  ensureRewardPackGrant(sourceGrant, {
+    runId: options.runId,
+    viewerId: options.viewerId,
+  });
+
+  if (sourceGrant.customPackVersion) {
+    const version = sourceGrant.customPackVersion;
+    const results = [];
+    for (let index = 0; index < sourceGrant.packQuantity; index += 1) {
+      results.push(await openCustomPackVersion(
+        prisma,
+        options.viewerId,
+        options.runId,
+        version.id,
+        {
+          idempotencyKey: `reward:${sourceGrant.id}:${index}`,
+          chargeCredits: false,
+          allowRewardOnly: true,
+        },
+      ));
+    }
+
+    const sourceOpenings = await prisma.packOpening.findMany({
+      where: { id: { in: results.map((result) => result.id) } },
+      select: {
+        id: true,
+        openedAt: true,
+        batch: true,
+      },
+    });
+    const openingsById = new Map(sourceOpenings.map((opening) => [opening.id, opening]));
+    const claim = await prisma.rewardGrant.updateMany({
+      where: {
+        id: sourceGrant.id,
+        runId: options.runId,
+        recipientId: options.viewerId,
+        status: "PENDING",
+      },
+      data: { status: "CLAIMED", claimedAt: new Date() },
+    });
+    if (claim.count !== 1) {
+      throw new DomainError({
+        code: "reward_already_claimed",
+        message: "Diese Belohnung wurde bereits geclaimt.",
+        status: 409,
+      });
+    }
+    const reward = await fetchRewardGrantWithPackSource(prisma, sourceGrant.id);
+    const firstBatch = openingsById.get(results[0]!.id)?.batch;
+    if (!reward || !firstBatch || !version.generatedSetId) {
+      throw new DomainError({
+        code: "reward_pack_unavailable",
+        message: "Das Custom-Pack-Reward konnte nicht vollständig geladen werden.",
+        status: 409,
+      });
+    }
+
+    return {
+      reward: serializeRewardGrant(reward),
+      batch: {
+        ...serializeBatch(firstBatch),
+        quantity: results.length,
+        totalCost: 0,
+      },
+      openings: results.map((result) => ({
+        id: result.id,
+        openedAt: openingsById.get(result.id)?.openedAt.toISOString() ?? new Date().toISOString(),
+        addedToCollection: result.pulls.length,
+        set: {
+          id: version.generatedSetId!,
+          code: version.definition.code,
+          name: version.definition.name,
+          packSize: version.packSize,
+        },
+        pulls: result.pulls.map((pull) => ({
+          id: pull.id,
+          slotIndex: pull.slotIndex,
+          cardName: pull.cardName,
+          cardImageUrl: pull.cardImageUrl,
+          rarity: pull.rarity,
+          setCode: pull.setCode ?? version.definition.code,
+        })),
+      })),
+    };
+  }
+
   const claimedBatchId = await prisma.$transaction(async (tx) => {
     await requireRunMembership(tx, {
       runId: options.runId,
       userId: options.viewerId,
     });
 
-    const grant = await fetchRewardGrantWithPackSet(tx, options.rewardGrantId);
+    const grant = await fetchRewardGrantWithPackSource(tx, options.rewardGrantId);
 
     if (!grant) {
       throw new DomainError({
@@ -1190,7 +1399,7 @@ export async function claimRewardPack(
     });
 
     if (claim.count !== 1) {
-      const latestGrant = await fetchRewardGrantWithPackSet(tx, options.rewardGrantId);
+      const latestGrant = await fetchRewardGrantWithPackSource(tx, options.rewardGrantId);
 
       if (!latestGrant) {
         throw new DomainError({
@@ -1266,13 +1475,12 @@ export async function claimRewardPack(
         })),
       });
 
-      await tx.collectionEntry.createMany({
-        data: pulls.map((pull) => ({
-          userId: options.viewerId,
+      await addPulledCardsToCollection(tx, {
+        userId: options.viewerId,
+        runId: options.runId,
+        pulls: pulls.map((pull) => ({
           cardId: pull.cardId,
           setCardId: pull.setCardId,
-          runId: options.runId,
-          source: OwnershipSource.PACK_OPENING,
           sourceReferenceId: opening.id,
         })),
       });
@@ -1282,7 +1490,7 @@ export async function claimRewardPack(
   });
 
   const [reward, batch] = await Promise.all([
-    fetchRewardGrantWithPackSet(prisma, options.rewardGrantId),
+    fetchRewardGrantWithPackSource(prisma, options.rewardGrantId),
     fetchBatchResult(prisma, claimedBatchId),
   ]);
 
@@ -1434,6 +1642,14 @@ export async function openPack(
           });
           totalCost = options.chargeCredits === false ? 0 : economy.packPrice;
 
+          if (options.chargeCredits !== false) {
+            await enforcePackPurchaseRules(tx, {
+              runId,
+              userId: viewer.id,
+              type: "PACK",
+            });
+          }
+
           if (!wallet || !batchId) {
             throw new Error("Wallet oder Pack-Batch konnte nicht vorbereitet werden.");
           }
@@ -1508,16 +1724,28 @@ export async function openPack(
           });
         }
 
-        await tx.collectionEntry.createMany({
-          data: pulls.map((pull) => ({
+        if (runId) {
+          await addPulledCardsToCollection(tx, {
             userId: viewer.id,
-            cardId: pull.cardId,
-            setCardId: pull.setCardId,
             runId,
-            source: OwnershipSource.PACK_OPENING,
-            sourceReferenceId: openingId,
-          })),
-        });
+            pulls: pulls.map((pull) => ({
+              cardId: pull.cardId,
+              setCardId: pull.setCardId,
+              sourceReferenceId: openingId,
+            })),
+          });
+        } else {
+          await tx.collectionEntry.createMany({
+            data: pulls.map((pull) => ({
+              userId: viewer.id,
+              cardId: pull.cardId,
+              setCardId: pull.setCardId,
+              runId: null,
+              source: "PACK_OPENING" as const,
+              sourceReferenceId: openingId,
+            })),
+          });
+        }
       },
       {
         timeout: 20_000,
@@ -1627,6 +1855,12 @@ export async function openDisplay(
       unlock,
     });
 
+    await enforcePackPurchaseRules(tx, {
+      runId: options.runId,
+      userId: viewer.id,
+      type: "DISPLAY",
+    });
+
     const economy = normalizePackEconomy({
       packPrice: unlock?.packPrice,
       displaySize: unlock?.displaySize,
@@ -1715,14 +1949,13 @@ export async function openDisplay(
       ),
     });
 
-    await tx.collectionEntry.createMany({
-      data: displayPacks.flatMap((opening) =>
+    await addPulledCardsToCollection(tx, {
+      userId: viewer.id,
+      runId: options.runId,
+      pulls: displayPacks.flatMap((opening) =>
         opening.pulls.map((pull) => ({
-          userId: viewer.id,
           cardId: pull.cardId,
           setCardId: pull.setCardId,
-          runId: options.runId,
-          source: OwnershipSource.PACK_OPENING,
           sourceReferenceId: opening.id,
         })),
       ),

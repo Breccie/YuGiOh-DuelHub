@@ -9,7 +9,7 @@ import type {
   RunPromosResponse,
   PromoSourceDto,
 } from "@ygo/contracts";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import { AssetIcon } from "@/components/asset-icon";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { apiPostJson, getApiErrorMessage } from "@/lib/api-client";
@@ -147,16 +147,8 @@ export function PromoCardsConsole({
   }
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
-      <div className="app-background" />
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <AppSidebar />
-
-        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-8">
-            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
-              <ConsoleGlobalStatusBar viewer={{ displayName: viewer.displayName }} />
-            </div>
+    <AppShell topbar={<ConsoleGlobalStatusBar viewer={{ displayName: viewer.displayName }} />}>
+          <div className="flex flex-col gap-4 pt-4">
             <header className="grid gap-8 rounded-[28px] border border-[rgba(255,255,255,0.10)] bg-[rgba(8,11,16,0.78)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.42)] backdrop-blur-xl xl:grid-cols-[360px_520px_minmax(0,1fr)] xl:items-end">
               <div className="hidden min-h-[300px] items-center justify-center xl:flex">
                 <div className="relative h-64 w-44 rotate-[-5deg] rounded-[18px] border border-[rgba(207,91,66,0.42)] bg-[linear-gradient(150deg,rgba(55,28,18,0.96),rgba(10,13,18,0.96))] shadow-[0_22px_60px_rgba(0,0,0,0.45)]">
@@ -486,8 +478,6 @@ export function PromoCardsConsole({
           ))}
         </section>
           </div>
-        </main>
-      </div>
-    </div>
+    </AppShell>
   );
 }

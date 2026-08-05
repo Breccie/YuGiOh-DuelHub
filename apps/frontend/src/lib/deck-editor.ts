@@ -1,5 +1,6 @@
-import { DeckSection, type PrismaClient } from "@prisma/client";
+import { DeckSection, type Prisma, type PrismaClient } from "@prisma/client";
 import { DomainError } from "@ygo/domain";
+import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
 import { getActiveRun } from "@/lib/run-service";
 import { defaultDeckBoxKey } from "@/lib/deckbox-config";
 import { resolveOwnedMediaAsset } from "@/lib/media-service";
@@ -132,6 +133,7 @@ export async function updateDeckMetadata(
     deckBoxAssetId?: string | null;
     banlistId?: string | null;
     snapshotDate?: string | null;
+    revision: number;
   },
 ) {
   const viewer = await prisma.user.findUnique({
@@ -146,6 +148,7 @@ export async function updateDeckMetadata(
 
   const activeRun = await getActiveRun(prisma, viewer.id);
   await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
+  await assertDeckIsMutable(prisma, activeRun.id, deckId);
   if (input.deckBoxAssetId !== undefined) {
     await resolveOwnedMediaAsset(prisma, viewer.id, input.deckBoxAssetId, "DECKBOX");
   }
@@ -160,9 +163,12 @@ export async function updateDeckMetadata(
   const snapshotDate =
     parseSnapshotDate(input.snapshotDate) ?? banlist?.effectiveFrom ?? null;
 
-  const deck = await prisma.deck.update({
+  const result = await prisma.deck.updateMany({
     where: {
       id: deckId,
+      userId: viewer.id,
+      runId: activeRun.id,
+      revision: input.revision,
     },
     data: {
       name,
@@ -171,10 +177,60 @@ export async function updateDeckMetadata(
       formatProfileId: banlist?.formatProfileId ?? null,
       banlistId: banlist?.id ?? null,
       snapshotDate,
+      revision: { increment: 1 },
     },
   });
 
+  if (result.count !== 1) {
+    const current = await prisma.deck.findFirst({
+      where: { id: deckId, userId: viewer.id, runId: activeRun.id },
+      select: { revision: true },
+    });
+    throw new DomainError({
+      code: "deck_revision_conflict",
+      message: "Das Deck wurde zwischenzeitlich geändert. Die lokale Änderung kann erneut gespeichert werden.",
+      status: 409,
+      details: { currentRevision: current?.revision ?? null },
+    });
+  }
+
+  const deck = await prisma.deck.findUniqueOrThrow({ where: { id: deckId } });
+
   return deck;
+}
+
+async function assertDeckIsMutable(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  runId: string,
+  deckId: string,
+) {
+  const rules = await getActiveCampaignRuleConfig(prisma, runId);
+  if (!rules.decks.tournamentDeckLock) return;
+
+  const registration = await prisma.tournamentParticipant.findFirst({
+    where: {
+      registeredDeckId: deckId,
+      tournament: {
+        runId,
+        status: { in: ["DRAFT", "ACTIVE"] },
+      },
+      OR: [
+        { checkedInAt: { not: null } },
+        { tournament: { startedAt: { not: null } } },
+      ],
+    },
+    select: {
+      tournament: { select: { title: true } },
+    },
+  });
+
+  if (registration) {
+    throw new DomainError({
+      code: "tournament_deck_locked",
+      message: `Dieses Deck ist für „${registration.tournament.title}“ eingecheckt und bis zum Turnierende gesperrt.`,
+      status: 409,
+    });
+  }
 }
 
 export async function deleteDeck(prisma: PrismaClient, viewerId: string, deckId: string) {
@@ -190,6 +246,7 @@ export async function deleteDeck(prisma: PrismaClient, viewerId: string, deckId:
 
   const activeRun = await getActiveRun(prisma, viewer.id);
   await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
+  await assertDeckIsMutable(prisma, activeRun.id, deckId);
 
   await prisma.deck.delete({
     where: {
@@ -315,6 +372,7 @@ export async function upsertDeckCard(
   }
 
   return prisma.$transaction(async (tx) => {
+    await assertDeckIsMutable(tx, activeRun.id, deckId);
     // Updating the parent deck gives every writer for this deck the same database
     // lock row. The aggregate below therefore observes all previously committed
     // section changes before deciding whether the requested total is valid.
@@ -411,6 +469,7 @@ export async function removeDeckCard(
 
   const activeRun = await getActiveRun(prisma, viewer.id);
   await requireOwnedDeck(prisma, deckId, viewer.id, activeRun.id);
+  await assertDeckIsMutable(prisma, activeRun.id, deckId);
 
   await prisma.deckCard.deleteMany({
     where: {
@@ -459,6 +518,7 @@ export async function moveDeckCard(
 
   const activeRun = await getActiveRun(prisma, viewer.id);
   return prisma.$transaction(async (tx) => {
+    await assertDeckIsMutable(tx, activeRun.id, deckId);
     const lockedDeck = await tx.deck.updateMany({
       where: {
         id: deckId,

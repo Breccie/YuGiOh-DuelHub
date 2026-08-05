@@ -2,11 +2,13 @@ import { CardKind, PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   acceptTradeVersion,
+  approveTradeCompletion,
   confirmTradeCompletion,
   createTradeCounterOffer,
   createTradeOffer,
   getTradeDetail,
 } from "@/lib/trade-service";
+import { buildCampaignRuleConfig } from "@/lib/campaign-rule-service";
 
 const prisma = new PrismaClient();
 
@@ -74,6 +76,28 @@ describe("trade service", () => {
         },
       });
       createdIds.runId = run.id;
+
+      const ruleConfig = buildCampaignRuleConfig(run);
+      ruleConfig.trades.allowCredits = true;
+      ruleConfig.trades.organizerApproval = true;
+      const ruleVersion = await prisma.campaignRuleVersion.create({
+        data: {
+          runId: run.id,
+          version: 1,
+          status: "ACTIVE",
+          presetKey: "CUSTOM",
+          config: ruleConfig,
+          createdById: proposer.id,
+          activatedAt: new Date(),
+        },
+      });
+      await prisma.playGroupRun.update({ where: { id: run.id }, data: { activeRuleVersionId: ruleVersion.id } });
+      await prisma.creditWallet.createMany({
+        data: [
+          { runId: run.id, userId: proposer.id, balance: 1000 },
+          { runId: run.id, userId: responder.id, balance: 1000 },
+        ],
+      });
 
       await prisma.user.updateMany({
         where: {
@@ -167,6 +191,8 @@ describe("trade service", () => {
         note: "Counter offer",
         offeredEntryIds: [responderEntryB.id],
         requestedEntryIds: [proposerEntryB.id],
+        offeredCredits: 200,
+        requestedCredits: 50,
       });
 
       const counteredTrade = await getTradeDetail(
@@ -181,6 +207,10 @@ describe("trade service", () => {
       );
 
       await acceptTradeVersion(prisma, proposer.id, createdTrade.id);
+
+      const reservedWallets = await prisma.creditWallet.findMany({ where: { runId: run.id } });
+      expect(reservedWallets.find((wallet) => wallet.userId === responder.id)?.reservedBalance).toBe(200);
+      expect(reservedWallets.find((wallet) => wallet.userId === proposer.id)?.reservedBalance).toBe(50);
 
       const acceptedEntries = await prisma.collectionEntry.findMany({
         where: {
@@ -215,11 +245,17 @@ describe("trade service", () => {
       expect(afterFirstConfirmation.proposerConfirmedAt).toBeNull();
 
       await confirmTradeCompletion(prisma, proposer.id, createdTrade.id);
-      const completedTrade = await getTradeDetail(
+      const waitingForApproval = await getTradeDetail(
         prisma,
         proposer.id,
         createdTrade.id,
       );
+      expect(waitingForApproval.status).toBe("ACCEPTED");
+      expect(waitingForApproval.requiresOrganizerApproval).toBe(true);
+      expect(waitingForApproval.approvedAt).toBeNull();
+
+      await approveTradeCompletion(prisma, proposer.id, createdTrade.id);
+      const completedTrade = await getTradeDetail(prisma, proposer.id, createdTrade.id);
       expect(completedTrade.status).toBe("COMPLETED");
       expect(completedTrade.proposerConfirmedAt).not.toBeNull();
       expect(completedTrade.responderConfirmedAt).not.toBeNull();
@@ -228,6 +264,7 @@ describe("trade service", () => {
           "VERSION_CREATED",
           "TRADE_ACCEPTED",
           "TRADE_CONFIRMED",
+          "TRADE_APPROVED",
           "TRADE_COMPLETED",
         ]),
       );
@@ -259,6 +296,10 @@ describe("trade service", () => {
           sourceReferenceId: createdTrade.id,
         }),
       );
+      const finalWallets = await prisma.creditWallet.findMany({ where: { runId: run.id } });
+      expect(finalWallets.find((wallet) => wallet.userId === proposer.id)).toMatchObject({ balance: 1150, reservedBalance: 0 });
+      expect(finalWallets.find((wallet) => wallet.userId === responder.id)).toMatchObject({ balance: 850, reservedBalance: 0 });
+      expect(await prisma.creditLedgerEntry.count({ where: { runId: run.id, source: "TRADE_TRANSFER" } })).toBe(4);
     } finally {
       if (createdIds.runId) {
         await prisma.playGroupRun.deleteMany({

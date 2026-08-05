@@ -72,3 +72,17 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Install browser runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Seed browser-smoke catalog
+        run: npm run db:seed:demo
+
+      - name: Test local browser flows
+        timeout-minutes: 8
+        run: npm run test:e2e:smoke
+
+      - name: Test online browser and API flows
+        timeout-minutes: 10
+        run: npm run test:e2e:online

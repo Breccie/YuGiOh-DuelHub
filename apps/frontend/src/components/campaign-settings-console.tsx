@@ -2,17 +2,21 @@
 
 import { startTransition, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type {
   AssignableRunRole,
   CampaignRuleConfig,
   CampaignRulePreset,
   CampaignRuleVersionDto,
+  RunJoinRequestDto,
   RunMemberDto,
   RunProgressionResponse,
 } from "@ygo/contracts";
+import { campaignRuleConfigSchema } from "@ygo/contracts";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { CampaignPackAccessPanel } from "@/components/campaign-pack-access-panel";
+import { ImageCropUpload } from "@/components/image-crop-upload";
 import { Panel, StatPill } from "@/components/panel";
 import { getApiErrorMessage } from "@/lib/api-client";
 import type { PlayGroupRunDto, ViewerSession } from "@/lib/app-dtos";
@@ -34,6 +38,7 @@ type BuiltInCampaignRulePreset = Exclude<CampaignRulePreset, "CUSTOM">;
 type CampaignSettingsSection =
   | "ECONOMY"
   | "PROGRESSION"
+  | "COLLECTION"
   | "DECKS"
   | "TRADES"
   | "TOURNAMENTS"
@@ -50,6 +55,7 @@ type CampaignWorkspaceSection =
   | "HISTORY";
 
 type CampaignDraft = {
+  advancedRuleConfig?: CampaignRuleConfig;
   preset: CampaignRulePreset;
   startingCredits: string;
   creditLimit: string;
@@ -64,7 +70,7 @@ type CampaignDraft = {
   maxMainDeck: string;
   tradesEnabled: boolean;
   reservationMinutes: string;
-  matchMode: "SINGLE" | "BEST_OF_THREE";
+  matchMode: CampaignRuleConfig["tournaments"]["matchMode"];
   requireResultConfirmation: boolean;
   tournamentWinnerCredits: string;
   tournamentRunnerUpCredits: string;
@@ -123,7 +129,7 @@ function createPresetConfig(options: {
   runnerUpCredits: number;
   participationCredits: number;
 }): CampaignRuleConfig {
-  return {
+  return campaignRuleConfigSchema.parse({
     economy: {
       startingCredits: options.startingCredits,
       creditLimit: null,
@@ -166,7 +172,7 @@ function createPresetConfig(options: {
       requireReasonForChanges: true,
       activationMode: "IMMEDIATE",
     },
-  };
+  });
 }
 
 const BUILT_IN_PRESET_CONFIGS: Record<BuiltInCampaignRulePreset, CampaignRuleConfig> = {
@@ -271,14 +277,16 @@ export function CampaignSettingsConsole({
   const [maxMainDeck, setMaxMainDeck] = useState("60");
   const [tradesEnabled, setTradesEnabled] = useState(true);
   const [reservationMinutes, setReservationMinutes] = useState("1440");
-  const [matchMode, setMatchMode] = useState<"SINGLE" | "BEST_OF_THREE">("BEST_OF_THREE");
+  const [matchMode, setMatchMode] = useState<CampaignRuleConfig["tournaments"]["matchMode"]>("BEST_OF_THREE");
   const [requireResultConfirmation, setRequireResultConfirmation] = useState(true);
   const [activationMode, setActivationMode] = useState<"IMMEDIATE" | "AT_DATE" | "NEXT_PROGRESSION_STEP">("IMMEDIATE");
   const [effectiveAt, setEffectiveAt] = useState("");
   const [changeReason, setChangeReason] = useState("");
   const [ruleVersions, setRuleVersions] = useState<CampaignRuleVersionDto[]>([]);
   const [baseRuleConfig, setBaseRuleConfig] = useState<CampaignRuleVersionDto["config"] | null>(null);
+  const [advancedRuleConfig, setAdvancedRuleConfig] = useState<CampaignRuleConfig | null>(null);
   const [members, setMembers] = useState<RunMemberDto[]>([]);
+  const [joinRequests, setJoinRequests] = useState<RunJoinRequestDto[]>([]);
   const [progression, setProgression] = useState<RunProgressionResponse | null>(null);
   const [inviteDuelistId, setInviteDuelistId] = useState("");
   const [inviteRole, setInviteRole] = useState<AssignableRunRole>("PLAYER");
@@ -291,6 +299,16 @@ export function CampaignSettingsConsole({
   const [campaignName, setCampaignName] = useState(activeRun.name);
   const [campaignDescription, setCampaignDescription] = useState(activeRun.description ?? "");
   const [campaignStatus, setCampaignStatus] = useState<PlayGroupRunDto["status"]>(activeRun.status);
+  const [campaignImageAssetId, setCampaignImageAssetId] = useState(activeRun.campaignImageAssetId);
+  const [campaignImageUrl, setCampaignImageUrl] = useState(activeRun.campaignImageUrl);
+  const [campaignRegion, setCampaignRegion] = useState(activeRun.region);
+  const [campaignLanguage, setCampaignLanguage] = useState(activeRun.language);
+  const [campaignTimeZone, setCampaignTimeZone] = useState(activeRun.timeZone);
+  const [campaignVisibility, setCampaignVisibility] = useState(activeRun.visibility);
+  const [campaignJoinType, setCampaignJoinType] = useState(activeRun.joinType);
+  const [campaignMaxPlayers, setCampaignMaxPlayers] = useState(activeRun.maxPlayers === null ? "" : String(activeRun.maxPlayers));
+  const [campaignStartsAt, setCampaignStartsAt] = useState(activeRun.startsAt?.slice(0, 16) ?? "");
+  const [campaignEndsAt, setCampaignEndsAt] = useState(activeRun.endsAt?.slice(0, 16) ?? "");
   const [identitySaving, setIdentitySaving] = useState(false);
   const [campaignDataReady, setCampaignDataReady] = useState(false);
   const [activeSection, setActiveSection] =
@@ -328,6 +346,15 @@ export function CampaignSettingsConsole({
         name: campaignName.trim(),
         description: campaignDescription.trim() || null,
         status: campaignStatus,
+        campaignImageAssetId,
+        region: campaignRegion,
+        language: campaignLanguage.trim(),
+        timeZone: campaignTimeZone.trim(),
+        visibility: campaignVisibility,
+        joinType: campaignJoinType,
+        maxPlayers: campaignMaxPlayers.trim() ? Number(campaignMaxPlayers) : null,
+        startsAt: campaignStartsAt ? new Date(campaignStartsAt).toISOString() : null,
+        endsAt: campaignEndsAt ? new Date(campaignEndsAt).toISOString() : null,
       });
       setFeedback("Kampagnenprofil wurde gespeichert.");
       startTransition(() => router.refresh());
@@ -340,6 +367,7 @@ export function CampaignSettingsConsole({
 
   const applyConfigToForm = useCallback((config: CampaignRuleConfig, nextPreset: CampaignRulePreset) => {
     setBaseRuleConfig(config);
+    setAdvancedRuleConfig(structuredClone(config));
     setPreset(nextPreset);
     setStartingCredits(String(config.economy.startingCredits));
     setCreditLimit(config.economy.creditLimit === null ? "" : String(config.economy.creditLimit));
@@ -369,6 +397,8 @@ export function CampaignSettingsConsole({
   }, [applyConfigToForm]);
 
   const applyDraftToForm = useCallback((draft: CampaignDraft) => {
+    const parsedAdvanced = campaignRuleConfigSchema.safeParse(draft.advancedRuleConfig);
+    if (parsedAdvanced.success) setAdvancedRuleConfig(parsedAdvanced.data);
     setPreset(draft.preset);
     setStartingCredits(draft.startingCredits);
     setCreditLimit(draft.creditLimit);
@@ -405,15 +435,33 @@ export function CampaignSettingsConsole({
     setPreset((current) => (current === "CUSTOM" ? current : "CUSTOM"));
   }
 
+  function updateAdvancedSection<K extends keyof CampaignRuleConfig>(
+    section: K,
+    patch: Partial<CampaignRuleConfig[K]>,
+  ) {
+    markPresetAsCustom();
+    setAdvancedRuleConfig((current) => current ? {
+      ...current,
+      [section]: { ...current[section], ...patch },
+    } : current);
+  }
+
+  function toggleRuleList<T extends string>(items: T[], value: T) {
+    return items.includes(value)
+      ? items.filter((item) => item !== value)
+      : [...items, value];
+  }
+
   useEffect(() => {
     let isMounted = true;
 
     async function refreshCampaignData() {
       setCampaignDataReady(false);
-      const [freshMembers, freshProgression, freshRuleVersions] = await Promise.all([
+      const [freshMembers, freshProgression, freshRuleVersions, freshJoinRequests] = await Promise.all([
         runClient.listMembers(activeRun.id),
         runClient.getProgression(activeRun.id),
         campaignRuleClient.list(activeRun.id),
+        isManager ? runClient.listJoinRequests(activeRun.id) : Promise.resolve([]),
       ]);
 
       if (!isMounted) {
@@ -421,6 +469,7 @@ export function CampaignSettingsConsole({
       }
 
       setMembers(freshMembers);
+      setJoinRequests(freshJoinRequests);
       setProgression(freshProgression);
       setRuleVersions(freshRuleVersions);
       const activeVersion = getActiveRuleVersion(freshRuleVersions);
@@ -455,11 +504,12 @@ export function CampaignSettingsConsole({
     return () => {
       isMounted = false;
     };
-  }, [activeRun.id, applyActiveRuleVersion, applyDraftToForm]);
+  }, [activeRun.id, applyActiveRuleVersion, applyDraftToForm, isManager]);
 
   useEffect(() => {
     if (!campaignDataReady || !baseRuleVersionId || !canManageRules) return;
     const draft: CampaignDraft = {
+      advancedRuleConfig: advancedRuleConfig ?? undefined,
       preset,
       startingCredits,
       creditLimit,
@@ -489,6 +539,7 @@ export function CampaignSettingsConsole({
     );
   }, [
     activeRun.id,
+    advancedRuleConfig,
     activationMode,
     allowProxies,
     baseRuleVersionId,
@@ -517,13 +568,32 @@ export function CampaignSettingsConsole({
   ]);
 
   async function refreshMembersAndProgression() {
-    const [freshMembers, freshProgression] = await Promise.all([
+    const [freshMembers, freshProgression, freshJoinRequests] = await Promise.all([
       runClient.listMembers(activeRun.id),
       runClient.getProgression(activeRun.id).catch(() => null),
+      isManager ? runClient.listJoinRequests(activeRun.id) : Promise.resolve([]),
     ]);
 
     setMembers(freshMembers);
     setProgression(freshProgression);
+    setJoinRequests(freshJoinRequests);
+  }
+
+  async function decideJoinRequest(
+    requestId: string,
+    decision: "APPROVE" | "REJECT",
+  ) {
+    setActionPending(true);
+    setFeedback(null);
+    try {
+      await runClient.decideJoinRequest(activeRun.id, requestId, { decision });
+      await refreshMembersAndProgression();
+      setFeedback(decision === "APPROVE" ? "Beitrittsantrag angenommen." : "Beitrittsantrag abgelehnt.");
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Beitrittsantrag konnte nicht entschieden werden."));
+    } finally {
+      setActionPending(false);
+    }
   }
 
   async function saveCampaignSettings(confirmed = false) {
@@ -531,7 +601,7 @@ export function CampaignSettingsConsole({
       setFeedback("Nur der Kampagnen-Owner kann Regelversionen ändern.");
       return;
     }
-    if (!campaignDataReady || !baseRuleConfig) {
+    if (!campaignDataReady || !baseRuleConfig || !advancedRuleConfig) {
       setFeedback("Die aktive Regelversion ist noch nicht sicher geladen. Bitte lade die Seite erneut.");
       return;
     }
@@ -605,34 +675,33 @@ export function CampaignSettingsConsole({
 
     const nextConfig: CampaignRuleConfig = {
       economy: {
-        ...baseRuleConfig.economy,
+        ...advancedRuleConfig.economy,
         startingCredits: parsedStartingCredits,
         creditLimit: parsedCreditLimit,
         packPrice: parsedPackPrice,
         displaySize: parsedDisplaySize,
       },
       progression: {
-        ...baseRuleConfig.progression,
+        ...advancedRuleConfig.progression,
         initialSetUnlockCount: parsedInitialSets,
         setsPerStep: parsedSetsPerStep,
         freePacksPerSetUnlock: parsedFreePacks,
         separatePromoProgression,
       },
-      collection: baseRuleConfig.collection,
+      collection: advancedRuleConfig.collection,
       decks: {
-        ...baseRuleConfig.decks,
+        ...advancedRuleConfig.decks,
         allowProxies,
         minMainDeck: parsedMinMainDeck,
         maxMainDeck: parsedMaxMainDeck,
       },
       trades: {
-        ...baseRuleConfig.trades,
+        ...advancedRuleConfig.trades,
         enabled: tradesEnabled,
-        allowCredits: false,
         reservationMinutes: parsedReservationMinutes,
       },
       tournaments: {
-        ...baseRuleConfig.tournaments,
+        ...advancedRuleConfig.tournaments,
         matchMode,
         requireResultConfirmation,
         winnerCredits: parsedWinnerCredits,
@@ -640,7 +709,7 @@ export function CampaignSettingsConsole({
         participationCredits: parsedParticipationCredits,
       },
       audit: {
-        ...baseRuleConfig.audit,
+        ...advancedRuleConfig.audit,
         activationMode,
       },
     };
@@ -789,6 +858,10 @@ export function CampaignSettingsConsole({
         title: `${activeRun.name} Cup ${titleDate}`,
         description: "Schnellstart aus den Kampagnen-Einstellungen.",
         formatLabel: "Classic Progression",
+        pairingMode: advancedRuleConfig?.tournaments.pairingMode ?? "SWISS",
+        matchMode: advancedRuleConfig?.tournaments.matchMode === "SINGLE"
+          ? "BEST_OF_ONE"
+          : advancedRuleConfig?.tournaments.matchMode ?? "BEST_OF_THREE",
       });
       const createdTournamentId = data.tournament.overview.id;
 
@@ -1017,9 +1090,30 @@ export function CampaignSettingsConsole({
             </div>
             {canManageRules ? (
               <div className="campaign-identity-form">
+                <div className="sm:col-span-2 grid gap-3 rounded-[12px] border border-white/10 bg-black/20 p-3 sm:grid-cols-[180px_1fr] sm:items-center">
+                  <div className="relative aspect-video overflow-hidden rounded-[8px] border border-white/10 bg-black/35">
+                    {campaignImageUrl ? <Image src={campaignImageUrl} alt="Kampagnenmotiv" fill className="object-cover" unoptimized /> : <div className="grid h-full place-items-center text-xs text-white/45">Kein Kampagnenmotiv</div>}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#f0dfcc]">Kampagnenbild</p>
+                    <p className="mb-3 mt-1 text-xs leading-5 text-[#9eacb5]">Wird im Kampagnenkopf und in öffentlichen Übersichten verwendet.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <ImageCropUpload kind="CAMPAIGN_IMAGE" aspect={16 / 9} label="Bild hochladen" onUploaded={(asset) => { setCampaignImageAssetId(asset.id); setCampaignImageUrl(asset.imageUrl); }} />
+                      {campaignImageAssetId ? <button type="button" className="ui-button-neutral" onClick={() => { setCampaignImageAssetId(null); setCampaignImageUrl(null); }}>Entfernen</button> : null}
+                    </div>
+                  </div>
+                </div>
                 <label><span>Name</span><input className="ui-input" value={campaignName} onChange={(event) => setCampaignName(event.target.value)} /></label>
                 <label><span>Status</span><select className="ui-input" value={campaignStatus} onChange={(event) => setCampaignStatus(event.target.value as PlayGroupRunDto["status"])}><option value="ACTIVE">Aktiv</option><option value="ARCHIVED">Archiviert</option></select></label>
                 <label className="sm:col-span-2"><span>Beschreibung</span><textarea className="ui-input min-h-24" value={campaignDescription} onChange={(event) => setCampaignDescription(event.target.value)} /></label>
+                <label><span>Region</span><select className="ui-input" value={campaignRegion} onChange={(event) => setCampaignRegion(event.target.value as typeof campaignRegion)}><option value="TCG">TCG</option><option value="OCG">OCG</option><option value="GLOBAL">Global</option><option value="CUSTOM">Benutzerdefiniert</option></select></label>
+                <label><span>Sprache</span><input className="ui-input" value={campaignLanguage} onChange={(event) => setCampaignLanguage(event.target.value)} placeholder="de" /></label>
+                <label><span>Zeitzone</span><input className="ui-input" value={campaignTimeZone} onChange={(event) => setCampaignTimeZone(event.target.value)} placeholder="Europe/Berlin" /></label>
+                <label><span>Sichtbarkeit</span><select className="ui-input" value={campaignVisibility} onChange={(event) => setCampaignVisibility(event.target.value as typeof campaignVisibility)}><option value="PRIVATE">Privat</option><option value="UNLISTED">Nicht gelistet</option><option value="PUBLIC">Öffentlich</option></select></label>
+                <label><span>Beitritt</span><select className="ui-input" value={campaignJoinType} onChange={(event) => setCampaignJoinType(event.target.value as typeof campaignJoinType)}><option value="INVITE_CODE">Einladungscode</option><option value="APPROVAL">Freigabe durch Leitung</option><option value="OPEN">Offen</option></select></label>
+                <label><span>Spielerlimit</span><input className="ui-input" inputMode="numeric" value={campaignMaxPlayers} onChange={(event) => setCampaignMaxPlayers(event.target.value)} placeholder="Unbegrenzt" /></label>
+                <label><span>Beginn</span><input className="ui-input" type="datetime-local" value={campaignStartsAt} onChange={(event) => setCampaignStartsAt(event.target.value)} /></label>
+                <label><span>Ende</span><input className="ui-input" type="datetime-local" value={campaignEndsAt} onChange={(event) => setCampaignEndsAt(event.target.value)} /></label>
                 <button type="button" className="ui-button-primary sm:col-span-2 sm:justify-self-start" disabled={identitySaving || !campaignName.trim()} onClick={() => void saveCampaignIdentity()}>{identitySaving ? "Speichert…" : "Kampagnenprofil speichern"}</button>
               </div>
             ) : null}
@@ -1042,7 +1136,7 @@ export function CampaignSettingsConsole({
             className={workspaceSection === "DECKS_TRADES" ? "mb-5 flex gap-1 rounded-[8px] border border-white/8 bg-black/20 p-1" : "hidden"}
             aria-label="Regelbereich"
           >
-            {([ ["DECKS", "Deckregeln"], ["TRADES", "Tauschregeln"] ] as const).map(([value, label]) => (
+            {([ ["DECKS", "Deckregeln"], ["COLLECTION", "Sammlung"], ["TRADES", "Tauschregeln"] ] as const).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
@@ -1159,6 +1253,18 @@ export function CampaignSettingsConsole({
             Diese Turnier-Credits werden in neu generierte Kampagnen-Checkpoints geschrieben
             und dienen als Pack-Währung für den freigeschalteten Shop.
           </p>
+          {activeSection === "COLLECTION" && advancedRuleConfig ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Duplikatregel</span><select className="ui-input mt-2" value={advancedRuleConfig.collection.duplicateRule} onChange={(event) => updateAdvancedSection("collection", { duplicateRule: event.target.value as CampaignRuleConfig["collection"]["duplicateRule"] })}><option value="KEEP_ALL">Alle behalten</option><option value="CAP_COPIES">Kopien begrenzen</option><option value="CONVERT_CREDITS">In Credits umwandeln</option></select></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Kartenidentität</span><select className="ui-input mt-2" value={advancedRuleConfig.collection.printingIdentity} onChange={(event) => updateAdvancedSection("collection", { printingIdentity: event.target.value as CampaignRuleConfig["collection"]["printingIdentity"] })}><option value="CARD">Karte</option><option value="PRINTING">Druckvariante</option><option value="PHYSICAL_COPY">Physische Kopie</option></select></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Sammlungslimit</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.collection.collectionEntryLimit ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("collection", { collectionEntryLimit: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Max. Kopien pro Karte</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.collection.maxCopiesPerCard ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("collection", { maxCopiesPerCard: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Binderlimit</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.collection.binderLimit ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("collection", { binderLimit: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Seiten pro Binder</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.collection.binderPageLimit ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("collection", { binderPageLimit: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Dusting-Credits je Karte</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.collection.dustingCreditsPerCard} disabled={!advancedRuleConfig.collection.dustingEnabled} onChange={(event) => updateAdvancedSection("collection", { dustingCreditsPerCard: Number(event.target.value) })} /></label>
+              {([ ["allowPackDuplicates", "Duplikate in Packs"], ["printingSpecificBinders", "Druckvarianten im Binder"], ["physicalCopyReservation", "Physische Kopien reservieren"], ["dustingEnabled", "Dusting aktivieren"] ] as const).map(([key, label]) => <label key={key} className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.collection[key]} onChange={(event) => updateAdvancedSection("collection", { [key]: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">{label}</span></label>)}
+            </div>
+          ) : null}
           <div className={activeSection === "DECKS" ? "grid gap-4 md:grid-cols-3" : "hidden"}>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Main Deck Minimum</span>
@@ -1173,6 +1279,15 @@ export function CampaignSettingsConsole({
               <span className="text-sm font-semibold text-[#f0dfcc]">Proxies erlauben</span>
             </label>
           </div>
+          {activeSection === "DECKS" && advancedRuleConfig ? (
+            <div className="mt-4 grid gap-4 border-t border-white/8 pt-4 md:grid-cols-3">
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Extra Deck Maximum</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.decks.maxExtraDeck} onChange={(event) => updateAdvancedSection("decks", { maxExtraDeck: Number(event.target.value) })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Side Deck Maximum</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.decks.maxSideDeck} onChange={(event) => updateAdvancedSection("decks", { maxSideDeck: Number(event.target.value) })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Decksichtbarkeit</span><select className="ui-input mt-2" value={advancedRuleConfig.decks.deckVisibility} onChange={(event) => updateAdvancedSection("decks", { deckVisibility: event.target.value as CampaignRuleConfig["decks"]["deckVisibility"] })}><option value="PRIVATE">Privat</option><option value="FRIENDS">Freunde</option><option value="CAMPAIGN">Kampagne</option><option value="PUBLIC">Öffentlich</option></select></label>
+              <label className="md:col-span-3"><span className="text-sm font-semibold text-[#f0dfcc]">Erlaubte Format-IDs</span><input className="ui-input mt-2" value={advancedRuleConfig.decks.allowedFormatKeys.join(", ")} onChange={(event) => updateAdvancedSection("decks", { allowedFormatKeys: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="Leer = aktuelles Kampagnenformat" /></label>
+              {([ ["ownershipRequired", "Besitzpflicht"], ["allowMultipleFormats", "Mehrere Formate"], ["tournamentDeckLock", "Turnierdeck beim Start sperren"] ] as const).map(([key, label]) => <label key={key} className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.decks[key]} onChange={(event) => updateAdvancedSection("decks", { [key]: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">{label}</span></label>)}
+            </div>
+          ) : null}
           <div className={activeSection === "TRADES" ? "grid gap-4 md:grid-cols-2" : "hidden"}>
             <label className="flex items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] px-4 py-3">
               <input type="checkbox" checked={tradesEnabled} onChange={(event) => { markPresetAsCustom(); setTradesEnabled(event.target.checked); }} />
@@ -1187,8 +1302,9 @@ export function CampaignSettingsConsole({
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Matchmodus</span>
               <select className="ui-input mt-2" value={matchMode} onChange={(event) => { markPresetAsCustom(); setMatchMode(event.target.value as typeof matchMode); }}>
+                <option value="BEST_OF_ONE">Best of One</option>
                 <option value="BEST_OF_THREE">Best of Three</option>
-                <option value="SINGLE">Single Duel</option>
+                <option value="BEST_OF_FIVE">Best of Five</option>
               </select>
             </label>
             <label className="flex items-center gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] px-4 py-3">
@@ -1196,6 +1312,51 @@ export function CampaignSettingsConsole({
               <span className="text-sm font-semibold text-[#f0dfcc]">Ergebnis bestätigen</span>
             </label>
           </div>
+          {activeSection === "TRADES" && advancedRuleConfig ? (
+            <div className="mt-4 grid gap-4 border-t border-white/8 pt-4 md:grid-cols-3">
+              <label className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.trades.allowCredits} onChange={(event) => updateAdvancedSection("trades", { allowCredits: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">Credits in Trades</span></label>
+              <label className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.trades.organizerApproval} onChange={(event) => updateAdvancedSection("trades", { organizerApproval: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">Organizer-Freigabe</span></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Mindestmitgliedschaft (Tage)</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.trades.minimumMembershipDays} onChange={(event) => updateAdvancedSection("trades", { minimumMembershipDays: Number(event.target.value) })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Max. Karten</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.trades.maxCardsPerTrade ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("trades", { maxCardsPerTrade: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Max. Credits</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.trades.maxCreditsPerTrade ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("trades", { maxCreditsPerTrade: event.target.value ? Number(event.target.value) : null })} /></label>
+              <div><span className="text-sm font-semibold text-[#f0dfcc]">Tauscharten</span><div className="mt-2 flex flex-wrap gap-3">{(["DIRECT", "AUCTION", "DRAFT_WINDOW"] as const).map((value) => <label key={value} className="flex items-center gap-2 text-sm text-[#baa58a]"><input type="checkbox" checked={advancedRuleConfig.trades.modes.includes(value)} onChange={() => updateAdvancedSection("trades", { modes: toggleRuleList(advancedRuleConfig.trades.modes, value) })} />{value}</label>)}</div></div>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Tauschfenster ab</span><input className="ui-input mt-2" type="datetime-local" value={advancedRuleConfig.trades.tradeWindowStart?.slice(0, 16) ?? ""} onChange={(event) => updateAdvancedSection("trades", { tradeWindowStart: event.target.value ? new Date(event.target.value).toISOString() : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Tauschfenster bis</span><input className="ui-input mt-2" type="datetime-local" value={advancedRuleConfig.trades.tradeWindowEnd?.slice(0, 16) ?? ""} onChange={(event) => updateAdvancedSection("trades", { tradeWindowEnd: event.target.value ? new Date(event.target.value).toISOString() : null })} /></label>
+            </div>
+          ) : null}
+          {activeSection === "PROGRESSION" && advancedRuleConfig ? (
+            <div className="mt-4 grid gap-4 border-t border-white/8 pt-4 md:grid-cols-3">
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Catch-up</span><select className="ui-input mt-2" value={advancedRuleConfig.progression.catchUpMode} onChange={(event) => updateAdvancedSection("progression", { catchUpMode: event.target.value as CampaignRuleConfig["progression"]["catchUpMode"] })}><option value="NONE">Kein Catch-up</option><option value="MATCH_CURRENT">Aktuellen Stand übernehmen</option><option value="HOST_GRANT">Durch Host vergeben</option></select></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Startpack-Auswahl</span><select className="ui-input mt-2" value={advancedRuleConfig.progression.startingPackMode} onChange={(event) => updateAdvancedSection("progression", { startingPackMode: event.target.value as CampaignRuleConfig["progression"]["startingPackMode"] })}><option value="NONE">Keine</option><option value="FIXED">Fest</option><option value="RANDOM">Zufällig</option><option value="PLAYER_CHOICE">Spielerwahl</option></select></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Startpack-Anzahl</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.progression.startingPackCount} onChange={(event) => updateAdvancedSection("progression", { startingPackCount: Number(event.target.value) })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Startset-IDs</span><input className="ui-input mt-2" value={advancedRuleConfig.progression.startingSetIds.join(", ")} onChange={(event) => updateAdvancedSection("progression", { startingSetIds: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} placeholder="set-id-1, set-id-2" /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Startkarten-IDs</span><input className="ui-input mt-2" value={advancedRuleConfig.progression.startingCardIds.join(", ")} onChange={(event) => updateAdvancedSection("progression", { startingCardIds: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Starterdeck-IDs</span><input className="ui-input mt-2" value={advancedRuleConfig.progression.starterDeckIds.join(", ")} onChange={(event) => updateAdvancedSection("progression", { starterDeckIds: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
+              <div className="md:col-span-3"><span className="text-sm font-semibold text-[#f0dfcc]">Fortschrittsauslöser</span><div className="mt-2 flex flex-wrap gap-3">{(["MANUAL", "DATE", "TOURNAMENT", "MATCHES", "EVENT"] as const).map((value) => <label key={value} className="flex items-center gap-2 text-sm text-[#baa58a]"><input type="checkbox" checked={advancedRuleConfig.progression.progressionModes.includes(value)} onChange={() => updateAdvancedSection("progression", { progressionModes: toggleRuleList(advancedRuleConfig.progression.progressionModes, value) })} />{value}</label>)}</div></div>
+              {([ ["allowReleaseOrder", "Release-Reihenfolge"], ["allowCustomOrder", "Eigene Reihenfolge"], ["allowPlayerVote", "Spielerabstimmung"], ["unlockReprints", "Reprints mitfreischalten"], ["allowBackwardUnlocks", "Rückwirkende Freigaben"], ["timedEventsEnabled", "Zeitlich begrenzte Events"] ] as const).map(([key, label]) => <label key={key} className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.progression[key]} onChange={(event) => updateAdvancedSection("progression", { [key]: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">{label}</span></label>)}
+            </div>
+          ) : null}
+          {activeSection === "ECONOMY" && advancedRuleConfig ? (
+            <div className="mt-4 grid gap-4 border-t border-white/8 pt-4 md:grid-cols-3">
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Bundle-Größe</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.economy.bundleSize} onChange={(event) => updateAdvancedSection("economy", { bundleSize: Number(event.target.value) })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Bundle-Preis</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.economy.bundlePrice ?? ""} placeholder="Automatisch" onChange={(event) => updateAdvancedSection("economy", { bundlePrice: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Packlimit pro Tag</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.economy.packPurchaseLimitPerDay ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("economy", { packPurchaseLimitPerDay: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Displaylimit pro Tag</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.economy.displayPurchaseLimitPerDay ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("economy", { displayPurchaseLimitPerDay: event.target.value ? Number(event.target.value) : null })} /></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Bundlelimit pro Tag</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.economy.bundlePurchaseLimitPerDay ?? ""} placeholder="Unbegrenzt" onChange={(event) => updateAdvancedSection("economy", { bundlePurchaseLimitPerDay: event.target.value ? Number(event.target.value) : null })} /></label>
+              <div><span className="text-sm font-semibold text-[#f0dfcc]">Kaufarten</span><div className="mt-2 flex flex-wrap gap-3">{(["PACK", "DISPLAY", "BUNDLE"] as const).map((value) => <label key={value} className="flex items-center gap-2 text-sm text-[#baa58a]"><input type="checkbox" checked={advancedRuleConfig.economy.purchaseTypes.includes(value)} onChange={() => updateAdvancedSection("economy", { purchaseTypes: toggleRuleList(advancedRuleConfig.economy.purchaseTypes, value) })} />{value}</label>)}</div></div>
+            </div>
+          ) : null}
+          {activeSection === "TOURNAMENTS" && advancedRuleConfig ? (
+            <div className="mt-4 grid gap-4 border-t border-white/8 pt-4 md:grid-cols-3">
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Standard-Paarung</span><select className="ui-input mt-2" value={advancedRuleConfig.tournaments.pairingMode} onChange={(event) => updateAdvancedSection("tournaments", { pairingMode: event.target.value as CampaignRuleConfig["tournaments"]["pairingMode"] })}><option value="SWISS">Swiss</option><option value="ROUND_ROBIN">Round Robin</option><option value="SINGLE_ELIMINATION">Single Elimination</option><option value="MANUAL">Manuell</option></select></label>
+              <label><span className="text-sm font-semibold text-[#f0dfcc]">Mindestteilnehmer</span><input className="ui-input mt-2" inputMode="numeric" value={advancedRuleConfig.tournaments.minimumParticipants} onChange={(event) => updateAdvancedSection("tournaments", { minimumParticipants: Number(event.target.value) })} /></label>
+              <label className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.tournaments.requireDeckRegistration} onChange={(event) => updateAdvancedSection("tournaments", { requireDeckRegistration: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">Deckregistrierung erforderlich</span></label>
+              <label className="flex items-center gap-3 rounded-[10px] border border-white/8 px-3 py-3"><input type="checkbox" checked={advancedRuleConfig.tournaments.rewardsRepeatable} onChange={(event) => updateAdvancedSection("tournaments", { rewardsRepeatable: event.target.checked })} /><span className="text-sm text-[#f0dfcc]">Rewards wiederholbar</span></label>
+              <div className="md:col-span-3"><span className="text-sm font-semibold text-[#f0dfcc]">Erlaubte Paarungen</span><div className="mt-2 flex flex-wrap gap-3">{(["SWISS", "ROUND_ROBIN", "SINGLE_ELIMINATION", "MANUAL"] as const).map((value) => <label key={value} className="flex items-center gap-2 text-sm text-[#baa58a]"><input type="checkbox" checked={advancedRuleConfig.tournaments.allowedPairingModes.includes(value)} onChange={() => updateAdvancedSection("tournaments", { allowedPairingModes: toggleRuleList(advancedRuleConfig.tournaments.allowedPairingModes, value) })} />{value}</label>)}</div></div>
+              <div className="md:col-span-3"><span className="text-sm font-semibold text-[#f0dfcc]">Erlaubte Matchmodi</span><div className="mt-2 flex flex-wrap gap-3">{(["BEST_OF_ONE", "BEST_OF_THREE", "BEST_OF_FIVE"] as const).map((value) => <label key={value} className="flex items-center gap-2 text-sm text-[#baa58a]"><input type="checkbox" checked={advancedRuleConfig.tournaments.allowedMatchModes.includes(value)} onChange={() => updateAdvancedSection("tournaments", { allowedMatchModes: toggleRuleList(advancedRuleConfig.tournaments.allowedMatchModes, value) })} />{value}</label>)}</div></div>
+              <div className="md:col-span-3"><span className="text-sm font-semibold text-[#f0dfcc]">Rewardquellen</span><div className="mt-2 flex flex-wrap gap-3">{(["CREDITS", "STANDARD_PACK", "CUSTOM_PACK", "PROMO", "FIXED_CARD"] as const).map((value) => <label key={value} className="flex items-center gap-2 text-sm text-[#baa58a]"><input type="checkbox" checked={advancedRuleConfig.tournaments.rewardSources.includes(value)} onChange={() => updateAdvancedSection("tournaments", { rewardSources: toggleRuleList(advancedRuleConfig.tournaments.rewardSources, value) })} />{value}</label>)}</div></div>
+            </div>
+          ) : null}
           <div className={activeSection === "ACTIVATION" ? "grid gap-4" : "hidden"}>
             <label className="block max-w-sm">
               <span className="text-sm font-semibold text-[#f0dfcc]">Aktivierung</span>
@@ -1239,6 +1400,23 @@ export function CampaignSettingsConsole({
         <div className={workspaceSection === "MEMBERS" ? "block" : "hidden"}>
         <Panel kicker="Mitglieder" title="Spieler einladen">
           <div className="grid gap-4">
+            {isManager && joinRequests.length > 0 ? (
+              <div className="space-y-2 rounded-[18px] border border-[rgba(60,184,166,0.22)] bg-[rgba(27,112,102,0.08)] p-4">
+                <p className="text-sm font-semibold text-[#e4fff9]">Offene Beitrittsanträge</p>
+                {joinRequests.map((request) => (
+                  <div key={request.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-white/8 bg-black/15 px-3 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#f0dfcc]">{request.displayName}</p>
+                      <p className="mt-1 text-xs text-[#baa58a]">{request.duelistId}{request.message ? ` · ${request.message}` : ""}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" className="ui-button-secondary" disabled={actionPending} onClick={() => void decideJoinRequest(request.id, "REJECT")}>Ablehnen</button>
+                      <button type="button" className="ui-button-primary" disabled={actionPending} onClick={() => void decideJoinRequest(request.id, "APPROVE")}>Freigeben</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <form className="grid gap-3 lg:grid-cols-[1fr_auto_auto]" onSubmit={inviteCampaignMember}>
               <label className="block">
                 <span className="text-sm font-semibold text-[#f0dfcc]">Duelist-ID</span>

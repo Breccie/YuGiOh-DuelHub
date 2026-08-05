@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-30T16:48:53.460Z",
+  "generatedAt": "2026-08-05T14:10:23.642Z",
   "totals": {
-    "APPROVED_REAL": 24,
-    "NEEDS_NORMALIZE": 40,
-    "NEEDS_GENERATION": 24,
-    "SPECIAL_PRODUCT": 272,
+    "APPROVED_REAL": 32,
+    "NEEDS_NORMALIZE": 62,
+    "NEEDS_GENERATION": 35,
+    "SPECIAL_PRODUCT": 197,
     "NO_GOOD_SOURCE": 0
   },
   "entries": [
@@ -24,6 +24,62 @@
       "qualityScore": 79,
       "approvedImageUrl": "/pack-renders/LOB.png",
       "reviewNote": "Real pack render is approved for direct display."
+    },
+    {
+      "code": "VITEST-RUN-ISOLATION-1783466950258-SET",
+      "setName": "vitest-run-isolation-1783466950258 Booster",
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": null,
+      "sourceName": null,
+      "source": null,
+      "licenseNote": null,
+      "dimensions": null,
+      "qualityScore": 0,
+      "approvedImageUrl": null,
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
+    },
+    {
+      "code": "VITEST-RUN-ISOLATION-1783625481414-SET",
+      "setName": "vitest-run-isolation-1783625481414 Booster",
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": null,
+      "sourceName": null,
+      "source": null,
+      "licenseNote": null,
+      "dimensions": null,
+      "qualityScore": 0,
+      "approvedImageUrl": null,
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
+    },
+    {
+      "code": "VITEST-RUN-ISOLATION-1783674587225-SET",
+      "setName": "vitest-run-isolation-1783674587225 Booster",
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": null,
+      "sourceName": null,
+      "source": null,
+      "licenseNote": null,
+      "dimensions": null,
+      "qualityScore": 0,
+      "approvedImageUrl": null,
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
+    },
+    {
+      "code": "VITEST-BINDER-RESERVED-1783674587226-SET",
+      "setName": "vitest-binder-reserved-1783674587226 Test Booster",
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": null,
+      "sourceName": null,
+      "source": null,
+      "licenseNote": null,
+      "dimensions": null,
+      "qualityScore": 0,
+      "approvedImageUrl": null,
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
     },
     {
       "code": "MRD",
@@ -153,20 +209,6 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "SMP-START",
-      "setName": "Starter Chronicles",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "LOD",
       "setName": "Legacy of Darkness",
       "productType": "CORE_BOOSTER",
@@ -232,20 +274,6 @@
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
-      "code": "PCY",
-      "setName": "Yu-Gi-Oh! Power of Chaos: Yugi the Destiny Limited Collector's Edition",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "DCR",
       "setName": "Dark Crisis",
       "productType": "CORE_BOOSTER",
@@ -299,7 +327,7 @@
     {
       "code": "EP1",
       "setName": "Exclusive Pack",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -313,7 +341,7 @@
     {
       "code": "MOV",
       "setName": "Movie Pack",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -385,20 +413,6 @@
       "qualityScore": 41,
       "approvedImageUrl": null,
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
-    },
-    {
-      "code": "MC1",
-      "setName": "Master Collection Volume 1",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
       "code": "FET",
@@ -494,34 +508,6 @@
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
-      "code": "FL1",
-      "setName": "Forbidden Legacy",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "MC2",
-      "setName": "Master Collection Volume 2",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "DR2",
       "setName": "Dark Revelation Volume 2",
       "productType": "CORE_BOOSTER",
@@ -612,34 +598,6 @@
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
-      "code": "DPK",
-      "setName": "Duelist Pack: Special Edition",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "GSE",
-      "setName": "Yu-Gi-Oh! GX Special Edition",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "TP8",
       "setName": "Tournament Pack 8",
       "productType": "BOOSTER",
@@ -671,20 +629,6 @@
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
-      "code": "UBP1",
-      "setName": "Yu-Gi-Oh! GX Ultimate Beginner's Pack",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "POTD",
       "setName": "Power of the Duelist",
       "productType": "CORE_BOOSTER",
@@ -705,20 +649,6 @@
       "code": "CP01",
       "setName": "Champion Pack: Game One",
       "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "UE02",
-      "setName": "Ultimate Edition 2",
-      "productType": "CORE_BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -867,7 +797,7 @@
     {
       "code": "PP01",
       "setName": "Premium Pack (TCG)",
-      "productType": "SPECIAL",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -910,48 +840,6 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "GXNG",
-      "setName": "GX Next Generation",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "EHC1",
-      "setName": "Yu-Gi-Oh! Elemental Hero Collection 1",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "EHC2",
-      "setName": "Yu-Gi-Oh! Elemental Hero Collection 2",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "DR04",
       "setName": "Dark Revelation Volume 4",
       "productType": "CORE_BOOSTER",
@@ -983,37 +871,9 @@
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
-      "code": "LDPP",
-      "setName": "Light and Darkness Power Pack",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "CP05",
       "setName": "Champion Pack: Game Five",
       "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "JUMP",
-      "setName": "Limited Edition 1",
-      "productType": "CORE_BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -1117,7 +977,7 @@
     {
       "code": "PP02",
       "setName": "Premium Pack 2 (TCG)",
-      "productType": "SPECIAL",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -1131,7 +991,7 @@
     {
       "code": "DTP1",
       "setName": "Duel Terminal - Preview Wave 1",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -1323,20 +1183,6 @@
       "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
-      "code": "DDY1",
-      "setName": "Duel Disk - Yusei Version",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "HA01",
       "setName": "Hidden Arsenal",
       "productType": "SPECIAL",
@@ -1366,20 +1212,6 @@
       "qualityScore": 59,
       "approvedImageUrl": null,
       "reviewNote": "Real pack image exists but must be normalized before display."
-    },
-    {
-      "code": "TWED",
-      "setName": "Twilight Edition",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
       "code": "TU02",
@@ -1590,20 +1422,6 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "XSPU",
-      "setName": "X-Saber Power-Up",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "HA03",
       "setName": "Hidden Arsenal 3",
       "productType": "SPECIAL",
@@ -1752,21 +1570,7 @@
     {
       "code": "DT05",
       "setName": "Duel Terminal 5",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "HASE",
-      "setName": "Hidden Arsenal: Special Edition",
-      "productType": "SPECIAL",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -1854,20 +1658,6 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "SAAS",
-      "setName": "Samurai Assault",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "TU07",
       "setName": "Turbo Pack: Booster Seven",
       "productType": "BOOSTER",
@@ -1901,7 +1691,7 @@
     {
       "code": "DT06",
       "setName": "Duel Terminal 6",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -1915,30 +1705,19 @@
     {
       "code": "RYMP",
       "setName": "Ra Yellow Mega Pack",
-      "productType": "TIN",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/RYMP.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 335,
+        "height": 599
+      },
+      "qualityScore": 68,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "H5SE",
-      "setName": "Hidden Arsenal 5: Steelswarm Invasion: Special Edition",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "GAOV",
@@ -2019,7 +1798,7 @@
     {
       "code": "DT07",
       "setName": "Duel Terminal 7",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -2136,20 +1915,6 @@
       "qualityScore": 59,
       "approvedImageUrl": null,
       "reviewNote": "Real pack image exists but must be normalized before display."
-    },
-    {
-      "code": "YS13",
-      "setName": "Super Starter Power-Up Pack",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
       "code": "BP02",
@@ -2309,30 +2074,19 @@
     {
       "code": "PGLD",
       "setName": "Premium Gold",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "FFSE",
-      "setName": "Fire Fists: Special Edition",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/PGLD.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 440,
+        "height": 840
+      },
+      "qualityScore": 94,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "DRLG",
@@ -2364,20 +2118,6 @@
       "qualityScore": 47,
       "approvedImageUrl": null,
       "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
-    },
-    {
-      "code": "YS14",
-      "setName": "Space-Time Showdown Power-Up Pack",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
       "code": "AP05",
@@ -2520,16 +2260,19 @@
     {
       "code": "PGL2",
       "setName": "Premium Gold: Return of the Bling",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": "https://images.ygoprog.com/pack/PGL2.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "dimensions": {
+        "width": 159,
+        "height": 306
+      },
+      "qualityScore": 42,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
       "code": "WSUP",
@@ -2621,16 +2364,19 @@
     {
       "code": "CORE",
       "setName": "Clash of Rebellions",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": "https://images.ygoprog.com/pack/CORE.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "dimensions": {
+        "width": 200,
+        "height": 351
+      },
+      "qualityScore": 45,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
       "code": "MP15",
@@ -2677,58 +2423,70 @@
     {
       "code": "DOCS",
       "setName": "Dimension of Chaos",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/DOCS.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 260,
+        "height": 458
+      },
+      "qualityScore": 59,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "BOSH",
       "setName": "Breakers of Shadow",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/BOSH.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 296,
+        "height": 532
+      },
+      "qualityScore": 63,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "WIRA",
       "setName": "Wing Raiders",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/WIRA.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 564,
+        "height": 1000
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "PGL3",
       "setName": "Premium Gold: Infinite Gold",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/PGL3.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 404,
+        "height": 762
+      },
+      "qualityScore": 87,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "OP01",
@@ -2747,30 +2505,36 @@
     {
       "code": "MIL1",
       "setName": "Millennium Pack",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/MIL1.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 836,
+        "height": 1484
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "SHVI",
       "setName": "Shining Victories",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/SHVI.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 460,
+        "height": 820
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "OP02",
@@ -2803,16 +2567,19 @@
     {
       "code": "TDIL",
       "setName": "The Dark Illusion",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/TDIL.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 451,
+        "height": 800
+      },
+      "qualityScore": 93,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "DRL3",
@@ -2859,16 +2626,19 @@
     {
       "code": "INOV",
       "setName": "Invasion: Vengeance",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/INOV.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 448,
+        "height": 800
+      },
+      "qualityScore": 93,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "DESO",
@@ -2901,30 +2671,36 @@
     {
       "code": "RATE",
       "setName": "Raging Tempest",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": "https://images.ygoprog.com/pack/RATE.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "dimensions": {
+        "width": 239,
+        "height": 426
+      },
+      "qualityScore": 48,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
       "code": "FUEN",
       "setName": "Fusion Enforcers",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/FUEN.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 289,
+        "height": 510
+      },
+      "qualityScore": 62,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "SP17",
@@ -2974,16 +2750,19 @@
     {
       "code": "MACR",
       "setName": "Maximum Crisis",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/MACR.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 450,
+        "height": 800
+      },
+      "qualityScore": 93,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "DPDG",
@@ -3033,16 +2812,19 @@
     {
       "code": "COTD",
       "setName": "Code of the Duelist",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/COTD.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 383,
+        "height": 675
+      },
+      "qualityScore": 82,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "OP05",
@@ -3087,74 +2869,38 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "YUCB",
-      "setName": "Yugi's Collector Box",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "LEDD",
-      "setName": "Legendary Dragon Decks",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "CIBR",
       "setName": "Circuit Break",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/CIBR.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 481,
+        "height": 843
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "SPWA",
       "setName": "Spirit Warriors",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "KACB",
-      "setName": "Kaiba's Collector Box",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/SPWA.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 481,
+        "height": 842
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "OP06",
@@ -3173,16 +2919,19 @@
     {
       "code": "EXFO",
       "setName": "Extreme Force",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/EXFO.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 453,
+        "height": 800
+      },
+      "qualityScore": 93,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "LED2",
@@ -3229,30 +2978,36 @@
     {
       "code": "FLOD",
       "setName": "Flames of Destruction",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/FLOD.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 447,
+        "height": 815
+      },
+      "qualityScore": 93,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "DASA",
       "setName": "Dark Saviors",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/DASA.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 689,
+        "height": 1280
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "BLRR",
@@ -3271,30 +3026,36 @@
     {
       "code": "CYHO",
       "setName": "Cybernetic Horizon",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/09/CYHO_mock-foil_EN.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/09/CYHO_mock-foil_EN.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SHVA",
       "setName": "Shadows in Valhalla",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/SHVA.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 863,
+        "height": 1513
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "OP08",
@@ -3339,46 +3100,21 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "LEHD",
-      "setName": "Legendary Hero Decks",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "SOFU",
       "setName": "Soul Fusion",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "AC18",
-      "setName": "Yu-Gi-Oh! Advent Calendar (2018)",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/09/SOFU_Foil_EN_Mock.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/09/SOFU_Foil_EN_Mock.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "HISU",
@@ -3425,30 +3161,36 @@
     {
       "code": "SAST",
       "setName": "Savage Strike",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/SAST_Foil_EN_Mock-1.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/SAST_Foil_EN_Mock-1.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "INCH",
       "setName": "The Infinity Chasers",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/INCH.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 563,
+        "height": 1000
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "SBLS",
@@ -3495,16 +3237,19 @@
     {
       "code": "DANE",
       "setName": "Dark Neostorm",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/DANE_mock-foil-1.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/DANE_mock-foil-1.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SBAD",
@@ -3537,30 +3282,19 @@
     {
       "code": "RIRA",
       "setName": "Rising Rampage",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "EVSD",
-      "setName": "Event Pack Speed Duel",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/RIRA_Foil_Mock_EN.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/RIRA_Foil_Mock_EN.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SBSC",
@@ -3633,20 +3367,6 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "AC19",
-      "setName": "Yu-Gi-Oh! Advent Calendar",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "STP2",
       "setName": "Speed Duel Tournament Pack 2",
       "productType": "BOOSTER",
@@ -3663,30 +3383,36 @@
     {
       "code": "CHIM",
       "setName": "Chaos Impact",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/CHIM_mock-foil_EN.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/CHIM_mock-foil_EN.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "MYFI",
       "setName": "Mystic Fighters",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/MYFI.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 706,
+        "height": 1252
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "OP12",
@@ -3733,30 +3459,36 @@
     {
       "code": "IGAS",
       "setName": "Ignition Assault",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/IGAS_Foil_Mocks_EN.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/IGAS_Foil_Mocks_EN.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SESL",
       "setName": "Secret Slayers",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/SESL.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 664,
+        "height": 1176
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "ETCO",
@@ -3792,21 +3524,24 @@
     {
       "code": "TOCH",
       "setName": "Toon Chaos",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/TOCH_BLS_Foil_Mock_EN.png",
+      "sourceName": "Konami official product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image.",
+      "dimensions": {
+        "width": 552,
+        "height": 552
+      },
+      "qualityScore": 70,
+      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2020/08/TOCH_BLS_Foil_Mock_EN.png",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "LDS1",
       "setName": "Legendary Duelists: Season 1",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -3851,19 +3586,16 @@
     {
       "code": "DLCS",
       "setName": "Dragons of Legend: The Complete Series",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DLCS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
-      "dimensions": {
-        "width": 360,
-        "height": 612
-      },
-      "qualityScore": 77,
+      "productType": "SPECIAL",
+      "assetStatus": "SPECIAL_PRODUCT",
+      "sourceUrl": null,
+      "sourceName": null,
+      "source": null,
+      "licenseNote": null,
+      "dimensions": null,
+      "qualityScore": 0,
       "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
       "code": "LED7",
@@ -3927,21 +3659,24 @@
     {
       "code": "GEIM",
       "setName": "Genesis Impact",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": "https://images.ygoprog.com/pack/GEIM.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "dimensions": {
+        "width": 144,
+        "height": 253
+      },
+      "qualityScore": 41,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
     },
     {
       "code": "LDS2",
       "setName": "Legendary Duelists: Season 2",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -3986,7 +3721,7 @@
     {
       "code": "ANGU",
       "setName": "Ancient Guardians",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4029,37 +3764,9 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "EGO1",
-      "setName": "Egyptian God Deck: Obelisk the Tormentor",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "EGS1",
-      "setName": "Egyptian God Deck: Slifer the Sky Dragon",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "KICO",
       "setName": "King's Court",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4133,20 +3840,6 @@
       "reviewNote": "Real pack render is approved for direct display."
     },
     {
-      "code": "SBPR",
-      "setName": "Blue-Eyes Alternative White Dragon Sweepstakes",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "BROL",
       "setName": "Brothers of Legend",
       "productType": "SPECIAL",
@@ -4163,7 +3856,7 @@
     {
       "code": "GRCR",
       "setName": "The Grand Creators",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4295,7 +3988,7 @@
     {
       "code": "LDS3",
       "setName": "Legendary Duelists: Season 3",
-      "productType": "CORE_BOOSTER",
+      "productType": "BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4326,7 +4019,7 @@
     {
       "code": "TAMA",
       "setName": "Tactical Masters",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4430,7 +4123,7 @@
     {
       "code": "AMDE",
       "setName": "Amazing Defenders",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4475,7 +4168,7 @@
     {
       "code": "MAZE",
       "setName": "Maze of Memories",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4534,7 +4227,7 @@
     {
       "code": "WISU",
       "setName": "Wild Survivors",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4621,16 +4314,16 @@
     {
       "code": "TBC1",
       "setName": "The Pot Collection",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": "https://images.ygoprodeck.com/images/sets/TBC1.jpg",
+      "sourceName": "Seed image from imported set metadata",
       "source": null,
-      "licenseNote": null,
+      "licenseNote": "Seed only; not approved for direct hero display.",
       "dimensions": null,
       "qualityScore": 0,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
     },
     {
       "code": "STP6",
@@ -4708,16 +4401,19 @@
     {
       "code": "VASM",
       "setName": "Valiant Smashers",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/VASM.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 509,
+        "height": 902
+      },
+      "qualityScore": 95,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "MZMI",
@@ -4751,20 +4447,6 @@
       "reviewNote": "Real pack render is approved for direct display."
     },
     {
-      "code": "ADC1",
-      "setName": "Adidas collaboration card",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "OP24",
       "setName": "OTS Tournament Pack 24",
       "productType": "BOOSTER",
@@ -4781,23 +4463,6 @@
     {
       "code": "BLC1",
       "setName": "Battles of Legend: Chapter 1",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/BLC1.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
-      "dimensions": {
-        "width": 302,
-        "height": 539
-      },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
-    },
-    {
-      "code": "KC01",
-      "setName": "25th Anniversary Ultimate Kaiba Set",
       "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
@@ -4808,6 +4473,20 @@
       "qualityScore": 0,
       "approvedImageUrl": null,
       "reviewNote": "Not part of the unified standard-booster asset pool."
+    },
+    {
+      "code": "KC01",
+      "setName": "25th Anniversary Ultimate Kaiba Set",
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": null,
+      "sourceName": null,
+      "source": null,
+      "licenseNote": null,
+      "dimensions": null,
+      "qualityScore": 0,
+      "approvedImageUrl": null,
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
     },
     {
       "code": "LEDE",
@@ -4933,7 +4612,7 @@
     {
       "code": "CRBR",
       "setName": "Crossover Breakers",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -4978,7 +4657,7 @@
     {
       "code": "MZTM",
       "setName": "Maze of the Master",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -5054,7 +4733,7 @@
     {
       "code": "JUSH",
       "setName": "Justice Hunters",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -5082,7 +4761,7 @@
     {
       "code": "25LP",
       "setName": "Limited Pack World Championship 2025",
-      "productType": "SPECIAL",
+      "productType": "CORE_BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -5139,60 +4818,21 @@
       "reviewNote": "Not part of the unified standard-booster asset pool."
     },
     {
-      "code": "CH01",
-      "setName": "THE CHRONICLES DECK: The Fallen & The Virtuous (All-Foil Edition)",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "L5DD",
-      "setName": "Legendary 5D&apos;s Decks",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
       "code": "PHRE",
       "setName": "Phantom Revenge",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_NORMALIZE",
+      "sourceUrl": "https://images.ygoprog.com/pack/PHRE.jpg",
+      "sourceName": "YGO Prog Pack-CDN",
+      "source": "YGOPROG",
+      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "dimensions": {
+        "width": 297,
+        "height": 545
+      },
+      "qualityScore": 64,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "CH02",
-      "setName": "THE CHRONICLES DECK: Spirit Charmers (All-Foil Edition)",
-      "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "Real pack image exists but must be normalized before display."
     },
     {
       "code": "BPRO",
@@ -5228,7 +4868,7 @@
     {
       "code": "MZMU",
       "setName": "Maze of Muertos",
-      "productType": "BOOSTER",
+      "productType": "SPECIAL",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -5243,20 +4883,6 @@
       "code": "RA05",
       "setName": "Rarity Collection 5",
       "productType": "SPECIAL",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
-    },
-    {
-      "code": "L26D",
-      "setName": "Legendary Modern Decks 2026",
-      "productType": "CORE_BOOSTER",
       "assetStatus": "SPECIAL_PRODUCT",
       "sourceUrl": null,
       "sourceName": null,
@@ -5301,16 +4927,16 @@
     {
       "code": "MAMO",
       "setName": "Magnificent Monsters",
-      "productType": "BOOSTER",
-      "assetStatus": "SPECIAL_PRODUCT",
-      "sourceUrl": null,
-      "sourceName": null,
+      "productType": "CORE_BOOSTER",
+      "assetStatus": "NEEDS_GENERATION",
+      "sourceUrl": "https://images.ygoprodeck.com/images/sets/MAMO.jpg",
+      "sourceName": "Seed image from imported set metadata",
       "source": null,
-      "licenseNote": null,
+      "licenseNote": "Seed only; not approved for direct hero display.",
       "dimensions": null,
       "qualityScore": 0,
       "approvedImageUrl": null,
-      "reviewNote": "Not part of the unified standard-booster asset pool."
+      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
     }
   ]
 }

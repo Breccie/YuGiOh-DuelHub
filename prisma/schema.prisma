@@ -104,6 +104,19 @@ enum TournamentMatchStatus {
   CANCELLED
 }
 
+enum TournamentPairingMode {
+  SWISS
+  ROUND_ROBIN
+  SINGLE_ELIMINATION
+  MANUAL
+}
+
+enum TournamentMatchMode {
+  BEST_OF_ONE
+  BEST_OF_THREE
+  BEST_OF_FIVE
+}
+
 enum ErrataPolicy {
   USE_LATEST_TEXT
   LOCK_TO_SNAPSHOT_TEXT
@@ -138,6 +151,13 @@ enum RunRole {
   PLAYER
 }
 
+enum RunJoinRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
 enum CreditLedgerSource {
   STARTING_BALANCE
   PACK_PURCHASE
@@ -146,6 +166,8 @@ enum CreditLedgerSource {
   TOURNAMENT_REWARD
   ORGANIZER_ADJUSTMENT
   MANUAL_GRANT
+  TRADE_TRANSFER
+  DUST_CONVERSION
 }
 
 enum PackOpeningBatchType {
@@ -243,12 +265,14 @@ model User {
   createdAt                    DateTime                 @default(now())
   updatedAt                    DateTime                 @updatedAt
   showcaseBinder               CollectionBinder?        @relation("ShowcaseBinder", fields: [showcaseBinderId], references: [id], onDelete: SetNull)
-  avatarAsset                  MediaAsset?               @relation("UserAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  avatarAsset                  MediaAsset?              @relation("UserAvatarAsset", fields: [avatarAssetId], references: [id], onDelete: SetNull)
   showcaseSnapshot             ProfileShowcaseSnapshot?
   activeRun                    PlayGroupRun?            @relation("ActiveRun", fields: [activeRunId], references: [id], onDelete: SetNull)
   sessions                     Session[]
   ownedRuns                    PlayGroupRun[]           @relation("RunOwner")
   runMemberships               RunMembership[]
+  runJoinRequests              RunJoinRequest[]         @relation("RunJoinRequestApplicant")
+  runJoinRequestsResolved      RunJoinRequest[]         @relation("RunJoinRequestResolver")
   creditWallets                CreditWallet[]
   creditLedgerEntries          CreditLedgerEntry[]
   rewardGrants                 RewardGrant[]            @relation("RewardGrantRecipient")
@@ -266,6 +290,7 @@ model User {
   tradesReceived               Trade[]                  @relation("TradeResponder")
   tradesCancelled              Trade[]                  @relation("TradeCancelledBy")
   tradesRejected               Trade[]                  @relation("TradeRejectedBy")
+  tradesApproved               Trade[]                  @relation("TradeApprovedBy")
   tradeVersionsSent            TradeVersion[]           @relation("TradeVersionSender")
   tradeVersionsReceived        TradeVersion[]           @relation("TradeVersionRecipient")
   duelRequestsSent             DuelRequest[]            @relation("DuelRequester")
@@ -284,11 +309,12 @@ model User {
   campaignRuleVersionsAuthored CampaignRuleVersion[]    @relation("CampaignRuleVersionAuthor")
   customPackDefinitionsCreated CustomPackDefinition[]   @relation("CustomPackDefinitionCreator")
   customPackTemplates          CustomPackTemplate[]
-  mediaAssets                  MediaAsset[]              @relation("MediaAssetOwner")
+  mediaAssets                  MediaAsset[]             @relation("MediaAssetOwner")
 }
 
 enum MediaAssetKind {
   AVATAR
+  CAMPAIGN_IMAGE
   PACK_ARTWORK
   PACK_IMAGE
   BINDER_COVER
@@ -301,25 +327,26 @@ enum MediaStorageProvider {
 }
 
 model MediaAsset {
-  id                         String               @id @default(cuid())
-  ownerId                    String
-  kind                       MediaAssetKind
-  name                       String
-  storageProvider            MediaStorageProvider
-  storageKey                 String               @unique
-  mimeType                   String
-  width                      Int
-  height                     Int
-  byteSize                   Int
-  sha256                     String
-  createdAt                  DateTime             @default(now())
-  updatedAt                  DateTime             @updatedAt
-  owner                      User                 @relation("MediaAssetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  avatarUsers                User[]               @relation("UserAvatarAsset")
-  binderCovers               CollectionBinder[]   @relation("BinderCoverAsset")
-  deckBoxes                  Deck[]               @relation("DeckBoxAsset")
+  id                        String               @id @default(cuid())
+  ownerId                   String
+  kind                      MediaAssetKind
+  name                      String
+  storageProvider           MediaStorageProvider
+  storageKey                String               @unique
+  mimeType                  String
+  width                     Int
+  height                    Int
+  byteSize                  Int
+  sha256                    String
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  owner                     User                 @relation("MediaAssetOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  avatarUsers               User[]               @relation("UserAvatarAsset")
+  binderCovers              CollectionBinder[]   @relation("BinderCoverAsset")
+  deckBoxes                 Deck[]               @relation("DeckBoxAsset")
   customPackArtworkVersions CustomPackVersion[]  @relation("CustomPackArtworkAsset")
   customPackImageVersions   CustomPackVersion[]  @relation("CustomPackImageAsset")
+  campaignImages            PlayGroupRun[]       @relation("CampaignImageAsset")
 
   @@index([ownerId, kind, createdAt])
 }
@@ -343,6 +370,15 @@ model PlayGroupRun {
   name                           String
   inviteCode                     String?                    @unique
   description                    String?
+  campaignImageAssetId           String?
+  region                         String                     @default("TCG")
+  language                       String                     @default("de")
+  timeZone                       String                     @default("Europe/Berlin")
+  visibility                     String                     @default("PRIVATE")
+  joinType                       String                     @default("INVITE_CODE")
+  maxPlayers                     Int?
+  startsAt                       DateTime?
+  endsAt                         DateTime?
   status                         RunStatus                  @default(ACTIVE)
   historyCursor                  DateTime?
   defaultPackPrice               Int                        @default(100)
@@ -359,6 +395,7 @@ model PlayGroupRun {
   createdAt                      DateTime                   @default(now())
   updatedAt                      DateTime                   @updatedAt
   owner                          User                       @relation("RunOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  campaignImage                  MediaAsset?                @relation("CampaignImageAsset", fields: [campaignImageAssetId], references: [id], onDelete: SetNull)
   activeForUsers                 User[]                     @relation("ActiveRun")
   memberships                    RunMembership[]
   wallets                        CreditWallet[]
@@ -383,8 +420,10 @@ model PlayGroupRun {
   activeRuleVersion              CampaignRuleVersion?       @relation("ActiveCampaignRuleVersion", fields: [activeRuleVersionId], references: [id], onDelete: SetNull)
   customPackDefinitions          CustomPackDefinition[]
   customPackAccesses             CampaignCustomPackAccess[]
+  joinRequests                   RunJoinRequest[]
 
   @@index([ownerId, status])
+  @@index([visibility, status])
 }
 
 model RunMembership {
@@ -400,16 +439,36 @@ model RunMembership {
   @@index([userId, joinedAt])
 }
 
+model RunJoinRequest {
+  id           String               @id @default(cuid())
+  runId        String
+  userId       String
+  status       RunJoinRequestStatus @default(PENDING)
+  message      String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  resolvedAt   DateTime?
+  resolvedById String?
+  run          PlayGroupRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user         User                 @relation("RunJoinRequestApplicant", fields: [userId], references: [id], onDelete: Cascade)
+  resolvedBy   User?                @relation("RunJoinRequestResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([runId, userId])
+  @@index([runId, status, createdAt])
+  @@index([userId, status, createdAt])
+}
+
 model CreditWallet {
-  id        String              @id @default(cuid())
-  runId     String
-  userId    String
-  balance   Int                 @default(0)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  run       PlayGroupRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entries   CreditLedgerEntry[]
+  id              String              @id @default(cuid())
+  runId           String
+  userId          String
+  balance         Int                 @default(0)
+  reservedBalance Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  run             PlayGroupRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries         CreditLedgerEntry[]
 
   @@unique([runId, userId])
   @@index([userId, updatedAt])
@@ -597,26 +656,29 @@ model HistoryEvent {
 }
 
 model RewardGrant {
-  id            String               @id @default(cuid())
-  runId         String
-  ruleVersionId String?
-  recipientId   String
-  grantedById   String?
-  amountCredits Int                  @default(0)
-  packSetId     String?
-  packQuantity  Int                  @default(0)
-  reason        String?
-  status        RewardGrantStatus    @default(PENDING)
-  createdAt     DateTime             @default(now())
-  claimedAt     DateTime?
-  run           PlayGroupRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
-  recipient     User                 @relation("RewardGrantRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  grantedBy     User?                @relation("RewardGrantGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
-  packSet       CardSet?             @relation(fields: [packSetId], references: [id], onDelete: SetNull)
-  ruleVersion   CampaignRuleVersion? @relation("RewardGrantRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
+  id                  String               @id @default(cuid())
+  runId               String
+  ruleVersionId       String?
+  recipientId         String
+  grantedById         String?
+  amountCredits       Int                  @default(0)
+  packSetId           String?
+  customPackVersionId String?
+  packQuantity        Int                  @default(0)
+  reason              String?
+  status              RewardGrantStatus    @default(PENDING)
+  createdAt           DateTime             @default(now())
+  claimedAt           DateTime?
+  run                 PlayGroupRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  recipient           User                 @relation("RewardGrantRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  grantedBy           User?                @relation("RewardGrantGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
+  packSet             CardSet?             @relation(fields: [packSetId], references: [id], onDelete: SetNull)
+  customPackVersion   CustomPackVersion?   @relation(fields: [customPackVersionId], references: [id], onDelete: Restrict)
+  ruleVersion         CampaignRuleVersion? @relation("RewardGrantRuleVersion", fields: [ruleVersionId], references: [id], onDelete: Restrict)
 
   @@index([runId, recipientId, status])
   @@index([ruleVersionId])
+  @@index([customPackVersionId])
 }
 
 model Session {
@@ -971,29 +1033,30 @@ model CustomPackDefinition {
 }
 
 model CustomPackVersion {
-  id             String                     @id @default(cuid())
-  definitionId   String
-  version        Int
-  status         CustomPackStatus           @default(DRAFT)
-  packSize       Int                        @default(9)
-  displaySize    Int                        @default(24)
-  price          Int                        @default(100)
-  rewardOnly     Boolean                    @default(false)
-  slotConfig     Json
-  generatedSetId String?
-  artworkAssetId String?
+  id               String                     @id @default(cuid())
+  definitionId     String
+  version          Int
+  status           CustomPackStatus           @default(DRAFT)
+  packSize         Int                        @default(9)
+  displaySize      Int                        @default(24)
+  price            Int                        @default(100)
+  rewardOnly       Boolean                    @default(false)
+  slotConfig       Json
+  generatedSetId   String?
+  artworkAssetId   String?
   packImageAssetId String?
-  publishedAt    DateTime?
-  createdAt      DateTime                   @default(now())
-  updatedAt      DateTime                   @updatedAt
-  definition     CustomPackDefinition       @relation(fields: [definitionId], references: [id], onDelete: Cascade)
-  generatedSet   CardSet?                   @relation("CustomPackGeneratedSet", fields: [generatedSetId], references: [id], onDelete: Restrict)
-  artworkAsset   MediaAsset?                @relation("CustomPackArtworkAsset", fields: [artworkAssetId], references: [id], onDelete: Restrict)
-  packImageAsset MediaAsset?                @relation("CustomPackImageAsset", fields: [packImageAssetId], references: [id], onDelete: Restrict)
-  poolEntries    CustomPackCardPoolEntry[]
-  slots          CustomPackSlot[]
-  accesses       CampaignCustomPackAccess[]
-  openings       PackOpening[]              @relation("CustomPackVersionOpenings")
+  publishedAt      DateTime?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+  definition       CustomPackDefinition       @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  generatedSet     CardSet?                   @relation("CustomPackGeneratedSet", fields: [generatedSetId], references: [id], onDelete: Restrict)
+  artworkAsset     MediaAsset?                @relation("CustomPackArtworkAsset", fields: [artworkAssetId], references: [id], onDelete: Restrict)
+  packImageAsset   MediaAsset?                @relation("CustomPackImageAsset", fields: [packImageAssetId], references: [id], onDelete: Restrict)
+  poolEntries      CustomPackCardPoolEntry[]
+  slots            CustomPackSlot[]
+  accesses         CampaignCustomPackAccess[]
+  openings         PackOpening[]              @relation("CustomPackVersionOpenings")
+  rewardGrants     RewardGrant[]
 
   @@unique([definitionId, version])
   @@index([definitionId, status, version])
@@ -1112,27 +1175,29 @@ model BanlistEntry {
 }
 
 model Deck {
-  id                           String            @id @default(cuid())
+  id                           String                  @id @default(cuid())
   userId                       String
   runId                        String?
   formatProfileId              String?
   banlistId                    String?
   name                         String
-  deckBoxKey                   String            @default("inferno-vortex")
+  deckBoxKey                   String                  @default("inferno-vortex")
   deckBoxAssetId               String?
   snapshotDate                 DateTime?
-  createdAt                    DateTime          @default(now())
-  updatedAt                    DateTime          @updatedAt
-  user                         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deckBoxAsset                 MediaAsset?       @relation("DeckBoxAsset", fields: [deckBoxAssetId], references: [id], onDelete: SetNull)
-  run                          PlayGroupRun?     @relation(fields: [runId], references: [id], onDelete: Cascade)
-  formatProfile                FormatProfile?    @relation(fields: [formatProfileId], references: [id], onDelete: SetNull)
-  banlist                      Banlist?          @relation(fields: [banlistId], references: [id], onDelete: SetNull)
+  revision                     Int                     @default(0)
+  createdAt                    DateTime                @default(now())
+  updatedAt                    DateTime                @updatedAt
+  user                         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deckBoxAsset                 MediaAsset?             @relation("DeckBoxAsset", fields: [deckBoxAssetId], references: [id], onDelete: SetNull)
+  run                          PlayGroupRun?           @relation(fields: [runId], references: [id], onDelete: Cascade)
+  formatProfile                FormatProfile?          @relation(fields: [formatProfileId], references: [id], onDelete: SetNull)
+  banlist                      Banlist?                @relation(fields: [banlistId], references: [id], onDelete: SetNull)
   cards                        DeckCard[]
   exports                      DeckExport[]
   duelRequests                 DuelRequest[]
-  tournamentMatchesAsPlayerOne TournamentMatch[] @relation("TournamentMatchPlayerOneDeck")
-  tournamentMatchesAsPlayerTwo TournamentMatch[] @relation("TournamentMatchPlayerTwoDeck")
+  tournamentMatchesAsPlayerOne TournamentMatch[]       @relation("TournamentMatchPlayerOneDeck")
+  tournamentMatchesAsPlayerTwo TournamentMatch[]       @relation("TournamentMatchPlayerTwoDeck")
+  tournamentRegistrations      TournamentParticipant[] @relation("TournamentRegisteredDeck")
 
   @@index([userId, updatedAt])
   @@index([runId, userId, updatedAt])
@@ -1166,12 +1231,16 @@ model Trade {
   reservationExpiresAt DateTime?
   proposerConfirmedAt  DateTime?
   responderConfirmedAt DateTime?
+  requiresOrganizerApproval Boolean      @default(false)
+  approvedByUserId       String?
+  approvedAt             DateTime?
   cancelledByUserId    String?
   rejectedByUserId     String?
   proposer             User           @relation("TradeProposer", fields: [proposerId], references: [id], onDelete: Cascade)
   responder            User           @relation("TradeResponder", fields: [responderId], references: [id], onDelete: Cascade)
   cancelledBy          User?          @relation("TradeCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
   rejectedBy           User?          @relation("TradeRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+  approvedBy           User?          @relation("TradeApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
   run                  PlayGroupRun?  @relation(fields: [runId], references: [id], onDelete: Cascade)
   activeVersion        TradeVersion?  @relation("TradeActiveVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
   acceptedVersion      TradeVersion?  @relation("TradeAcceptedVersion", fields: [acceptedVersionId], references: [id], onDelete: SetNull)
@@ -1182,6 +1251,7 @@ model Trade {
   @@index([responderId, proposedAt])
   @@index([runId, proposedAt])
   @@index([runId, status, reservationExpiresAt])
+  @@index([runId, requiresOrganizerApproval, approvedAt])
 }
 
 model TradeItem {
@@ -1204,6 +1274,8 @@ model TradeVersion {
   senderId         String
   recipientId      String
   note             String?
+  offeredCredits   Int                @default(0)
+  requestedCredits Int                @default(0)
   createdAt        DateTime           @default(now())
   supersededAt     DateTime?
   trade            Trade              @relation("TradeVersions", fields: [tradeId], references: [id], onDelete: Cascade)
@@ -1295,6 +1367,9 @@ model Tournament {
   formatLabel            String?
   scheduledAt            DateTime?
   status                 TournamentStatus           @default(DRAFT)
+  pairingMode            TournamentPairingMode      @default(SWISS)
+  matchMode              TournamentMatchMode        @default(BEST_OF_THREE)
+  startedAt              DateTime?
   completedAt            DateTime?
   createdAt              DateTime                   @default(now())
   updatedAt              DateTime                   @updatedAt
@@ -1368,22 +1443,26 @@ model TournamentMvpCard {
 }
 
 model TournamentParticipant {
-  id           String                      @id @default(cuid())
-  tournamentId String
-  userId       String
-  invitedById  String?
-  status       TournamentParticipantStatus @default(INVITED)
-  seed         Int?
-  joinedAt     DateTime?
-  droppedAt    DateTime?
-  createdAt    DateTime                    @default(now())
-  updatedAt    DateTime                    @updatedAt
-  tournament   Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invitedBy    User?                       @relation("TournamentParticipantInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  id               String                      @id @default(cuid())
+  tournamentId     String
+  userId           String
+  invitedById      String?
+  status           TournamentParticipantStatus @default(INVITED)
+  seed             Int?
+  registeredDeckId String?
+  checkedInAt      DateTime?
+  joinedAt         DateTime?
+  droppedAt        DateTime?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  tournament       Tournament                  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user             User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy        User?                       @relation("TournamentParticipantInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+  registeredDeck   Deck?                       @relation("TournamentRegisteredDeck", fields: [registeredDeckId], references: [id], onDelete: SetNull)
 
   @@unique([tournamentId, userId])
   @@index([tournamentId, status])
+  @@index([registeredDeckId])
 }
 
 model TournamentRound {

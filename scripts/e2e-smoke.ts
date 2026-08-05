@@ -8,7 +8,8 @@ const repoRoot = process.cwd();
 const port = Number(process.env.E2E_PORT ?? 3210);
 const baseUrl = `http://127.0.0.1:${port}`;
 const databaseUrl = process.env.E2E_DATABASE_URL ?? "file:./codex-e2e-smoke.db";
-const sourceDbPath = path.join(repoRoot, "prisma", "dev.db");
+const sourceDbPath = process.env.E2E_SOURCE_DATABASE_PATH
+  ?? path.join(repoRoot, "prisma", "demo.db");
 const smokeDbPath = path.join(repoRoot, "prisma", "codex-e2e-smoke.db");
 
 type SeededCatalog = {
@@ -30,6 +31,7 @@ function startDevServer(env: NodeJS.ProcessEnv) {
     {
       cwd: repoRoot,
       env,
+      detached: process.platform !== "win32",
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -49,26 +51,48 @@ function pipeServerOutput(child: ChildProcessWithoutNullStreams) {
 }
 
 async function stopDevServer(child: ChildProcessWithoutNullStreams | null) {
-  if (!child || child.killed) {
+  if (!child) {
     return;
   }
 
-  if (process.platform === "win32") {
+  if (child.exitCode === null && process.platform === "win32") {
     spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
       shell: true,
       stdio: "ignore",
     });
-  } else {
-    child.kill();
+  } else if (child.exitCode === null && child.pid) {
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch {
+      child.kill("SIGTERM");
+    }
   }
 
-  await new Promise<void>((resolve) => {
+  const exited = await new Promise<boolean>((resolve) => {
+    if (child.exitCode !== null) {
+      resolve(true);
+      return;
+    }
     const timeout = setTimeout(resolve, 3_000);
     child.once("exit", () => {
       clearTimeout(timeout);
-      resolve();
+      resolve(true);
     });
   });
+
+  if (!exited && child.exitCode === null && child.pid && process.platform !== "win32") {
+    try {
+      process.kill(-child.pid, "SIGKILL");
+    } catch {
+      child.kill("SIGKILL");
+    }
+  }
+
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.stdin?.destroy();
+  child.removeAllListeners();
+  child.unref();
 }
 
 async function waitForServer() {
@@ -807,7 +831,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main().then(
+  () => process.exit(0),
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  },
+);

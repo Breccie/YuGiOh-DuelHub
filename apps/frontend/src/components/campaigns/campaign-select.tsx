@@ -1,9 +1,9 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { PlayGroupRunDto } from "@ygo/contracts";
+import type { PlayGroupRunDto, StartingPackChoiceResponse } from "@ygo/contracts";
 import { AssetIcon } from "@/components/asset-icon";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { runClient } from "@/lib/run-client";
@@ -59,10 +59,49 @@ export function CampaignSelect({
   const [tournamentRunnerUpCredits, setTournamentRunnerUpCredits] = useState("500");
   const [tournamentParticipationCredits, setTournamentParticipationCredits] = useState("250");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  const [startingPackChoice, setStartingPackChoice] =
+    useState<StartingPackChoiceResponse | null>(null);
+  const [selectedStartingSetId, setSelectedStartingSetId] = useState("");
+  const [choosingStartingPack, setChoosingStartingPack] = useState(false);
   const activeRun = useMemo(
     () => runs.find((run) => run.id === activeRunId) ?? runs[0] ?? null,
     [activeRunId, runs],
   );
+
+  useEffect(() => {
+    if (!activeRun) {
+      return;
+    }
+    let cancelled = false;
+    void runClient.getStartingPackChoice(activeRun.id).then((choice) => {
+      if (cancelled) return;
+      setStartingPackChoice(choice);
+      setSelectedStartingSetId(choice.selectedSetId ?? choice.options[0]?.setId ?? "");
+    }).catch(() => {
+      if (!cancelled) setStartingPackChoice(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRun]);
+
+  async function chooseStartingPack() {
+    if (!activeRun || !selectedStartingSetId) return;
+    setChoosingStartingPack(true);
+    setErrorMessage(null);
+    try {
+      const choice = await runClient.chooseStartingPack(activeRun.id, {
+        setId: selectedStartingSetId,
+      });
+      setStartingPackChoice(choice);
+      setNoticeMessage(`${choice.packQuantity} Startpacks liegen jetzt in deiner Reward-Inbox bereit.`);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, "Startpack konnte nicht ausgewählt werden."));
+    } finally {
+      setChoosingStartingPack(false);
+    }
+  }
 
   async function activateRun(runId: string, target = "/") {
     setPendingRunId(runId);
@@ -161,9 +200,17 @@ export function CampaignSelect({
 
     setJoining(true);
     setErrorMessage(null);
+    setNoticeMessage(null);
 
     try {
-      await runClient.join({ inviteCode: code });
+      const result = await runClient.join({ inviteCode: code });
+      if ("joinRequest" in result) {
+        setInviteCode("");
+        setNoticeMessage(
+          `Beitrittsantrag für ${result.joinRequest.displayName} wurde gesendet. Du erhältst Zugriff, sobald Host oder Organizer ihn freigeben.`,
+        );
+        return;
+      }
       startTransition(() => {
         router.push("/");
         router.refresh();
@@ -360,9 +407,47 @@ export function CampaignSelect({
         </div>
       </form>
 
+      {startingPackChoice?.enabled ? (
+        <section className="panel-surface rounded-[24px] px-5 py-5">
+          <p className="ui-kicker">Startpack-Auswahl</p>
+          <div className="mt-3 grid items-end gap-4 lg:grid-cols-[1fr_minmax(280px,0.7fr)_auto]">
+            <p className="text-sm leading-6 text-[#cdb79c]">
+              Wähle einmalig das Set für deine {startingPackChoice.packQuantity} Startpacks. Danach liegen sie in der Reward-Inbox bereit.
+            </p>
+            <label className="block">
+              <span className="ui-kicker">Startset</span>
+              <select
+                className="ui-input mt-2"
+                value={selectedStartingSetId}
+                disabled={Boolean(startingPackChoice.selectedSetId) || choosingStartingPack}
+                onChange={(event) => setSelectedStartingSetId(event.target.value)}
+              >
+                {startingPackChoice.options.map((option) => (
+                  <option key={option.setId} value={option.setId}>{option.name} · {option.code}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="ui-button-primary"
+              disabled={Boolean(startingPackChoice.selectedSetId) || !selectedStartingSetId || choosingStartingPack}
+              onClick={() => void chooseStartingPack()}
+            >
+              {startingPackChoice.selectedSetId ? "Ausgewählt" : choosingStartingPack ? "Wird gewählt…" : "Startpacks wählen"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       {errorMessage ? (
         <div className="rounded-[18px] border border-[rgba(204,97,78,0.22)] bg-[rgba(141,61,48,0.14)] px-4 py-3 text-sm text-[#ffd8cf]">
           {errorMessage}
+        </div>
+      ) : null}
+
+      {noticeMessage ? (
+        <div className="rounded-[18px] border border-[rgba(60,184,166,0.28)] bg-[rgba(27,112,102,0.16)] px-4 py-3 text-sm text-[#d8fff8]">
+          {noticeMessage}
         </div>
       ) : null}
 

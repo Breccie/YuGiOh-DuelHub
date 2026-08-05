@@ -11,7 +11,7 @@ import type {
   RunRewardGrantDto,
   RunRewardsResponse,
 } from "@ygo/contracts";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { InteractiveBoosterPack } from "@/components/interactive-booster-pack";
@@ -256,7 +256,9 @@ function RewardInbox({ activeRunId }: { activeRunId: string | null }) {
 
   const pendingRewards = rewards.filter(
     (reward) =>
-      reward.status === "PENDING" && reward.packSetId && reward.packQuantity > 0,
+      reward.status === "PENDING"
+      && (reward.packSetId || reward.customPackVersionId)
+      && reward.packQuantity > 0,
   );
   const revealedCards = claimedOpenings.flatMap((opening) =>
     opening.pulls.map((pull) => ({
@@ -300,10 +302,10 @@ function RewardInbox({ activeRunId }: { activeRunId: string | null }) {
                   {formatRewardReason(reward.reason)}
                 </p>
                 <h3 className="mt-2 text-lg font-semibold text-[#f2dfc7]">
-                  {reward.packSet?.name ?? "Tournament Pack"}
+                  {reward.packSet?.name ?? reward.customPack?.name ?? "Tournament Pack"}
                 </h3>
                 <p className="mt-1 text-sm text-[#bea990]">
-                  {reward.packQuantity}x {reward.packSet?.code ?? "Reward-Pack"}
+                  {reward.packQuantity}x {reward.packSet?.code ?? reward.customPack?.code ?? "Reward-Pack"}
                 </p>
               </div>
               <span className="inline-flex h-10 min-w-10 items-center justify-center rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(9,11,15,0.64)] px-3 text-sm font-semibold text-[#f3dec4]">
@@ -628,25 +630,17 @@ export function PackSelectionConsole({
   }
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
-      <div className="app-background" />
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <AppSidebar />
-
-        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
-            <section className="relative xl:min-h-[520px]">
-              <div className="relative">
-                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
-                  <ConsoleGlobalStatusBar
-                    viewer={{ displayName: viewer.displayName }}
-                    fallback={{
-                      collectionValue: `${formatNumber(collectionProgress.owned)} / ${formatNumber(collectionProgress.total)}`,
-                    }}
-                  />
-                </div>
-              </div>
-
+    <AppShell
+      topbar={(
+        <ConsoleGlobalStatusBar
+          viewer={{ displayName: viewer.displayName }}
+          fallback={{
+            collectionValue: `${formatNumber(collectionProgress.owned)} / ${formatNumber(collectionProgress.total)}`,
+          }}
+        />
+      )}
+    >
+            <section className="relative mt-5 xl:min-h-[520px]">
               <div className="relative mt-5 grid gap-8 xl:grid-cols-[360px_520px_minmax(0,1fr)] xl:items-end">
                 <div className="xl:translate-y-[28px] xl:self-end">
                   <InteractiveBoosterPack
@@ -1010,9 +1004,6 @@ export function PackSelectionConsole({
                 </div>
               </Panel>
             </section>
-          </div>
-        </main>
-      </div>
-    </div>
+    </AppShell>
   );
 }

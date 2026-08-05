@@ -17,7 +17,7 @@ import type {
   TradeVersionDto,
 } from "@/lib/app-dtos";
 import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
-import { getActiveRun, requireRunMembership } from "@/lib/run-service";
+import { getActiveRun, getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
 
 class TradeServiceError extends Error {
   status: number;
@@ -69,6 +69,7 @@ async function expireTradeReservationIfNeeded(
         },
         data: { lockState: EntryLockState.AVAILABLE },
       });
+      await releaseVersionCreditReservations(tx, runId, acceptedVersion);
     }
     await tx.trade.updateMany({
       where: { id: tradeId, status: "ACCEPTED" },
@@ -187,13 +188,152 @@ function uniqueEntrySelection(
   };
 }
 
-function ensureNonEmptyTrade(selection: EntrySelection) {
-  if (selection.offeredIds.length === 0 && selection.requestedIds.length === 0) {
+function ensureNonEmptyTrade(
+  selection: EntrySelection,
+  credits: { offeredCredits: number; requestedCredits: number },
+) {
+  if (selection.offeredIds.length === 0 && selection.requestedIds.length === 0
+    && credits.offeredCredits === 0 && credits.requestedCredits === 0) {
     throw new TradeServiceError(
       "Ein Trade braucht mindestens eine angebotene oder angefragte Karte.",
       400,
     );
   }
+}
+
+function assertTradeDraftRules(
+  rules: Awaited<ReturnType<typeof requireTradesEnabled>>,
+  selection: EntrySelection,
+  credits: { offeredCredits: number; requestedCredits: number },
+) {
+  if (!rules.modes.includes("DIRECT")) {
+    throw new TradeServiceError("Direkte Trades sind in dieser Kampagne deaktiviert.", 409);
+  }
+  const now = new Date();
+  if (rules.tradeWindowStart && new Date(rules.tradeWindowStart) > now) {
+    throw new TradeServiceError("Das Tauschfenster dieser Kampagne ist noch nicht geöffnet.", 409);
+  }
+  if (rules.tradeWindowEnd && new Date(rules.tradeWindowEnd) <= now) {
+    throw new TradeServiceError("Das Tauschfenster dieser Kampagne ist geschlossen.", 409);
+  }
+  if ((credits.offeredCredits > 0 || credits.requestedCredits > 0) && !rules.allowCredits) {
+    throw new TradeServiceError("Credit-Trades sind in dieser Kampagne deaktiviert.", 409);
+  }
+  if (rules.maxCardsPerTrade !== null
+    && selection.offeredIds.length + selection.requestedIds.length > rules.maxCardsPerTrade) {
+    throw new TradeServiceError(`Ein Trade darf höchstens ${rules.maxCardsPerTrade} Karten enthalten.`, 409);
+  }
+  if (rules.maxCreditsPerTrade !== null
+    && Math.max(credits.offeredCredits, credits.requestedCredits) > rules.maxCreditsPerTrade) {
+    throw new TradeServiceError(`Pro Seite sind höchstens ${rules.maxCreditsPerTrade} Credits erlaubt.`, 409);
+  }
+}
+
+async function reserveWalletCredits(
+  tx: Prisma.TransactionClient,
+  runId: string,
+  userId: string,
+  amount: number,
+) {
+  if (amount === 0) return;
+  const wallet = await getOrCreateWallet(tx, { runId, userId });
+  const updated = await tx.creditWallet.updateMany({
+    where: {
+      id: wallet.id,
+      reservedBalance: wallet.reservedBalance,
+      balance: { gte: wallet.reservedBalance + amount },
+    },
+    data: { reservedBalance: { increment: amount } },
+  });
+  if (updated.count !== 1) {
+    throw new TradeServiceError("Mindestens eine Seite hat nicht genügend freie Credits.", 409);
+  }
+}
+
+async function releaseVersionCreditReservations(
+  tx: Prisma.TransactionClient,
+  runId: string,
+  version: { senderId: string; recipientId: string; offeredCredits: number; requestedCredits: number },
+) {
+  for (const [userId, amount] of [
+    [version.senderId, version.offeredCredits],
+    [version.recipientId, version.requestedCredits],
+  ] as const) {
+    if (amount === 0) continue;
+    const wallet = await getOrCreateWallet(tx, { runId, userId });
+    const released = await tx.creditWallet.updateMany({
+      where: { id: wallet.id, reservedBalance: { gte: amount } },
+      data: { reservedBalance: { decrement: amount } },
+    });
+    if (released.count !== 1) {
+      throw new TradeServiceError("Eine Credit-Reservierung ist nicht mehr konsistent.", 409);
+    }
+  }
+}
+
+async function transferReservedCredits(
+  tx: Prisma.TransactionClient,
+  options: {
+    runId: string;
+    tradeId: string;
+    payerId: string;
+    recipientId: string;
+    amount: number;
+    direction: "OFFERED" | "REQUESTED";
+  },
+) {
+  if (options.amount === 0) return;
+  const [payerWallet, recipientWallet] = await Promise.all([
+    getOrCreateWallet(tx, { runId: options.runId, userId: options.payerId }),
+    getOrCreateWallet(tx, { runId: options.runId, userId: options.recipientId }),
+  ]);
+  const debited = await tx.creditWallet.updateMany({
+    where: {
+      id: payerWallet.id,
+      balance: { gte: options.amount },
+      reservedBalance: { gte: options.amount },
+    },
+    data: {
+      balance: { decrement: options.amount },
+      reservedBalance: { decrement: options.amount },
+    },
+  });
+  if (debited.count !== 1) {
+    throw new TradeServiceError("Reservierte Credits konnten nicht final übertragen werden.", 409);
+  }
+  const [payerAfter, recipientAfter] = await Promise.all([
+    tx.creditWallet.findUniqueOrThrow({ where: { id: payerWallet.id } }),
+    tx.creditWallet.update({
+      where: { id: recipientWallet.id },
+      data: { balance: { increment: options.amount } },
+    }),
+  ]);
+  await tx.creditLedgerEntry.createMany({
+    data: [
+      {
+        runId: options.runId,
+        walletId: payerWallet.id,
+        userId: options.payerId,
+        amount: -options.amount,
+        balanceAfter: payerAfter.balance,
+        source: "TRADE_TRANSFER",
+        referenceType: `Trade:${options.direction}`,
+        referenceId: options.tradeId,
+        note: "Credit-Anteil eines abgeschlossenen Trades.",
+      },
+      {
+        runId: options.runId,
+        walletId: recipientWallet.id,
+        userId: options.recipientId,
+        amount: options.amount,
+        balanceAfter: recipientAfter.balance,
+        source: "TRADE_TRANSFER",
+        referenceType: `Trade:${options.direction}`,
+        referenceId: options.tradeId,
+        note: "Credit-Anteil eines abgeschlossenen Trades.",
+      },
+    ],
+  });
 }
 
 function latestVersion(trade: TradeRecord) {
@@ -242,6 +382,8 @@ function versionToDto(trade: TradeRecord, version: TradeVersionRecord): TradeVer
     recipient: participantToDto(version.recipient),
     offered: offered.map(toCardLineDto),
     requested: requested.map(toCardLineDto),
+    offeredCredits: version.offeredCredits,
+    requestedCredits: version.requestedCredits,
     isActive: trade.activeVersionId === version.id,
     isAccepted: trade.acceptedVersionId === version.id,
   };
@@ -281,6 +423,15 @@ function deriveAllowedActions(trade: TradeRecord, viewerId: string): TradeAllowe
 
 function deriveThreadState(trade: TradeRecord, viewerId: string): TradeListItemDto["threadState"] {
   const activeVersion = getActiveVersion(trade);
+  if (
+    trade.status === "ACCEPTED"
+    && trade.requiresOrganizerApproval
+    && !trade.approvedAt
+    && trade.proposerConfirmedAt
+    && trade.responderConfirmedAt
+  ) {
+    return "waitingForOrganizerApproval";
+  }
   return deriveTradeThreadState({
     status: trade.status,
     viewerIsActiveRecipient: activeVersion?.recipientId === viewerId,
@@ -332,6 +483,17 @@ function buildTimeline(trade: TradeRecord): TradeTimelineEntryDto[] {
       actor: participantToDto(trade.responder),
       title: `${trade.responder.displayName} hat den Abschluss bestätigt`,
       detail: "Der Besitzwechsel wartet jetzt nur noch auf beide Bestätigungen.",
+    });
+  }
+
+  if (trade.approvedAt) {
+    entries.push({
+      id: `approved-${trade.id}`,
+      type: "TRADE_APPROVED",
+      createdAt: trade.approvedAt.toISOString(),
+      actor: null,
+      title: "Trade durch die Kampagnenleitung freigegeben",
+      detail: "Die organisatorische Prüfung ist abgeschlossen.",
     });
   }
 
@@ -394,6 +556,9 @@ function toTradeDetailDto(trade: TradeRecord, viewerId: string): TradeDetailDto 
     responderConfirmedAt: trade.responderConfirmedAt?.toISOString() ?? null,
     cancelledByUserId: trade.cancelledByUserId ?? null,
     rejectedByUserId: trade.rejectedByUserId ?? null,
+    requiresOrganizerApproval: trade.requiresOrganizerApproval,
+    approvedByUserId: trade.approvedByUserId ?? null,
+    approvedAt: trade.approvedAt?.toISOString() ?? null,
     proposer: participantToDto(trade.proposer),
     responder: participantToDto(trade.responder),
     activeVersion: getActiveVersion(trade) ? versionToDto(trade, getActiveVersion(trade)!) : null,
@@ -425,6 +590,12 @@ function toTradeListItemDto(trade: TradeRecord, viewerId: string): TradeListItem
     partner: participantToDto(partner),
     givingCount: givingItems.length,
     receivingCount: receivingItems.length,
+    givingCredits: referenceVersion
+      ? referenceVersion.senderId === viewerId ? referenceVersion.offeredCredits : referenceVersion.requestedCredits
+      : 0,
+    receivingCredits: referenceVersion
+      ? referenceVersion.senderId === viewerId ? referenceVersion.requestedCredits : referenceVersion.offeredCredits
+      : 0,
     givingPreview: givingItems.slice(0, 4).map((item) => item.collectionEntry.card.name),
     receivingPreview: receivingItems.slice(0, 4).map((item) => item.collectionEntry.card.name),
     awaitingYourResponse: threadState === "awaitingYourResponse",
@@ -772,7 +943,7 @@ export async function createTradeOffer(
   draft: TradeOfferDraft,
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
-  await requireTradesEnabled(prisma, activeRun.id);
+  const tradeRules = await requireTradesEnabled(prisma, activeRun.id);
   const responder = await prisma.user.findUnique({
     where: {
       duelistId: draft.responderDuelistId.trim().toUpperCase(),
@@ -791,13 +962,23 @@ export async function createTradeOffer(
   }
 
   await ensureAcceptedFriendship(prisma, viewerId, responder.id);
-  await requireRunMembership(prisma, {
+  const responderMembership = await requireRunMembership(prisma, {
     runId: activeRun.id,
     userId: responder.id,
   });
 
+  if (tradeRules.minimumMembershipDays > 0) {
+    const cutoff = Date.now() - tradeRules.minimumMembershipDays * 86_400_000;
+    const viewerMembership = await requireRunMembership(prisma, { runId: activeRun.id, userId: viewerId });
+    if (viewerMembership.joinedAt.getTime() > cutoff || responderMembership.joinedAt.getTime() > cutoff) {
+      throw new TradeServiceError(`Beide Seiten müssen seit mindestens ${tradeRules.minimumMembershipDays} Tagen Mitglied sein.`, 409);
+    }
+  }
+
   const selection = uniqueEntrySelection(draft.offeredEntryIds, draft.requestedEntryIds);
-  ensureNonEmptyTrade(selection);
+  const credits = { offeredCredits: draft.offeredCredits ?? 0, requestedCredits: draft.requestedCredits ?? 0 };
+  ensureNonEmptyTrade(selection, credits);
+  assertTradeDraftRules(tradeRules, selection, credits);
   await loadEntriesForDraft(prisma, viewerId, responder.id, activeRun.id, selection);
 
   const tradeId = await prisma.$transaction(async (tx) => {
@@ -820,6 +1001,8 @@ export async function createTradeOffer(
         senderId: viewerId,
         recipientId: responder.id,
         note: draft.note?.trim() || null,
+        offeredCredits: credits.offeredCredits,
+        requestedCredits: credits.requestedCredits,
       },
       select: {
         id: true,
@@ -870,7 +1053,7 @@ export async function createTradeCounterOffer(
   draft: TradeVersionDraft,
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
-  await requireTradesEnabled(prisma, activeRun.id);
+  const tradeRules = await requireTradesEnabled(prisma, activeRun.id);
   await backfillTradeById(prisma, tradeId);
 
   await prisma.$transaction(async (tx) => {
@@ -896,10 +1079,21 @@ export async function createTradeCounterOffer(
       );
     }
 
+    assertTradeDraftRules(
+      tradeRules,
+      {
+        offeredIds: activeVersion.items.filter((item) => item.fromUserId === activeVersion.senderId).map((item) => item.collectionEntryId),
+        requestedIds: activeVersion.items.filter((item) => item.fromUserId === activeVersion.recipientId).map((item) => item.collectionEntryId),
+      },
+      { offeredCredits: activeVersion.offeredCredits, requestedCredits: activeVersion.requestedCredits },
+    );
+
     await ensureAcceptedFriendship(tx, trade.proposerId, trade.responderId);
 
     const selection = uniqueEntrySelection(draft.offeredEntryIds, draft.requestedEntryIds);
-    ensureNonEmptyTrade(selection);
+    const credits = { offeredCredits: draft.offeredCredits ?? 0, requestedCredits: draft.requestedCredits ?? 0 };
+    ensureNonEmptyTrade(selection, credits);
+    assertTradeDraftRules(tradeRules, selection, credits);
     await loadEntriesForDraft(tx, viewerId, activeVersion.senderId, activeRun.id, selection);
 
     await tx.tradeVersion.update({
@@ -920,6 +1114,8 @@ export async function createTradeCounterOffer(
         senderId: viewerId,
         recipientId: activeVersion.senderId,
         note: draft.note?.trim() || null,
+        offeredCredits: credits.offeredCredits,
+        requestedCredits: credits.requestedCredits,
       },
       select: {
         id: true,
@@ -1016,6 +1212,10 @@ export async function acceptTradeVersion(
       }
     }
 
+
+    await reserveWalletCredits(tx, activeRun.id, activeVersion.senderId, activeVersion.offeredCredits);
+    await reserveWalletCredits(tx, activeRun.id, activeVersion.recipientId, activeVersion.requestedCredits);
+
     await tx.trade.update({
       where: {
         id: trade.id,
@@ -1033,6 +1233,9 @@ export async function acceptTradeVersion(
         ),
         proposerConfirmedAt: null,
         responderConfirmedAt: null,
+        requiresOrganizerApproval: tradeRules.organizerApproval,
+        approvedBy: { disconnect: true },
+        approvedAt: null,
         resolvedAt: null,
       },
     });
@@ -1040,6 +1243,106 @@ export async function acceptTradeVersion(
 
   const acceptedTrade = await loadTradeForViewer(prisma, viewerId, tradeId);
   return toTradeDetailDto(acceptedTrade, viewerId);
+}
+
+export async function listPendingTradeApprovals(
+  prisma: PrismaClient,
+  viewerId: string,
+) {
+  const activeRun = await getActiveRun(prisma, viewerId);
+  const membership = activeRun.memberships.find((entry) => entry.userId === viewerId);
+  if (!membership || !["OWNER", "ORGANIZER"].includes(membership.role)) {
+    throw new TradeServiceError("Nur Owner oder Organizer dürfen Trade-Freigaben sehen.", 403);
+  }
+  await expireStaleTradeReservations(prisma, activeRun.id);
+  const trades = await prisma.trade.findMany({
+    where: {
+      runId: activeRun.id,
+      status: "ACCEPTED",
+      requiresOrganizerApproval: true,
+      approvedAt: null,
+      proposerConfirmedAt: { not: null },
+      responderConfirmedAt: { not: null },
+    },
+    orderBy: { updatedAt: "asc" },
+    include: tradeInclude,
+  });
+  return trades.map((trade) => ({
+    id: trade.id,
+    proposer: {
+      userId: trade.proposer.id,
+      duelistId: trade.proposer.duelistId,
+      displayName: trade.proposer.displayName,
+    },
+    responder: {
+      userId: trade.responder.id,
+      duelistId: trade.responder.duelistId,
+      displayName: trade.responder.displayName,
+    },
+    offeredCards: trade.acceptedVersion?.items.filter((item) => item.fromUserId === trade.proposerId).length ?? 0,
+    requestedCards: trade.acceptedVersion?.items.filter((item) => item.fromUserId === trade.responderId).length ?? 0,
+    offeredCredits: trade.acceptedVersion?.offeredCredits ?? 0,
+    requestedCredits: trade.acceptedVersion?.requestedCredits ?? 0,
+    reservationExpiresAt: trade.reservationExpiresAt?.toISOString() ?? null,
+  }));
+}
+
+async function finalizeAcceptedTrade(
+  tx: Prisma.TransactionClient,
+  runId: string,
+  trade: TradeRecord,
+  acceptedVersion: NonNullable<ReturnType<typeof getAcceptedVersion>>,
+  now: Date,
+) {
+  for (const item of acceptedVersion.items) {
+    const { count } = await tx.collectionEntry.updateMany({
+      where: {
+        id: item.collectionEntryId,
+        userId: item.fromUserId,
+        runId,
+        lockState: EntryLockState.RESERVED,
+      },
+      data: {
+        userId: item.toUserId,
+        source: OwnershipSource.TRADE,
+        sourceReferenceId: trade.id,
+        lockState: EntryLockState.AVAILABLE,
+      },
+    });
+
+    if (count !== 1) {
+      throw new TradeServiceError(
+        "Mindestens eine reservierte Kartenkopie konnte nicht final übertragen werden.",
+        409,
+      );
+    }
+  }
+
+  await transferReservedCredits(tx, {
+    runId,
+    tradeId: trade.id,
+    payerId: acceptedVersion.senderId,
+    recipientId: acceptedVersion.recipientId,
+    amount: acceptedVersion.offeredCredits,
+    direction: "OFFERED",
+  });
+  await transferReservedCredits(tx, {
+    runId,
+    tradeId: trade.id,
+    payerId: acceptedVersion.recipientId,
+    recipientId: acceptedVersion.senderId,
+    amount: acceptedVersion.requestedCredits,
+    direction: "REQUESTED",
+  });
+
+  await tx.trade.update({
+    where: { id: trade.id },
+    data: {
+      status: "COMPLETED",
+      resolvedAt: now,
+      reservationExpiresAt: null,
+    },
+  });
 }
 
 export async function confirmTradeCompletion(
@@ -1091,46 +1394,82 @@ export async function confirmTradeCompletion(
       },
     });
 
-    if (nextProposerConfirmedAt && nextResponderConfirmedAt) {
-      for (const item of acceptedVersion.items) {
-        const { count } = await tx.collectionEntry.updateMany({
-          where: {
-            id: item.collectionEntryId,
-            userId: item.fromUserId,
-            runId: activeRun.id,
-            lockState: EntryLockState.RESERVED,
-          },
-          data: {
-            userId: item.toUserId,
-            source: OwnershipSource.TRADE,
-            sourceReferenceId: trade.id,
-            lockState: EntryLockState.AVAILABLE,
-          },
-        });
-
-        if (count !== 1) {
-          throw new TradeServiceError(
-            "Mindestens eine reservierte Kartenkopie konnte nicht final übertragen werden.",
-            409,
-          );
-        }
-      }
-
-      await tx.trade.update({
-        where: {
-          id: trade.id,
-        },
-        data: {
-          status: "COMPLETED",
-          resolvedAt: now,
-          reservationExpiresAt: null,
-        },
-      });
+    if (
+      nextProposerConfirmedAt
+      && nextResponderConfirmedAt
+      && (!trade.requiresOrganizerApproval || trade.approvedAt)
+    ) {
+      await finalizeAcceptedTrade(tx, activeRun.id, trade, acceptedVersion, now);
     }
   });
 
   const completedTrade = await loadTradeForViewer(prisma, viewerId, tradeId);
   return toTradeDetailDto(completedTrade, viewerId);
+}
+
+export async function approveTradeCompletion(
+  prisma: PrismaClient,
+  viewerId: string,
+  tradeId: string,
+) {
+  const activeRun = await getActiveRun(prisma, viewerId);
+  const membership = await prisma.runMembership.findUnique({
+    where: { runId_userId: { runId: activeRun.id, userId: viewerId } },
+    select: { role: true },
+  });
+  if (!membership || !["OWNER", "ORGANIZER"].includes(membership.role)) {
+    throw new TradeServiceError(
+      "Nur Owner oder Organizer dürfen einen Trade freigeben.",
+      403,
+    );
+  }
+
+  await backfillTradeById(prisma, tradeId);
+  if (await expireTradeReservationIfNeeded(prisma, tradeId, activeRun.id)) {
+    throw new TradeServiceError(
+      "Die Reservierungsfrist dieses Trades ist abgelaufen.",
+      409,
+    );
+  }
+
+  let participantViewerId = viewerId;
+  await prisma.$transaction(async (tx) => {
+    const trade = await loadTrade(tx, tradeId);
+    if (!trade || trade.runId !== activeRun.id) {
+      throw new TradeServiceError("Trade wurde nicht gefunden.", 404);
+    }
+    requireAcceptedTrade(trade);
+    if (!trade.requiresOrganizerApproval) {
+      throw new TradeServiceError(
+        "Dieser Trade benötigt keine organisatorische Freigabe.",
+        409,
+      );
+    }
+    if (!trade.proposerConfirmedAt || !trade.responderConfirmedAt) {
+      throw new TradeServiceError(
+        "Beide Beteiligten müssen den Abschluss zuerst bestätigen.",
+        409,
+      );
+    }
+    const acceptedVersion = getAcceptedVersion(trade);
+    if (!acceptedVersion) {
+      throw new TradeServiceError("Die akzeptierte Version fehlt.", 409);
+    }
+
+    const now = new Date();
+    await tx.trade.update({
+      where: { id: trade.id },
+      data: {
+        approvedBy: { connect: { id: viewerId } },
+        approvedAt: now,
+      },
+    });
+    await finalizeAcceptedTrade(tx, activeRun.id, trade, acceptedVersion, now);
+    participantViewerId = trade.proposerId;
+  });
+
+  const approvedTrade = await loadTradeForViewer(prisma, participantViewerId, tradeId);
+  return toTradeDetailDto(approvedTrade, participantViewerId);
 }
 
 export async function rejectTrade(
@@ -1233,6 +1572,7 @@ export async function cancelTrade(
           lockState: EntryLockState.AVAILABLE,
         },
       });
+      await releaseVersionCreditReservations(tx, activeRun.id, acceptedVersion);
     } else {
       throw new TradeServiceError("Dieser Thread kann nicht mehr abgebrochen werden.", 409);
     }

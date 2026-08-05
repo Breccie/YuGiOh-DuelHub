@@ -1,11 +1,11 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { Panel, StatusPill } from "@/components/panel";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { apiGetJson, getApiErrorMessage } from "@/lib/api-client";
 import type { ViewerSession } from "@/lib/app-dtos";
 import { tournamentClient } from "@/lib/tournament-client";
 import type { TournamentDetail } from "@/lib/tournament-service";
@@ -35,6 +35,31 @@ export function TournamentDetailConsole({
   const [scoreDrafts, setScoreDrafts] = useState<
     Record<string, { playerOneScore: string; playerTwoScore: string }>
   >({});
+  const [availableDecks, setAvailableDecks] = useState<Array<{ id: string; name: string; isLegal: boolean }>>([]);
+  const currentParticipant = tournament.participants.find((participant) => participant.duelist.userId === session.userId);
+  const [selectedDeckId, setSelectedDeckId] = useState(currentParticipant?.registeredDeck?.id ?? "");
+  const [manualPairs, setManualPairs] = useState<Array<{ playerOneId: string; playerTwoId: string }>>([
+    { playerOneId: "", playerTwoId: "" },
+  ]);
+
+  useEffect(() => {
+    if (tournament.overview.status !== "DRAFT" || !currentParticipant) return;
+    void apiGetJson<{ decks: Array<{ id: string; name: string; isLegal: boolean }> }>("/api/decks?view=library")
+      .then((payload) => setAvailableDecks(payload.decks))
+      .catch(() => setAvailableDecks([]));
+  }, [currentParticipant, tournament.overview.status]);
+
+  async function registerDeck() {
+    if (!selectedDeckId) return;
+    setFeedback(null);
+    try {
+      await tournamentClient.registerDeck(tournament.overview.id, { deckId: selectedDeckId });
+      setFeedback("Turnierdeck eingecheckt. Beim Start wird eine unveränderliche Kopie gespeichert.");
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Turnierdeck konnte nicht eingecheckt werden."));
+    }
+  }
 
   async function invite() {
     setFeedback(null);
@@ -52,7 +77,16 @@ export function TournamentDetailConsole({
 
   async function createRound() {
     try {
-      await tournamentClient.createRound(tournament.overview.id);
+      if (tournament.overview.pairingMode === "MANUAL") {
+        await tournamentClient.createManualRound(tournament.overview.id, {
+          pairs: manualPairs.map((pair) => ({
+            playerOneId: pair.playerOneId,
+            playerTwoId: pair.playerTwoId || null,
+          })),
+        });
+      } else {
+        await tournamentClient.createRound(tournament.overview.id);
+      }
       startTransition(() => router.refresh());
     } catch (error) {
       setFeedback(getApiErrorMessage(error, "Swiss-Runde konnte nicht erzeugt werden."));
@@ -168,6 +202,19 @@ export function TournamentDetailConsole({
             <p className="ui-copy text-sm">
               {tournament.overview.description || "Noch keine Beschreibung hinterlegt."}
             </p>
+            {currentParticipant && tournament.overview.status === "DRAFT" ? (
+              <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                <p className="ui-kicker">Deck-Check-in</p>
+                <p className="mt-2 text-sm text-[#baa58a]">Das gewählte Deck wird beim Start unveränderlich eingefroren.</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <select className="ui-input" value={selectedDeckId} onChange={(event) => setSelectedDeckId(event.target.value)}>
+                    <option value="">Deck auswählen</option>
+                    {availableDecks.map((deck) => <option key={deck.id} value={deck.id}>{deck.name}{deck.isLegal ? "" : " · nicht legal"}</option>)}
+                  </select>
+                  <button className="ui-button-secondary" type="button" disabled={!selectedDeckId} onClick={() => void registerDeck()}>Deck einchecken</button>
+                </div>
+              </div>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-3">
               {[
                 ["Format", tournament.overview.formatLabel ?? "Ohne Format"],
@@ -200,9 +247,28 @@ export function TournamentDetailConsole({
                 Einladen
               </button>
               <button className="ui-button-primary" type="button" onClick={createRound}>
-                Swiss-Runde erzeugen
+                {tournament.overview.pairingMode === "SWISS" ? "Swiss-Runde erzeugen" : tournament.overview.pairingMode === "ROUND_ROBIN" ? "Nächste Liga-Runde" : tournament.overview.pairingMode === "SINGLE_ELIMINATION" ? "Nächste K.-o.-Runde" : "Paarungen manuell anlegen"}
               </button>
             </div>
+            {tournament.overview.pairingMode === "MANUAL" ? (
+              <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                <div className="flex items-center justify-between gap-3"><p className="ui-kicker">Manuelle Paarungen</p><button type="button" className="ui-button-secondary" onClick={() => setManualPairs((current) => [...current, { playerOneId: "", playerTwoId: "" }])}>Tisch hinzufügen</button></div>
+                <div className="mt-3 space-y-3">
+                  {manualPairs.map((pair, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[auto_1fr_1fr_auto]">
+                      <span className="self-center text-sm text-[#baa58a]">Tisch {index + 1}</span>
+                      {(["playerOneId", "playerTwoId"] as const).map((field) => (
+                        <select key={field} className="ui-input" value={pair[field]} onChange={(event) => setManualPairs((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: event.target.value } : row))}>
+                          <option value="">{field === "playerTwoId" ? "Bye" : "Spieler wählen"}</option>
+                          {tournament.participants.filter((participant) => participant.status === "ACCEPTED").map((participant) => <option key={participant.id} value={participant.duelist.userId}>{participant.duelist.displayName}</option>)}
+                        </select>
+                      ))}
+                      <button type="button" className="ui-button-secondary" onClick={() => setManualPairs((current) => current.filter((_, rowIndex) => rowIndex !== index))}>Entfernen</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">

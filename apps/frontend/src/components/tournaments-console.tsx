@@ -90,6 +90,8 @@ export function TournamentsConsole({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [formatLabel, setFormatLabel] = useState("Classic Progression");
+  const [pairingMode, setPairingMode] = useState<"SWISS" | "ROUND_ROBIN" | "SINGLE_ELIMINATION" | "MANUAL">("SWISS");
+  const [matchMode, setMatchMode] = useState<"BEST_OF_ONE" | "BEST_OF_THREE" | "BEST_OF_FIVE">("BEST_OF_THREE");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [editingMvpTournamentId, setEditingMvpTournamentId] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export function TournamentsConsole({
     setPending(true);
     setFeedback(null);
     try {
-      const data = await tournamentClient.create({ title, description, formatLabel });
+      const data = await tournamentClient.create({ title, description, formatLabel, pairingMode, matchMode });
       const createdTournamentId = data.tournament.overview.id;
       if (!createdTournamentId) throw new Error("Turnier wurde erstellt, aber die Detail-ID fehlt.");
       startTransition(() => router.push(`/tournaments/${createdTournamentId}`));
@@ -324,7 +326,7 @@ export function TournamentsConsole({
                     <section className="tournament-champion-panel" aria-label="Turniersieger">
                       <div className="tournament-champion-crest">
                         <Image
-                          src="/app-assets/tournaments/champion-crest.png"
+                          src="/app-assets/tournaments/champion-crest.webp"
                           alt=""
                           width={320}
                           height={320}
@@ -476,6 +478,14 @@ export function TournamentsConsole({
             <div className="mt-5 grid gap-4">
               <label><span className="ui-kicker">Titel</span><input className="ui-input mt-2" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus /></label>
               <label><span className="ui-kicker">Format</span><input className="ui-input mt-2" value={formatLabel} onChange={(event) => setFormatLabel(event.target.value)} /></label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label><span className="ui-kicker">Paarungsart</span><select className="ui-input mt-2" value={pairingMode} onChange={(event) => setPairingMode(event.target.value as typeof pairingMode)}>
+                  <option value="SWISS">Swiss</option><option value="ROUND_ROBIN">Jeder gegen jeden</option><option value="SINGLE_ELIMINATION">K.-o.-System</option><option value="MANUAL">Manuelle Paarungen</option>
+                </select></label>
+                <label><span className="ui-kicker">Matchmodus</span><select className="ui-input mt-2" value={matchMode} onChange={(event) => setMatchMode(event.target.value as typeof matchMode)}>
+                  <option value="BEST_OF_ONE">Best of 1</option><option value="BEST_OF_THREE">Best of 3</option><option value="BEST_OF_FIVE">Best of 5</option>
+                </select></label>
+              </div>
               <label><span className="ui-kicker">Beschreibung</span><textarea className="ui-input mt-2 min-h-[110px]" value={description} onChange={(event) => setDescription(event.target.value)} /></label>
               {feedback ? <div className="campaign-feedback">{feedback}</div> : null}
               <button type="button" className="ui-button-primary" disabled={pending || !title.trim()} onClick={() => void createTournamentFlow()}>{pending ? "Wird erstellt…" : "Turnier erstellen"}</button>

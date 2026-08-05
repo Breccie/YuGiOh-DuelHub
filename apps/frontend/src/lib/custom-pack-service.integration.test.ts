@@ -7,6 +7,8 @@ import {
   updateCustomPackDraft,
 } from "@/lib/custom-pack-service";
 import { updateCampaignPackAccess } from "@/lib/campaign-pack-access-service";
+import { buildCampaignRuleConfig } from "@/lib/campaign-rule-service";
+import { claimRewardPack, createRunRewardGrant } from "@/lib/pack-openings";
 import { deleteRunFixture } from "@/test-support/run-fixture-cleanup";
 
 const prisma = new PrismaClient();
@@ -42,6 +44,23 @@ describe("custom pack publishing and opening", () => {
         },
       });
       runId = run.id;
+      const ruleConfig = buildCampaignRuleConfig(run);
+      ruleConfig.tournaments.rewardSources = ["CREDITS", "STANDARD_PACK", "CUSTOM_PACK"];
+      const ruleVersion = await prisma.campaignRuleVersion.create({
+        data: {
+          runId: run.id,
+          version: 1,
+          status: "ACTIVE",
+          presetKey: "CUSTOM",
+          config: ruleConfig,
+          createdById: user.id,
+          activatedAt: new Date(),
+        },
+      });
+      await prisma.playGroupRun.update({
+        where: { id: run.id },
+        data: { activeRuleVersionId: ruleVersion.id },
+      });
       const cards = await Promise.all(
         ["Common", "Rare", "Super Rare", "Ultra Rare", "Secret Rare"].map((rarity, index) =>
           prisma.card.create({
@@ -142,6 +161,34 @@ describe("custom pack publishing and opening", () => {
         idempotencyKey: "after-soft-lock",
       })).rejects.toMatchObject({ code: "pack_locked", status: 409 });
 
+      const walletBeforeReward = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: user.id } },
+      });
+      const reward = await createRunRewardGrant(prisma, {
+        organizerId: user.id,
+        runId: run.id,
+        recipientDuelistId: user.duelistId,
+        customPackVersionId: version.id,
+        packQuantity: 1,
+        reason: "Integrationstest: Custom Pack als Rewardquelle.",
+      });
+      const rewardClaim = await claimRewardPack(prisma, {
+        viewerId: user.id,
+        runId: run.id,
+        rewardGrantId: reward.reward.id,
+      });
+      expect(rewardClaim.openings).toHaveLength(1);
+      expect(rewardClaim.batch).toMatchObject({ type: "REWARD", quantity: 1, totalCost: 0 });
+      await expect(claimRewardPack(prisma, {
+        viewerId: user.id,
+        runId: run.id,
+        rewardGrantId: reward.reward.id,
+      })).rejects.toMatchObject({ code: "reward_already_claimed" });
+      const walletAfterReward = await prisma.creditWallet.findUniqueOrThrow({
+        where: { runId_userId: { runId: run.id, userId: user.id } },
+      });
+      expect(walletAfterReward.balance).toBe(walletBeforeReward.balance);
+
       const [opening, ownedCards, wallet, purchases] = await Promise.all([
         prisma.packOpening.findUniqueOrThrow({ where: { id: first.id } }),
         prisma.collectionEntry.count({ where: { runId: run.id, userId: user.id } }),
@@ -150,7 +197,7 @@ describe("custom pack publishing and opening", () => {
       ]);
       expect(opening.customPackVersionId).toBe(version.id);
       expect(opening.ruleVersionId).toBeTruthy();
-      expect(ownedCards).toBe(18);
+      expect(ownedCards).toBe(27);
       expect(wallet.balance).toBe(800);
       expect(purchases).toBe(2);
     } finally {

@@ -7,15 +7,7 @@ import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { PackSectionNav } from "@/components/pack-section-nav";
 
 function imageUrl(assetId: string | null) {
-  return assetId ? `/api/assets/media/${encodeURIComponent(assetId)}` : "/app-assets/fallback-pack.png";
-}
-
-function availableNow(access: NonNullable<CustomPackRecord["versions"][number]["accesses"]>[number]) {
-  const now = Date.now();
-  return access.availabilityStatus === "AVAILABLE"
-    && (!access.availableFrom || new Date(access.availableFrom).getTime() <= now)
-    && (!access.availableUntil || new Date(access.availableUntil).getTime() > now)
-    && !access.rewardOnly;
+  return assetId ? `/api/assets/media/${encodeURIComponent(assetId)}` : "/app-assets/fallback-pack.webp";
 }
 
 export function CustomPackSelectionConsole({ session, activeRun, packs }: {
@@ -25,7 +17,7 @@ export function CustomPackSelectionConsole({ session, activeRun, packs }: {
 }) {
   const canEdit = activeRun.viewerRole === "OWNER" || activeRun.viewerRole === "ORGANIZER";
   const available = packs.flatMap((pack) => pack.versions
-    .filter((version) => version.status === "PUBLISHED" && (version.accesses?.some((access) => access.runId === activeRun.id && availableNow(access)) ?? false))
+    .filter((version) => version.status === "PUBLISHED" && (version.accesses?.some((access) => access.runId === activeRun.id && access.isAvailableNow) ?? false))
     .slice(0, 1)
     .map((version) => ({ pack, version })));
 

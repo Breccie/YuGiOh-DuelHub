@@ -6,15 +6,18 @@ import {
   applyRunProgressionResponseSchema,
   campaignPackAccessResponseSchema,
   claimRewardResponseSchema,
+  chooseStartingPackRequestSchema,
   claimPromoRequestSchema,
   claimPromoResponseSchema,
   createHistoryEventRequestSchema,
   createRewardGrantRequestSchema,
   createRunRequestSchema,
+  decideRunJoinRequestSchema,
   generateRunProgressionRequestSchema,
   generateRunProgressionResponseSchema,
   historyEventSchema,
   joinRunRequestSchema,
+  joinRunResponseSchema,
   openDisplayRequestSchema,
   openDisplayResponseSchema,
   openPackResponseSchema,
@@ -23,8 +26,10 @@ import {
   rewardGrantSchema,
   runRewardsResponseSchema,
   runProgressionResponseSchema,
+  startingPackChoiceResponseSchema,
   runPromosResponseSchema,
   runMemberSchema,
+  runJoinRequestSchema,
   runListResponseSchema,
   updateActiveRunRequestSchema,
   updateCampaignPackAccessRequestSchema,
@@ -55,9 +60,13 @@ import {
 import {
   addRunMember,
   createRun,
+  chooseCampaignStartingPack,
+  decideRunJoinRequest,
   getActiveRun,
+  getCampaignStartingPackChoice,
   getOrCreateWallet,
   joinRunByInviteCode,
+  listRunJoinRequests,
   listRuns,
   requireRunMembership,
   serializeLedgerEntry,
@@ -84,6 +93,10 @@ const promoParamsSchema = runParamsSchema.extend({
 
 const rewardGrantParamsSchema = runParamsSchema.extend({
   rewardGrantId: z.string().trim().min(1),
+});
+
+const joinRequestParamsSchema = runParamsSchema.extend({
+  requestId: z.string().trim().min(1),
 });
 
 function getSharedPrisma() {
@@ -153,18 +166,25 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
       const body = joinRunRequestSchema.parse(request.body ?? {});
-      const run = await joinRunByInviteCode(
+      const result = await joinRunByInviteCode(
         getSharedPrisma(),
         session.userId,
         body.inviteCode,
+        body.message,
       );
+      if (result.kind === "PENDING") {
+        return reply.status(202).send(
+          joinRunResponseSchema.parse({ joinRequest: result.joinRequest }),
+        );
+      }
+      const run = result.run;
       const wallet = await getOrCreateWallet(getSharedPrisma(), {
         runId: run.id,
         userId: session.userId,
       });
 
       return reply.status(201).send(
-        activeRunResponseSchema.parse({
+        joinRunResponseSchema.parse({
           run: serializeRun(run, session.userId),
           wallet: serializeWallet(wallet),
         }),
@@ -226,18 +246,7 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       const run = await updateRunSettings(getSharedPrisma(), {
         runId,
         viewerId: session.userId,
-        name: body.name,
-        description: body.description,
-        status: body.status,
-        defaultPackPrice: body.defaultPackPrice,
-        defaultDisplaySize: body.defaultDisplaySize,
-        freePacksPerSetUnlock: body.freePacksPerSetUnlock,
-        initialSetUnlockCount: body.initialSetUnlockCount,
-        setsPerProgressionStep: body.setsPerProgressionStep,
-        separatePromoProgression: body.separatePromoProgression,
-        tournamentWinnerCredits: body.tournamentWinnerCredits,
-        tournamentRunnerUpCredits: body.tournamentRunnerUpCredits,
-        tournamentParticipationCredits: body.tournamentParticipationCredits,
+        ...body,
       });
 
       return reply.send(run);
@@ -381,6 +390,67 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
       );
     } catch (error) {
       return sendApiError(reply, error, "Run-Mitglied konnte nicht hinzugefügt werden.");
+    }
+  });
+
+  app.get("/:runId/starting-pack-choice", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const result = await getCampaignStartingPackChoice(getSharedPrisma(), {
+        runId,
+        userId: session.userId,
+      });
+      return reply.send(startingPackChoiceResponseSchema.parse(result));
+    } catch (error) {
+      return sendApiError(reply, error, "Startpack-Auswahl konnte nicht geladen werden.");
+    }
+  });
+
+  app.post("/:runId/starting-pack-choice", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const body = chooseStartingPackRequestSchema.parse(request.body ?? {});
+      const result = await chooseCampaignStartingPack(getSharedPrisma(), {
+        runId,
+        userId: session.userId,
+        setId: body.setId,
+      });
+      return reply.send(startingPackChoiceResponseSchema.parse(result));
+    } catch (error) {
+      return sendApiError(reply, error, "Startpack konnte nicht ausgewählt werden.");
+    }
+  });
+
+  app.get("/:runId/join-requests", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId } = runParamsSchema.parse(request.params);
+      const requests = await listRunJoinRequests(getSharedPrisma(), {
+        runId,
+        viewerId: session.userId,
+      });
+      return reply.send(z.array(runJoinRequestSchema).parse(requests));
+    } catch (error) {
+      return sendApiError(reply, error, "Beitrittsanträge konnten nicht geladen werden.");
+    }
+  });
+
+  app.post("/:runId/join-requests/:requestId/decision", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { runId, requestId } = joinRequestParamsSchema.parse(request.params);
+      const body = decideRunJoinRequestSchema.parse(request.body ?? {});
+      const result = await decideRunJoinRequest(getSharedPrisma(), {
+        runId,
+        requestId,
+        viewerId: session.userId,
+        decision: body.decision,
+      });
+      return reply.send(runJoinRequestSchema.parse(result));
+    } catch (error) {
+      return sendApiError(reply, error, "Beitrittsantrag konnte nicht entschieden werden.");
     }
   });
 
@@ -618,6 +688,7 @@ const runsRoutes: FastifyPluginAsync = async (app) => {
         recipientDuelistId: body.recipientDuelistId,
         amountCredits: body.amountCredits,
         packSetId: body.packSetId,
+        customPackVersionId: body.customPackVersionId,
         packQuantity: body.packQuantity,
         reason: body.reason,
       });

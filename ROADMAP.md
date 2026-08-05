@@ -3,7 +3,7 @@
 Das langfristige kampagnenzentrierte Sandbox-Zielbild und der Ausbauplan stehen in
 [docs/product-vision.md](docs/product-vision.md).
 
-Stand: 2026-07-24
+Stand: 2026-08-05
 
 ## Release-Reihenfolge
 
@@ -12,10 +12,10 @@ Stand: 2026-07-24
 | 1. Online-Basis | Env-Profile, sichere Migrationen, API-Health, Seed-Schutz | Implementiert und lokal geprueft |
 | 2. Kampagnenflow | Login -> Kampagnenauswahl -> aktive Kampagne -> serverseitige Guards | Implementiert, Rollen-/Online-Smoke weiter ausbauen |
 | 3. Gemeinsamer Editor | All-Cards-Katalog, Besitzfilter, Deck-, Binder- und Wunschlistenfluss | Implementiert und per Desktop/Mobile-Playwright abgenommen |
-| 4. Regelversionen | Presets, sofortige/datums-/checkpointbasierte Aktivierung, historische Referenzen | Kern implementiert; Rollen, Änderungsgründe, Credit-Limit, Catch-up, Trade-Frist und Matchmodus durchgesetzt |
-| 5. Custom Packs | Entwurf, Slots/Gewichte, Simulation, Veröffentlichung und idempotentes Öffnen | Private Vorlagen und Kampagnenkopie implementiert; vollständige Reward-Einbindung offen |
-| 6. Trade-/Turnier-MVP | Reservierung, Bestätigung, Standings, Abschluss und Rewards | Implementiert; zusätzliche Sandbox-Modi offen |
-| 7. Deployment-Abnahme | Postgres-Smoke und Smoke gegen echte Vercel/Render-URLs | Wartet auf echte Projekt-Credentials |
+| 4. Regelversionen | Vollständige Sandboxbereiche, Versionierung und historische Referenzen | Implementiert; zentrale Limits und Gates werden serverseitig erzwungen |
+| 5. Custom Packs | Editor, Zugriff, Planung, Reward-only und idempotentes Öffnen | Implementiert und lokal integriert geprüft |
+| 6. Trades und Turniere | Atomare Credits, Freigaben, Modi, Deck-Snapshots, Standings und MVP | Implementiert und lokal integriert geprüft |
+| 7. Deployment-Abnahme | Postgres-Smoke und Smoke gegen echte Vercel/Render-URLs | Lokal/CI vorbereitet; Produktions-Cutover separat zu bestätigen |
 
 ## P0 vor externem Deployment
 
@@ -35,17 +35,14 @@ Stand: 2026-07-24
 - Custom Pack mit produktiver Kampagne erstellen, simulieren, veroeffentlichen und einen idempotenten Retry der Oeffnung pruefen.
 - Geplante Regelversion einmal per Datum und einmal per Progressionsschritt aktivieren und die historischen Referenzen kontrollieren.
 
-## P2 nach erstem Release
+## Nach dem Cutover
 
-- Deployment-Smoke gegen echte Vercel/Render-URLs automatisieren.
+- Deployment-Smoke gegen echte Vercel/Render-URLs regelmäßig ausführen.
 - Pack-/Promo-Daten weiter vervollstaendigen.
 - Nicht matchbare offizielle Genesys-Karten als Known Issue pflegen.
 - E-Mail/Passwort-Reset oder bessere Account-Wiederherstellung ergaenzen.
-- Organizer-Rechte und Kampagnenbeitritt UX-seitig verbessern.
-- Deck-Autosave mit Konfliktwiederholung ergaenzen.
-- Custom Packs vollstaendig in Progression/Rewards integrieren.
-- Verbleibende Sandbox-Regeln (unter anderem Pack-/Sammlungsoptionen, Deck-Lock und zusätzliche Turniermodi) in allen Verbrauchern umsetzen.
-- Credit-Anteile in Trades erst nach einem eigenen, atomaren Ledger-Transferkonzept aktivieren; die Option bleibt bis dahin sichtbar als nicht verfügbar deaktiviert.
+- Auktionen und zeitlich moderierte Draft-Tauschfenster als eigene Produkte auf dem vorhandenen Trade-Regelmodell aufbauen.
+- Beitrittsanfragen mit Owner-/Organizer-Freigabe und die einmalige `PLAYER_CHOICE`-Startpackauswahl sind umgesetzt und integriert getestet.
 
 ## Nicht-Ziel
 

@@ -60,7 +60,9 @@ export const createDeckRequestSchema = z.object({
 });
 export type CreateDeckRequest = z.infer<typeof createDeckRequestSchema>;
 
-export const updateDeckRequestSchema = createDeckRequestSchema;
+export const updateDeckRequestSchema = createDeckRequestSchema.extend({
+  revision: z.number().int().nonnegative(),
+});
 export type UpdateDeckRequest = z.infer<typeof updateDeckRequestSchema>;
 
 export const deckSectionSchema = z.enum(["MAIN", "EXTRA", "SIDE"]);
@@ -254,6 +256,8 @@ export const createTradeRequestSchema = z.object({
   note: z.string().trim().max(400).nullable().optional(),
   offeredEntryIds: z.array(z.string().trim().min(1)).default([]),
   requestedEntryIds: z.array(z.string().trim().min(1)).default([]),
+  offeredCredits: z.number().int().min(0).max(999_999).default(0),
+  requestedCredits: z.number().int().min(0).max(999_999).default(0),
 });
 export type CreateTradeRequest = z.infer<typeof createTradeRequestSchema>;
 
@@ -261,11 +265,13 @@ export const createTradeVersionRequestSchema = z.object({
   note: z.string().trim().max(400).nullable().optional(),
   offeredEntryIds: z.array(z.string().trim().min(1)).default([]),
   requestedEntryIds: z.array(z.string().trim().min(1)).default([]),
+  offeredCredits: z.number().int().min(0).max(999_999).default(0),
+  requestedCredits: z.number().int().min(0).max(999_999).default(0),
 });
 export type CreateTradeVersionRequest = z.infer<typeof createTradeVersionRequestSchema>;
 
 export const tradeDecisionRequestSchema = z.object({
-  action: z.enum(["accept", "reject", "cancel", "confirmCompletion"]),
+  action: z.enum(["accept", "reject", "cancel", "confirmCompletion", "approve"]),
 });
 export type TradeDecisionRequest = z.infer<typeof tradeDecisionRequestSchema>;
 
@@ -382,6 +388,8 @@ export const createTournamentRequestSchema = z.object({
   description: z.string().trim().max(400).nullable().optional(),
   formatLabel: z.string().trim().max(80).nullable().optional(),
   scheduledAt: z.string().trim().min(1).nullable().optional(),
+  pairingMode: z.enum(["SWISS", "ROUND_ROBIN", "SINGLE_ELIMINATION", "MANUAL"]).optional().default("SWISS"),
+  matchMode: z.enum(["BEST_OF_ONE", "BEST_OF_THREE", "BEST_OF_FIVE"]).optional().default("BEST_OF_THREE"),
 });
 export type CreateTournamentRequest = z.infer<typeof createTournamentRequestSchema>;
 
@@ -391,6 +399,19 @@ export const inviteTournamentParticipantRequestSchema = z.object({
 export type InviteTournamentParticipantRequest = z.infer<
   typeof inviteTournamentParticipantRequestSchema
 >;
+
+export const registerTournamentDeckRequestSchema = z.object({
+  deckId: z.string().trim().min(1),
+});
+export type RegisterTournamentDeckRequest = z.infer<typeof registerTournamentDeckRequestSchema>;
+
+export const createManualTournamentRoundRequestSchema = z.object({
+  pairs: z.array(z.object({
+    playerOneId: z.string().trim().min(1),
+    playerTwoId: z.string().trim().min(1).nullable(),
+  })).min(1),
+});
+export type CreateManualTournamentRoundRequest = z.infer<typeof createManualTournamentRoundRequestSchema>;
 
 export const recordTournamentMatchResultRequestSchema = z.object({
   action: z.enum(["report", "confirm", "adminConfirm"]).optional().default("report"),
@@ -601,12 +622,16 @@ export type TradeOfferDraft = {
   note: string | null;
   offeredEntryIds: string[];
   requestedEntryIds: string[];
+  offeredCredits?: number;
+  requestedCredits?: number;
 };
 
 export type TradeVersionDraft = {
   note: string | null;
   offeredEntryIds: string[];
   requestedEntryIds: string[];
+  offeredCredits?: number;
+  requestedCredits?: number;
 };
 
 export type TradeParticipantDto = {
@@ -635,6 +660,8 @@ export type TradeVersionDto = {
   recipient: TradeParticipantDto;
   offered: TradeCardLineDto[];
   requested: TradeCardLineDto[];
+  offeredCredits: number;
+  requestedCredits: number;
   isActive: boolean;
   isAccepted: boolean;
 };
@@ -645,6 +672,7 @@ export type TradeTimelineEntryDto = {
     | "VERSION_CREATED"
     | "TRADE_ACCEPTED"
     | "TRADE_CONFIRMED"
+    | "TRADE_APPROVED"
     | "TRADE_COMPLETED"
     | "TRADE_REJECTED"
     | "TRADE_CANCELLED";
@@ -659,13 +687,15 @@ export type TradeAllowedAction =
   | "reject"
   | "cancel"
   | "counter"
-  | "confirmCompletion";
+  | "confirmCompletion"
+  | "approve";
 
 export type TradeThreadState =
   | "awaitingYourResponse"
   | "waitingForTheirResponse"
   | "waitingForYourConfirmation"
   | "waitingForTheirConfirmation"
+  | "waitingForOrganizerApproval"
   | "completed"
   | "cancelled"
   | "rejected";
@@ -682,6 +712,8 @@ export type TradeListItemDto = {
   partner: TradeParticipantDto;
   givingCount: number;
   receivingCount: number;
+  givingCredits: number;
+  receivingCredits: number;
   givingPreview: string[];
   receivingPreview: string[];
   awaitingYourResponse: boolean;
@@ -701,6 +733,9 @@ export type TradeDetailDto = {
   responderConfirmedAt: string | null;
   cancelledByUserId: string | null;
   rejectedByUserId: string | null;
+  requiresOrganizerApproval: boolean;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
   proposer: TradeParticipantDto;
   responder: TradeParticipantDto;
   activeVersion: TradeVersionDto | null;
@@ -751,6 +786,9 @@ export type TournamentOverviewDto = {
   formatLabel: string | null;
   scheduledAt: string | null;
   status: "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+  pairingMode: "SWISS" | "ROUND_ROBIN" | "SINGLE_ELIMINATION" | "MANUAL";
+  matchMode: "BEST_OF_ONE" | "BEST_OF_THREE" | "BEST_OF_FIVE";
+  startedAt: string | null;
   host: {
     userId: string;
     duelistId: string;
@@ -1077,6 +1115,15 @@ export type OpenPackResponse = z.infer<typeof openPackResponseSchema>;
 
 export const runStatusSchema = z.enum(["ACTIVE", "ARCHIVED"]);
 export const runRoleSchema = z.enum(["OWNER", "ORGANIZER", "PLAYER"]);
+export const campaignRegionSchema = z.enum(["TCG", "OCG", "GLOBAL", "CUSTOM"]);
+export const campaignVisibilitySchema = z.enum(["PRIVATE", "UNLISTED", "PUBLIC"]);
+export const campaignJoinTypeSchema = z.enum(["INVITE_CODE", "APPROVAL", "OPEN"]);
+export const runJoinRequestStatusSchema = z.enum([
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "CANCELLED",
+]);
 export const creditLedgerSourceSchema = z.enum([
   "STARTING_BALANCE",
   "PACK_PURCHASE",
@@ -1085,6 +1132,7 @@ export const creditLedgerSourceSchema = z.enum([
   "TOURNAMENT_REWARD",
   "ORGANIZER_ADJUSTMENT",
   "MANUAL_GRANT",
+  "TRADE_TRANSFER",
 ]);
 export const historyEventTypeSchema = z.enum([
   "WORLD_CHAMPIONSHIP",
@@ -1128,6 +1176,16 @@ export const playGroupRunSchema = z.object({
   name: z.string(),
   inviteCode: z.string().nullable(),
   description: z.string().nullable(),
+  campaignImageAssetId: z.string().nullable(),
+  campaignImageUrl: z.string().nullable(),
+  region: campaignRegionSchema,
+  language: z.string(),
+  timeZone: z.string(),
+  visibility: campaignVisibilitySchema,
+  joinType: campaignJoinTypeSchema,
+  maxPlayers: z.number().int().nullable(),
+  startsAt: z.string().nullable(),
+  endsAt: z.string().nullable(),
   status: runStatusSchema,
   historyCursor: z.string().nullable(),
   defaultPackPrice: z.number().int(),
@@ -1162,6 +1220,21 @@ export const runMemberSchema = runMembershipSchema.extend({
 });
 export type RunMemberDto = z.infer<typeof runMemberSchema>;
 
+export const runJoinRequestSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  userId: z.string(),
+  duelistId: z.string(),
+  displayName: z.string(),
+  status: runJoinRequestStatusSchema,
+  message: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  resolvedAt: z.string().nullable(),
+  resolvedById: z.string().nullable(),
+});
+export type RunJoinRequestDto = z.infer<typeof runJoinRequestSchema>;
+
 export const assignableRunRoleSchema = z.enum(["ORGANIZER", "PLAYER"]);
 export type AssignableRunRole = z.infer<typeof assignableRunRoleSchema>;
 
@@ -1174,6 +1247,15 @@ export type AddRunMemberRequest = z.infer<typeof addRunMemberRequestSchema>;
 export const createRunRequestSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(400).nullable().optional(),
+  campaignImageAssetId: z.string().trim().min(1).nullable().optional(),
+  region: campaignRegionSchema.optional(),
+  language: z.string().trim().min(2).max(16).optional(),
+  timeZone: z.string().trim().min(1).max(80).optional(),
+  visibility: campaignVisibilitySchema.optional(),
+  joinType: campaignJoinTypeSchema.optional(),
+  maxPlayers: z.number().int().min(2).max(10_000).nullable().optional(),
+  startsAt: z.string().datetime().nullable().optional(),
+  endsAt: z.string().datetime().nullable().optional(),
   startingCredits: z.number().int().min(0).max(999_999).optional(),
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
@@ -1189,12 +1271,27 @@ export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 
 export const joinRunRequestSchema = z.object({
   inviteCode: z.string().trim().min(1).max(32),
+  message: z.string().trim().max(400).nullable().optional(),
 });
 export type JoinRunRequest = z.infer<typeof joinRunRequestSchema>;
+
+export const decideRunJoinRequestSchema = z.object({
+  decision: z.enum(["APPROVE", "REJECT"]),
+});
+export type DecideRunJoinRequest = z.infer<typeof decideRunJoinRequestSchema>;
 
 export const updateRunSettingsRequestSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   description: z.string().trim().max(400).nullable().optional(),
+  campaignImageAssetId: z.string().trim().min(1).nullable().optional(),
+  region: campaignRegionSchema.optional(),
+  language: z.string().trim().min(2).max(16).optional(),
+  timeZone: z.string().trim().min(1).max(80).optional(),
+  visibility: campaignVisibilitySchema.optional(),
+  joinType: campaignJoinTypeSchema.optional(),
+  maxPlayers: z.number().int().min(2).max(10_000).nullable().optional(),
+  startsAt: z.string().datetime().nullable().optional(),
+  endsAt: z.string().datetime().nullable().optional(),
   status: runStatusSchema.optional(),
   defaultPackPrice: z.number().int().min(0).max(99_999).optional(),
   defaultDisplaySize: z.number().int().min(1).max(120).optional(),
@@ -1291,6 +1388,7 @@ export const creditWalletSchema = z.object({
   runId: z.string(),
   userId: z.string(),
   balance: z.number().int(),
+  reservedBalance: z.number().int().nonnegative().default(0),
   updatedAt: z.string(),
 });
 export type CreditWalletDto = z.infer<typeof creditWalletSchema>;
@@ -1320,6 +1418,32 @@ export const activeRunResponseSchema = z.object({
   wallet: creditWalletSchema,
 });
 export type ActiveRunResponse = z.infer<typeof activeRunResponseSchema>;
+
+export const joinRunResponseSchema = z.union([
+  activeRunResponseSchema,
+  z.object({
+    joinRequest: runJoinRequestSchema,
+  }),
+]);
+export type JoinRunResponse = z.infer<typeof joinRunResponseSchema>;
+
+export const startingPackChoiceResponseSchema = z.object({
+  enabled: z.boolean(),
+  packQuantity: z.number().int().min(0),
+  selectedSetId: z.string().nullable(),
+  options: z.array(z.object({
+    setId: z.string(),
+    code: z.string(),
+    name: z.string(),
+    imageUrl: z.string().nullable(),
+  })),
+});
+export type StartingPackChoiceResponse = z.infer<typeof startingPackChoiceResponseSchema>;
+
+export const chooseStartingPackRequestSchema = z.object({
+  setId: z.string().trim().min(1),
+});
+export type ChooseStartingPackRequest = z.infer<typeof chooseStartingPackRequestSchema>;
 
 export const walletResponseSchema = z.object({
   wallet: creditWalletSchema,
@@ -1388,6 +1512,7 @@ export const rewardGrantSchema = z.object({
   grantedById: z.string().nullable(),
   amountCredits: z.number().int(),
   packSetId: z.string().nullable(),
+  customPackVersionId: z.string().nullable(),
   packQuantity: z.number().int(),
   reason: z.string().nullable(),
   status: rewardGrantStatusSchema,
@@ -1407,6 +1532,14 @@ export type RewardGrantPackSetDto = z.infer<typeof rewardGrantPackSetSchema>;
 
 export const runRewardGrantSchema = rewardGrantSchema.extend({
   packSet: rewardGrantPackSetSchema.nullable(),
+  customPack: z.object({
+    id: z.string(),
+    code: z.string(),
+    name: z.string(),
+    version: z.number().int(),
+    packSize: z.number().int(),
+    imageUrl: z.string().nullable(),
+  }).nullable(),
 });
 export type RunRewardGrantDto = z.infer<typeof runRewardGrantSchema>;
 
@@ -1426,8 +1559,13 @@ export const createRewardGrantRequestSchema = z.object({
   recipientDuelistId: z.string().trim().min(1),
   amountCredits: z.number().int().min(0).max(999_999).optional(),
   packSetId: z.string().trim().min(1).nullable().optional(),
+  customPackVersionId: z.string().trim().min(1).nullable().optional(),
   packQuantity: z.number().int().min(0).max(120).optional(),
   reason: z.string().trim().max(400).nullable().optional(),
+}).superRefine((input, context) => {
+  if (input.packSetId && input.customPackVersionId) {
+    context.addIssue({ code: "custom", path: ["customPackVersionId"], message: "Ein Reward kann nur eine Packquelle verwenden." });
+  }
 });
 export type CreateRewardGrantRequest = z.infer<
   typeof createRewardGrantRequestSchema
@@ -1654,6 +1792,12 @@ export const campaignRuleConfigSchema = z.object({
     creditLimit: z.number().int().min(0).nullable().default(null),
     packPrice: z.number().int().min(0),
     displaySize: z.number().int().min(1).max(100),
+    bundleSize: z.number().int().min(1).max(100).default(3),
+    bundlePrice: z.number().int().min(0).nullable().default(null),
+    packPurchaseLimitPerDay: z.number().int().min(1).nullable().default(null),
+    displayPurchaseLimitPerDay: z.number().int().min(1).nullable().default(null),
+    bundlePurchaseLimitPerDay: z.number().int().min(1).nullable().default(null),
+    purchaseTypes: z.array(z.enum(["PACK", "DISPLAY", "BUNDLE"])).min(1).default(["PACK", "DISPLAY"]),
   }),
   progression: z.object({
     initialSetUnlockCount: z.number().int().min(0).max(100),
@@ -1661,11 +1805,31 @@ export const campaignRuleConfigSchema = z.object({
     freePacksPerSetUnlock: z.number().int().min(0).max(1000),
     separatePromoProgression: z.boolean(),
     catchUpMode: z.enum(["NONE", "MATCH_CURRENT", "HOST_GRANT"]).default("NONE"),
+    startingPackMode: z.enum(["NONE", "FIXED", "RANDOM", "PLAYER_CHOICE"]).default("NONE"),
+    startingPackCount: z.number().int().min(0).max(1000).default(0),
+    startingSetIds: z.array(z.string()).default([]),
+    startingCardIds: z.array(z.string()).default([]),
+    starterDeckIds: z.array(z.string()).default([]),
+    progressionModes: z.array(z.enum(["MANUAL", "DATE", "TOURNAMENT", "MATCHES", "EVENT"])).min(1).default(["MANUAL", "TOURNAMENT"]),
+    allowReleaseOrder: z.boolean().default(true),
+    allowCustomOrder: z.boolean().default(false),
+    allowPlayerVote: z.boolean().default(false),
+    unlockReprints: z.boolean().default(true),
+    allowBackwardUnlocks: z.boolean().default(false),
+    timedEventsEnabled: z.boolean().default(false),
   }),
   collection: z.object({
     duplicateRule: z.enum(["KEEP_ALL", "CAP_COPIES", "CONVERT_CREDITS"]).default("KEEP_ALL"),
     printingSpecificBinders: z.boolean().default(true),
     physicalCopyReservation: z.boolean().default(true),
+    allowPackDuplicates: z.boolean().default(true),
+    printingIdentity: z.enum(["CARD", "PRINTING", "PHYSICAL_COPY"]).default("PHYSICAL_COPY"),
+    collectionEntryLimit: z.number().int().min(1).nullable().default(null),
+    maxCopiesPerCard: z.number().int().min(1).nullable().default(null),
+    dustingEnabled: z.boolean().default(false),
+    dustingCreditsPerCard: z.number().int().min(0).default(0),
+    binderLimit: z.number().int().min(1).nullable().default(null),
+    binderPageLimit: z.number().int().min(1).nullable().default(null),
   }),
   decks: z.object({
     allowProxies: z.boolean().default(false),
@@ -1674,15 +1838,33 @@ export const campaignRuleConfigSchema = z.object({
     maxExtraDeck: z.number().int().min(0).max(30).default(15),
     maxSideDeck: z.number().int().min(0).max(30).default(15),
     tournamentDeckLock: z.boolean().default(true),
+    ownershipRequired: z.boolean().default(true),
+    allowedFormatKeys: z.array(z.string()).default([]),
+    allowMultipleFormats: z.boolean().default(false),
+    deckVisibility: z.enum(["PRIVATE", "FRIENDS", "CAMPAIGN", "PUBLIC"]).default("PRIVATE"),
   }),
   trades: z.object({
     enabled: z.boolean().default(true),
     allowCredits: z.boolean().default(false),
     reservationMinutes: z.number().int().min(1).max(10080).default(1440),
+    modes: z.array(z.enum(["DIRECT", "AUCTION", "DRAFT_WINDOW"])).min(1).default(["DIRECT"]),
+    minimumMembershipDays: z.number().int().min(0).max(3650).default(0),
+    organizerApproval: z.boolean().default(false),
+    maxCardsPerTrade: z.number().int().min(1).nullable().default(null),
+    maxCreditsPerTrade: z.number().int().min(1).nullable().default(null),
+    tradeWindowStart: z.string().datetime().nullable().default(null),
+    tradeWindowEnd: z.string().datetime().nullable().default(null),
   }),
   tournaments: z.object({
-    matchMode: z.enum(["SINGLE", "BEST_OF_THREE"]).default("BEST_OF_THREE"),
+    matchMode: z.enum(["BEST_OF_ONE", "BEST_OF_THREE", "BEST_OF_FIVE", "SINGLE"]).default("BEST_OF_THREE"),
+    pairingMode: z.enum(["SWISS", "ROUND_ROBIN", "SINGLE_ELIMINATION", "MANUAL"]).default("SWISS"),
+    allowedPairingModes: z.array(z.enum(["SWISS", "ROUND_ROBIN", "SINGLE_ELIMINATION", "MANUAL"])).min(1).default(["SWISS"]),
+    allowedMatchModes: z.array(z.enum(["BEST_OF_ONE", "BEST_OF_THREE", "BEST_OF_FIVE"])).min(1).default(["BEST_OF_THREE"]),
     requireResultConfirmation: z.boolean().default(true),
+    requireDeckRegistration: z.boolean().default(false),
+    minimumParticipants: z.number().int().min(2).max(1024).default(2),
+    rewardsRepeatable: z.boolean().default(true),
+    rewardSources: z.array(z.enum(["CREDITS", "STANDARD_PACK", "CUSTOM_PACK", "PROMO", "FIXED_CARD"])).default(["CREDITS", "STANDARD_PACK"]),
     winnerCredits: z.number().int().min(0),
     runnerUpCredits: z.number().int().min(0),
     participationCredits: z.number().int().min(0),
@@ -1707,6 +1889,17 @@ export const campaignRuleConfigSchema = z.object({
       code: "custom",
       path: ["economy", "creditLimit"],
       message: "Das Credit-Limit darf nicht unter den Start-Credits liegen.",
+    });
+  }
+  if (
+    config.trades.tradeWindowStart
+    && config.trades.tradeWindowEnd
+    && new Date(config.trades.tradeWindowStart) >= new Date(config.trades.tradeWindowEnd)
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["trades", "tradeWindowEnd"],
+      message: "Das Ende des Tauschfensters muss nach dem Beginn liegen.",
     });
   }
 });
@@ -1816,6 +2009,7 @@ export type UpdateCustomPackDraftRequest = z.infer<typeof updateCustomPackDraftR
 
 export const mediaAssetKindSchema = z.enum([
   "AVATAR",
+  "CAMPAIGN_IMAGE",
   "PACK_ARTWORK",
   "BINDER_COVER",
   "DECKBOX",

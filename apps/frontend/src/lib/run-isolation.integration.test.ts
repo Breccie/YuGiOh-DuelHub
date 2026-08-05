@@ -172,6 +172,7 @@ describe("run isolation", () => {
       await expect(
         updateDeckMetadata(prisma, owner.id, deck.id, {
           name: `${tag} moved deck`,
+          revision: deck.revision,
         }),
       ).rejects.toThrow("Deck wurde nicht gefunden.");
 

@@ -17,11 +17,7 @@ function asOpeningSnapshot(base: PackDashboardSnapshotDto, runId: string, versio
   const pack = packs.find((candidate) => candidate.versions.some((version) => version.id === versionId));
   const version = pack?.versions.find((candidate) => candidate.id === versionId);
   const access = version?.accesses?.find((candidate) => candidate.runId === runId);
-  const now = Date.now();
-  const isAvailable = access?.availabilityStatus === "AVAILABLE"
-    && (!access.availableFrom || new Date(access.availableFrom).getTime() <= now)
-    && (!access.availableUntil || new Date(access.availableUntil).getTime() > now);
-  if (!pack || !version || version.status !== "PUBLISHED" || !isAvailable || access.rewardOnly) return null;
+  if (!pack || !version || version.status !== "PUBLISHED" || !access?.isAvailableNow) return null;
   const imageUrl = version.packImageAssetId ? `/api/assets/media/${encodeURIComponent(version.packImageAssetId)}` : null;
   return {
     ...base,

@@ -6,6 +6,7 @@ import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 import {
   acceptTradeVersion,
+  approveTradeCompletion,
   cancelTrade,
   confirmTradeCompletion,
   rejectTrade,
@@ -35,7 +36,9 @@ export async function POST(
           ? await rejectTrade(prisma, session.userId, tradeId)
           : body.action === "cancel"
             ? await cancelTrade(prisma, session.userId, tradeId)
-            : await confirmTradeCompletion(prisma, session.userId, tradeId);
+            : body.action === "approve"
+              ? await approveTradeCompletion(prisma, session.userId, tradeId)
+              : await confirmTradeCompletion(prisma, session.userId, tradeId);
 
     return NextResponse.json({
       trade,

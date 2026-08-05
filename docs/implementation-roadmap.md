@@ -1,6 +1,6 @@
 # Umsetzungs-Roadmap und Abnahmecheckliste
 
-Stand: 2026-07-24
+Stand: 2026-08-05
 
 ## Phase 1 – Gemeinsamer Katalog
 
@@ -19,7 +19,7 @@ Stand: 2026-07-24
 - [x] Bedarf in gemeinsame Wunschliste übernehmen
 - [x] Zentraler Spielbarkeitsguard für Export und Duellanfrage
 - [x] Entwurfsstatus und Export-Sperre in der Deckbibliothek
-- [ ] Turnierregistrierungs-Guard an allen zukünftigen Deckzuordnungsendpunkten
+- [x] Turnierregistrierungs-Guard, Besitz-/Größenprüfung und unveränderlicher Start-Snapshot
 - [x] Duplizieren/Umbenennen/Löschen und Bibliotheksfilter
 
 ## Phase 3 – Binder und Wunschliste
@@ -53,12 +53,12 @@ Stand: 2026-07-24
 - [x] Custom-Pack-Studio mit Kartenpool, Rarity-Zuweisung, Simulation und Veröffentlichung
 - [x] Auditierbare Custom-Pack-Öffnung aus dem Studio
 - [x] Private Vorlagen in der Oberfläche verwalten
-- [ ] Custom Packs zusätzlich in Standard-Shop, Progression und Turnierrewards auswählbar machen
+- [x] Custom Packs in Packauswahl, Zugriffssteuerung und Rewards auswählbar machen
 
 ## Phase 6 – Härtung und Rollout
 
 - [x] TypeScript-Gesamtprüfung
-- [x] Unit-/Integrationstests: 100 bestanden, 1 bewusst übersprungen
+- [x] Unit-/Integrationstests einschließlich Credit-Trade, Custom-Reward, Deck-Lock, Dusting und Turnier-Snapshot
 - [x] Playwright-Abnahme Desktop und Mobile für Deck, Binder, Regeln und Custom Packs
 - [x] Referenz-/App-Screenshotvergleich und `design-qa.md: final result: passed`
 - [x] Integrationstest für unveränderliche, reproduzierbare Custom-Pack-Öffnungen

@@ -10,7 +10,7 @@ const OFFICIAL_PACK_RENDERS: Record<string, string> = {
 };
 
 const OFFICIAL_PACK_BACK_RENDERS: Record<string, string> = {};
-const GENERIC_PACK_BACK_RENDER = "/app-assets/fallback-pack.png";
+const GENERIC_PACK_BACK_RENDER = "/app-assets/fallback-pack.webp";
 
 function shouldPreferFallbackImage(code: string) {
   const manifestEntry = getPackAssetManifestEntry(code);

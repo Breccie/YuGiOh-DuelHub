@@ -21,6 +21,7 @@ type TradeEntry = {
     | "waitingForTheirResponse"
     | "waitingForYourConfirmation"
     | "waitingForTheirConfirmation"
+    | "waitingForOrganizerApproval"
     | "completed"
     | "cancelled"
     | "rejected";

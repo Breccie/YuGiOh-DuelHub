@@ -54,6 +54,8 @@ export function TradeCreateConsole({
     selectedPartnerOverride || queryPartnerDuelistId || partners[0]?.duelistId || "";
   const [offeredEntryIds, setOfferedEntryIds] = useState<string[]>([]);
   const [requestedEntryIds, setRequestedEntryIds] = useState<string[]>([]);
+  const [offeredCredits, setOfferedCredits] = useState("0");
+  const [requestedCredits, setRequestedCredits] = useState("0");
   const [note, setNote] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -64,7 +66,8 @@ export function TradeCreateConsole({
   );
   const canSubmit =
     Boolean(partnerDuelistId) &&
-    (offeredEntryIds.length > 0 || requestedEntryIds.length > 0);
+    (offeredEntryIds.length > 0 || requestedEntryIds.length > 0
+      || Number(offeredCredits) > 0 || Number(requestedCredits) > 0);
 
   function toggleSelection(values: string[], setValues: (next: string[]) => void, id: string) {
     if (values.includes(id)) {
@@ -90,6 +93,8 @@ export function TradeCreateConsole({
         note: note || null,
         offeredEntryIds,
         requestedEntryIds,
+        offeredCredits: Number(offeredCredits) || 0,
+        requestedCredits: Number(requestedCredits) || 0,
       });
 
       const tradeId = data?.trade?.id;
@@ -137,6 +142,11 @@ export function TradeCreateConsole({
                 ))}
               </select>
             </label>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block"><span className="ui-kicker">Du gibst Credits</span><input className="ui-input mt-2" type="number" min="0" step="1" value={offeredCredits} onChange={(event) => setOfferedCredits(event.target.value)} /></label>
+              <label className="block"><span className="ui-kicker">Du verlangst Credits</span><input className="ui-input mt-2" type="number" min="0" step="1" value={requestedCredits} onChange={(event) => setRequestedCredits(event.target.value)} /></label>
+            </div>
 
             <label className="block">
               <span className="ui-kicker">Notiz</span>

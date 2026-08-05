@@ -59,21 +59,18 @@
     }
   },
   "dependencies": {
-    "@fastify/cookie": "^11.0.2",
-    "@fastify/cors": "^11.1.0",
-    "@fastify/rate-limit": "^11.1.0",
-    "@prisma/client": "^6.18.0",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.1",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.112.0",
     "@tabler/icons-react": "^3.44.0",
-    "fastify": "^5.10.0",
-    "next": "16.2.11",
+    "fastify": "^5.11.2",
+    "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
     "sharp": "0.35.3",
-    "three": "^0.184.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -83,12 +80,12 @@
     "@types/react-dom": "^19",
     "concurrently": "^9.2.4",
     "cross-env": "^10.1.0",
-    "electron": "^42.4.0",
+    "electron": "^42.8.1",
     "electron-builder": "^26.15.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11",
-    "playwright": "^1.61.1",
-    "prisma": "^6.18.0",
+    "eslint-config-next": "16.3.0",
+    "playwright": "^1.62.1",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5",
@@ -97,7 +94,7 @@
   },
   "overrides": {
     "effect": "3.20.0",
-    "postcss": "8.5.22",
+    "postcss": "8.5.25",
     "sharp": "0.35.3"
   }
 }

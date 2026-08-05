@@ -15,6 +15,7 @@ import {
 import { getCardAssetUrl, resolveAppImageUrl } from "@/lib/asset-urls";
 import { binderSlotCount } from "@/lib/binder-open-layout";
 import { getActiveRun } from "@/lib/run-service";
+import { getActiveCampaignRuleConfig } from "@/lib/campaign-rule-service";
 import { getMediaAssetUrl, resolveOwnedMediaAsset } from "@/lib/media-service";
 
 type CollectionEntryRecord = Prisma.CollectionEntryGetPayload<{
@@ -841,7 +842,21 @@ export async function createCollectionBinder(
   const viewer = requireViewer(await loadViewer(prisma, viewerId));
   const cover = getBinderCoverMeta(input.coverKey);
   const activeRun = await getActiveRun(prisma, viewer.id);
+  const rules = await getActiveCampaignRuleConfig(prisma, activeRun.id);
   await resolveOwnedMediaAsset(prisma, viewer.id, input.coverAssetId, "BINDER_COVER");
+
+  if (rules.collection.binderLimit !== null) {
+    const binderCount = await prisma.collectionBinder.count({
+      where: { userId: viewer.id, runId: activeRun.id },
+    });
+    if (binderCount >= rules.collection.binderLimit) {
+      throw new DomainError({
+        code: "binder_limit_reached",
+        message: `In dieser Kampagne sind höchstens ${rules.collection.binderLimit} Binder erlaubt.`,
+        status: 409,
+      });
+    }
+  }
 
   const binder = await prisma.$transaction(async (tx) => {
     if (input.makeActive ?? true) {
@@ -1203,6 +1218,17 @@ export async function createCollectionBinderPage(
 
   if (!binder) {
     throw new Error("Binder wurde nicht gefunden.");
+  }
+  const rules = await getActiveCampaignRuleConfig(prisma, activeRun.id);
+  if (
+    rules.collection.binderPageLimit !== null
+    && binder.pages.length >= rules.collection.binderPageLimit
+  ) {
+    throw new DomainError({
+      code: "binder_page_limit_reached",
+      message: `Dieser Binder darf höchstens ${rules.collection.binderPageLimit} Seiten enthalten.`,
+      status: 409,
+    });
   }
 
   const nextPageIndex =

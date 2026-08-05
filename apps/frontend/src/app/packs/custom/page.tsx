@@ -7,6 +7,7 @@ import { getViewerSession } from "@/lib/auth";
 import { getOnlineViewerSession } from "@/lib/online-session";
 import { getPrisma } from "@/lib/prisma";
 import { listCustomPacks } from "@/lib/custom-pack-service";
+import { serializeRun } from "@/lib/run-service";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,6 @@ export default async function CustomPacksPage() {
   const session = await getViewerSession(prisma);
   if (!session) redirect("/login");
   const run = await requireActiveCampaign(prisma, session.userId);
-  const role = run.memberships.find((membership) => membership.userId === session.userId)?.role ?? "PLAYER";
-  const activeRun = { ...run, viewerRole: role, memberCount: run._count.memberships, historyCursor: run.historyCursor?.toISOString() ?? null, createdAt: run.createdAt.toISOString(), updatedAt: run.updatedAt.toISOString() };
+  const activeRun = serializeRun(run, session.userId);
   return <CustomPackSelectionConsole session={session} activeRun={activeRun} packs={JSON.parse(JSON.stringify(await listCustomPacks(prisma, session.userId, run.id))) as import("@/lib/custom-pack-client").CustomPackRecord[]} />;
 }

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { AssetIconName } from "@/components/asset-icon";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import {
   ConsoleGlobalStatusBar,
 } from "@/components/console-shell-primitives";
@@ -61,30 +61,20 @@ export function DuelConsoleScaffold({
     parseMetricCount(findMetricValue(metrics, ["Duellanfragen", "Anfragen"]));
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-transparent text-[#f2e5d1]">
-      <div className="app-background" />
-
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <AppSidebar />
-
-        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
-            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
-              <ConsoleGlobalStatusBar
-                viewer={viewer}
-                fallback={{
-                  activeRunName: campaignValue,
-                  collectionValue,
-                  friendOnlineCount: topbar?.friendOnlineCount,
-                  duelRequestCount,
-                }}
-              />
-            </div>
-
-            <div className="mt-4 flex-1">{children}</div>
-          </div>
-        </main>
-      </div>
-    </div>
+    <AppShell
+      topbar={(
+        <ConsoleGlobalStatusBar
+          viewer={viewer}
+          fallback={{
+            activeRunName: campaignValue,
+            collectionValue,
+            friendOnlineCount: topbar?.friendOnlineCount,
+            duelRequestCount,
+          }}
+        />
+      )}
+    >
+      <div className="mt-4 flex-1">{children}</div>
+    </AppShell>
   );
 }

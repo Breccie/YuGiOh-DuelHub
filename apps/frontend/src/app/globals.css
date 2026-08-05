@@ -226,7 +226,7 @@ textarea {
   letter-spacing: 0.022em;
   background-image:
     linear-gradient(180deg, rgba(255, 247, 233, 0.99) 0%, rgba(243, 220, 186, 0.98) 24%, rgba(201, 162, 111, 0.98) 58%, rgba(122, 83, 52, 0.98) 100%),
-    url("/app-assets/inscription-texture.png");
+    url("/app-assets/inscription-texture.webp");
   background-size:
     100% 100%,
     cover;
@@ -256,7 +256,7 @@ textarea {
   letter-spacing: 0.02em;
   background-image:
     linear-gradient(180deg, rgba(250, 240, 222, 0.98) 0%, rgba(227, 198, 163, 0.96) 42%, rgba(150, 110, 77, 0.96) 100%),
-    url("/app-assets/inscription-texture.png");
+    url("/app-assets/inscription-texture.webp");
   background-size:
     100% 100%,
     cover;
@@ -321,7 +321,7 @@ textarea {
   inset: 0;
   content: "";
   z-index: 0;
-  background-image: url("/app-assets/pack-stage-bg-moon-monolith.png");
+  background-image: url("/app-assets/pack-stage-bg-moon-monolith.webp");
   background-position: center top;
   background-size: min(100vw, 1672px) auto;
   background-repeat: no-repeat;
@@ -2919,7 +2919,7 @@ html[data-graphics="low"] .app-topbar {
   border-radius: 1rem;
   background:
     linear-gradient(90deg, rgba(2, 6, 10, 0.98) 0%, rgba(3, 8, 13, 0.9) 48%, rgba(3, 7, 11, 0.72) 100%),
-    url("/app-assets/pack-stage-bg-moon-monolith.png") center 48% / cover no-repeat;
+    url("/app-assets/pack-stage-bg-moon-monolith.webp") center 48% / cover no-repeat;
   padding: clamp(0.9rem, 1.5vw, 1.35rem);
   box-shadow: inset 0 0 0 1px rgba(255, 235, 197, 0.025), 0 22px 70px rgba(0, 0, 0, 0.38);
 }
@@ -3325,7 +3325,7 @@ html[data-graphics="low"] .app-topbar {
     border-radius: 0.75rem;
     background:
       linear-gradient(180deg, rgba(2, 6, 10, 0.92), rgba(3, 7, 11, 0.98)),
-      url("/app-assets/pack-stage-bg-moon-monolith.png") 62% top / auto 31rem no-repeat;
+      url("/app-assets/pack-stage-bg-moon-monolith.webp") 62% top / auto 31rem no-repeat;
     padding: 0.85rem;
   }
 
