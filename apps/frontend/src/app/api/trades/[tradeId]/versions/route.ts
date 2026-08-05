@@ -27,6 +27,8 @@ export async function POST(
       note: body.note ?? null,
       offeredEntryIds: body.offeredEntryIds,
       requestedEntryIds: body.requestedEntryIds,
+      offeredCredits: body.offeredCredits,
+      requestedCredits: body.requestedCredits,
     });
 
     return NextResponse.json(

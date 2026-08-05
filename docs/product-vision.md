@@ -1,6 +1,6 @@
 # Yu-Gi-Oh Duel Hub – Produktvision und Sandbox-Zielbild
 
-Stand: 2026-07-24
+Stand: 2026-08-05
 
 Der aktuelle visuelle Befund zu Kampagnen, Bindern und Decks ist in
 [ux-audit-campaign-binders-decks.md](ux-audit-campaign-binders-decks.md) dokumentiert.
@@ -39,19 +39,20 @@ Bereits umgesetzt und geprüft:
 - sichere Release-Skripte ohne automatisches destruktives Reseeding sowie
   gehärteter Remote-Asset-Proxy.
 
-Noch nicht als vollständig abgeschlossen gelten:
+Seit der Abschlussrunde umgesetzt sind außerdem atomare Credit-Trades mit
+Reservierung und optionaler Organizer-Freigabe, Custom Packs als Rewardquelle,
+Deck-Autosave mit Revision und Konfliktwiederholung, geplante Packzugriffe,
+Sammlungsgrenzen mit automatischer Dust-Umwandlung, Turnierdeck-Check-in und
+unveränderliche Start-Snapshots sowie Swiss, Round Robin, Single Elimination und
+manuelle Paarungen in BO1/BO3/BO5.
 
-- alle übrigen dokumentierten Sandbox-Regeln bis in jeden Verbraucher
-  durchzureichen (insbesondere Pack-/Sammlungsoptionen, Deck-Lock und zusätzliche
-  Turniermodi),
-- die vollständige Einbindung eigener Packs in Progression sowie frei
-  konfigurierbare Rewards,
-- Credit-Anteile in Trades; die Einstellung ist bis zur atomaren
-  Ledger-Implementierung bewusst deaktiviert,
-- echtes Deck-Autosave mit Konfliktwiederholung; aktuell bleibt der explizite
-  Speichern-Button die verlässliche Primäraktion,
-- vollständiger Online-E2E-Smoke gegen die späteren Produktions-URLs und
-  produktiven Zugangsdaten.
+Als externe Abnahme verbleiben der PostgreSQL-Smoke und der verifizierte
+Produktions-Cutover gegen die tatsächlichen Render-/Vercel-Dienste. Persistierte
+Beitrittsanträge mit Owner-/Organizer-Entscheidung sowie die einmalige
+`PLAYER_CHOICE`-Auswahl von Startpacks sind aktive UI- und API-Funktionen.
+Eigenständige Mehrbieter-Auktionen bleiben ein Ausbau des bereits versionierten
+Tauschregelmodells; direkte Trades und moderierte Tauschfenster werden
+serverseitig erzwungen.
 
 ## Produktversprechen
 

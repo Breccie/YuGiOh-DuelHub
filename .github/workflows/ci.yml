@@ -72,3 +72,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Install browser runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Seed browser-smoke catalog
+        run: npm run db:seed:demo
+
+      - name: Test local browser flows
+        run: npm run test:e2e:smoke
+
+      - name: Test online browser and API flows
+        run: npm run test:e2e:online

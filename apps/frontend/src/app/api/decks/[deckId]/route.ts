@@ -39,6 +39,9 @@ export async function PATCH(
         deckBoxKey: deckBox.key,
         deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
         deckBoxAssetId: deck.deckBoxAssetId,
+        revision: deck.revision,
+        banlistId: deck.banlistId,
+        snapshotDate: deck.snapshotDate?.toISOString() ?? null,
       },
     });
   } catch (error) {
@@ -49,10 +52,19 @@ export async function PATCH(
           ? Number((error as { status: number }).status)
           : 500;
 
+    const domainError = error instanceof Error && "code" in error && "details" in error
+      ? error as Error & { code: string; details?: unknown }
+      : null;
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Deck konnte nicht aktualisiert werden.",
+        error: error instanceof Error ? error.message : "Deck konnte nicht aktualisiert werden.",
+        ...(domainError ? {
+          errorDetail: {
+            code: domainError.code,
+            message: domainError.message,
+            details: domainError.details,
+          },
+        } : {}),
       },
       { status },
     );

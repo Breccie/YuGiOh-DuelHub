@@ -21,7 +21,10 @@ Die App funktioniert direkt in einem aktuellen Desktop-Browser. Für Duelle und 
 - Genesys-Punkte direkt im Deck-Editor anzeigen und berechnen
 - Decks als `.ydk` für EDOPro exportieren
 - Karten zwischen Spielern anbieten, reservieren und nach beidseitiger Bestätigung tauschen
-- Turniere, Teilnehmer, Runden, Paarungen und Ranglisten verwalten
+- Karten und Credits atomar tauschen; auf Wunsch bestätigt ein Organizer den Abschluss
+- Eigene Packs erstellen, simulieren, veröffentlichen, planen und als Belohnung vergeben
+- Swiss-, Round-Robin-, Single-Elimination- und manuelle Turniere in BO1/BO3/BO5 verwalten
+- Turnierdecks einchecken, beim Start unveränderlich snapshotten und MVP-Karten ausstellen
 - Extern gespielte Ergebnisse melden und vom Gegner bestätigen lassen
 - Credits, Turnierpacks und neue Pack-Freischaltungen als Belohnungen erhalten
 - Freunde verwalten sowie Duell-, Tausch- und Kampagnenanfragen senden
@@ -58,13 +61,13 @@ Nach dem Bau kann das Deck als `.ydk` exportiert und in EDOPro geladen werden. D
 
 ## Tauschen
 
-Ein Spieler erstellt ein Angebot und wählt die angebotenen sowie gewünschten Karten aus. Der andere Spieler kann annehmen oder ein Gegenangebot senden. Beteiligte Karten werden reserviert, damit sie nicht gleichzeitig in einem weiteren Tausch verwendet werden können. Der Besitzerwechsel erfolgt erst nach der Bestätigung beider Spieler.
+Ein Spieler erstellt ein Angebot und wählt angebotene oder gewünschte Karten und – sofern in der Kampagne erlaubt – Credits aus. Der andere Spieler kann annehmen oder ein Gegenangebot senden. Karten und Credits werden gemeinsam reserviert; der atomare Besitzerwechsel erfolgt erst nach den Bestätigungen beider Spieler und optionaler Organizer-Freigabe.
 
 ## Turniere und Kampagnenfortschritt
 
 Kampagnen-Hosts können Turniere erstellen, Teilnehmer verwalten, Runden starten und den Fortschritt bei Bedarf manuell anpassen. Duelle werden extern gespielt: Ein Spieler trägt den Score ein, der Gegner bestätigt das Ergebnis.
 
-Nach dem Turnierabschluss berechnet Duel Hub die Rangliste und verteilt die eingestellten Belohnungen. Dazu können Credits, besondere Packs und die Freischaltung des nächsten chronologischen Sets gehören. Credits lassen sich auch für ältere Packs verwenden, um Lücken in der Sammlung zu schließen.
+Nach dem Turnierabschluss berechnet Duel Hub die Rangliste und verteilt die eingestellten Belohnungen. Dazu können Credits, Standard- oder Custom Packs und die Freischaltung des nächsten chronologischen Sets gehören. Das Siegerarchiv bewahrt den Ergebnis- und Deck-Snapshot; MVP-Karten müssen tatsächlich in einem eingecheckten Turnierdeck enthalten gewesen sein.
 
 ## Voraussetzungen
 

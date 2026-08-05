@@ -8,9 +8,14 @@ import type {
   GenerateRunProgressionRequest,
   GenerateRunProgressionResponse,
   JoinRunRequest,
+  JoinRunResponse,
+  DecideRunJoinRequest,
+  ChooseStartingPackRequest,
+  RunJoinRequestDto,
   RunMemberDto,
   RunListResponse,
   RunProgressionResponse,
+  StartingPackChoiceResponse,
   UpdateActiveRunRequest,
   UpdateCampaignPackAccessRequest,
   UpdateRunSettingsRequest,
@@ -35,7 +40,7 @@ export const runClient = {
     );
   },
   join(input: JoinRunRequest) {
-    return apiPostJson<ActiveRunResponse, JoinRunRequest>(
+    return apiPostJson<JoinRunResponse, JoinRunRequest>(
       "/api/v1/runs/join",
       input,
     );
@@ -52,6 +57,29 @@ export const runClient = {
   updateSettings(runId: string, input: UpdateRunSettingsRequest) {
     return apiPatchJson<ActiveRunResponse["run"], UpdateRunSettingsRequest>(
       `/api/v1/runs/${runId}/settings`,
+      input,
+    );
+  },
+  listJoinRequests(runId: string) {
+    return apiGetJson<RunJoinRequestDto[]>(`/api/v1/runs/${runId}/join-requests`, {
+      cache: "no-store",
+    });
+  },
+  decideJoinRequest(runId: string, requestId: string, input: DecideRunJoinRequest) {
+    return apiPostJson<RunJoinRequestDto, DecideRunJoinRequest>(
+      `/api/v1/runs/${runId}/join-requests/${requestId}/decision`,
+      input,
+    );
+  },
+  getStartingPackChoice(runId: string) {
+    return apiGetJson<StartingPackChoiceResponse>(
+      `/api/v1/runs/${runId}/starting-pack-choice`,
+      { cache: "no-store" },
+    );
+  },
+  chooseStartingPack(runId: string, input: ChooseStartingPackRequest) {
+    return apiPostJson<StartingPackChoiceResponse, ChooseStartingPackRequest>(
+      `/api/v1/runs/${runId}/starting-pack-choice`,
       input,
     );
   },

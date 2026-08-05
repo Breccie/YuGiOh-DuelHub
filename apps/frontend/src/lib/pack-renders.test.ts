@@ -45,9 +45,9 @@ describe("MVP pack renders", () => {
   it("uses the bundled raster asset instead of a text-based pack-back placeholder", () => {
     const backImageUrl = getPreferredPackBackImage("UNLISTED");
 
-    expect(backImageUrl).toBe("/app-assets/fallback-pack.png");
+    expect(backImageUrl).toBe("/app-assets/fallback-pack.webp");
     expect(
-      existsSync(path.join(frontendPublicDir, "app-assets", "fallback-pack.png")),
+      existsSync(path.join(frontendPublicDir, "app-assets", "fallback-pack.webp")),
     ).toBe(true);
   });
 });

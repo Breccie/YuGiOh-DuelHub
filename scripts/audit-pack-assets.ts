@@ -467,7 +467,8 @@ async function createContactSheet(entries: ManifestEntry[]) {
     }
   }
 
-  await sharp(background).composite(composites).png().toFile(CONTACT_SHEET_PATH);
+  const contactSheet = await sharp(background).composite(composites).png().toBuffer();
+  writeFileSync(CONTACT_SHEET_PATH, contactSheet);
 }
 
 function createGenerationJobs(entries: ManifestEntry[]) {

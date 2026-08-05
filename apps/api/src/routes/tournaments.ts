@@ -2,8 +2,10 @@ import type { PrismaClient as FrontendPrismaClient } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
 import {
   createTournamentRequestSchema,
+  createManualTournamentRoundRequestSchema,
   inviteTournamentParticipantRequestSchema,
   recordTournamentMatchResultRequestSchema,
+  registerTournamentDeckRequestSchema,
   updateTournamentMvpCardsRequestSchema,
 } from "@ygo/contracts";
 import {
@@ -15,6 +17,7 @@ import {
   inviteTournamentParticipant,
   listTournamentOverviews,
   recordTournamentMatchResult,
+  registerTournamentDeck,
   updateTournamentMvpCards,
 } from "@/lib/tournament-service";
 import { requireViewerSession } from "../lib/auth";
@@ -92,11 +95,27 @@ const tournamentRoutes: FastifyPluginAsync = async (app) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
       const { id } = request.params as { id: string };
-      const tournament = await createSwissRound(getSharedPrisma(), session.userId, id);
+      const manualPairs = request.body
+        ? createManualTournamentRoundRequestSchema.parse(request.body).pairs
+        : undefined;
+      const tournament = await createSwissRound(getSharedPrisma(), session.userId, id, manualPairs);
 
       return reply.send({ tournament });
     } catch (error) {
       return sendApiError(reply, error, "Swiss-Runde konnte nicht erzeugt werden.");
+    }
+  });
+
+  app.post("/:id/registration", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const { id } = request.params as { id: string };
+      const body = registerTournamentDeckRequestSchema.parse(request.body ?? {});
+      return reply.send({
+        tournament: await registerTournamentDeck(getSharedPrisma(), session.userId, id, body.deckId),
+      });
+    } catch (error) {
+      return sendApiError(reply, error, "Turnierdeck konnte nicht registriert werden.");
     }
   });
 

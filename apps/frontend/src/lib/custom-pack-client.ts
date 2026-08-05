@@ -29,6 +29,7 @@ export type CustomPackRecord = {
       price: number | null;
       rewardOnly: boolean;
       availabilityStatus: "AVAILABLE" | "LOCKED" | "SCHEDULED";
+      isAvailableNow: boolean;
       availableFrom: string | null;
       availableUntil: string | null;
     }>;

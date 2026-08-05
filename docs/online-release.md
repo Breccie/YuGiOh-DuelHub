@@ -55,11 +55,12 @@ curl https://<render-api>.onrender.com/health
 curl https://<render-api>.onrender.com/ready
 ```
 
-`/health` prueft, ob der API-Prozess laeuft. Erwartet:
-`{ "ok": true, "service": "ygo-api" }`.
+`/health` prueft, ob der API-Prozess laeuft. Die Antwort enthält zusätzlich
+`buildSha`, `buildTime`, `schemaVersion` und `region`; derselbe Build steht im
+Header `X-Duel-Hub-Build`.
 
-`/ready` prueft zusaetzlich die Postgres-Verbindung. Erwartet:
-`{ "ok": true, "service": "ygo-api", "database": "reachable" }`.
+`/ready` prueft zusaetzlich die Postgres-Verbindung und liefert dieselben
+Build-Metadaten sowie `database: "reachable"`.
 Wenn `/health` funktioniert, aber `/ready` `503` liefert, sind meist
 `API_DATABASE_URL`, Supabase Pooler/IPv6/IPv4 oder Migration/Seed der naechste
 Pruefpunkt.

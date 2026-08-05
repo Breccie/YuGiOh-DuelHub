@@ -8,12 +8,14 @@ import {
 } from "@ygo/contracts";
 import {
   acceptTradeVersion,
+  approveTradeCompletion,
   cancelTrade,
   confirmTradeCompletion,
   createTradeCounterOffer,
   createTradeOffer,
   getTradeDetail,
   listTradesForViewer,
+  listPendingTradeApprovals,
   rejectTrade,
 } from "@/lib/trade-service";
 import { requireViewerSession } from "../lib/auth";
@@ -64,6 +66,8 @@ function formatTradeState(value: TradeListItemDto["threadState"]) {
       return "Abschluss offen";
     case "waitingForTheirConfirmation":
       return "Partner bestätigt noch";
+    case "waitingForOrganizerApproval":
+      return "Wartet auf Organizer-Freigabe";
     case "completed":
       return "Abgeschlossen";
     case "cancelled":
@@ -421,6 +425,16 @@ const tradeRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.get("/approvals", async (request, reply) => {
+    try {
+      const session = await requireViewerSession(request, getPrisma());
+      const approvals = await listPendingTradeApprovals(getSharedPrisma(), session.userId);
+      return reply.send({ approvals });
+    } catch (error) {
+      return sendApiError(reply, error, "Trade-Freigaben konnten nicht geladen werden.");
+    }
+  });
+
   app.post("/", async (request, reply) => {
     try {
       const session = await requireViewerSession(request, getPrisma());
@@ -430,6 +444,8 @@ const tradeRoutes: FastifyPluginAsync = async (app) => {
         note: body.note ?? null,
         offeredEntryIds: body.offeredEntryIds,
         requestedEntryIds: body.requestedEntryIds,
+        offeredCredits: body.offeredCredits,
+        requestedCredits: body.requestedCredits,
       });
 
       return reply.status(201).send({
@@ -478,7 +494,9 @@ const tradeRoutes: FastifyPluginAsync = async (app) => {
             ? await rejectTrade(getSharedPrisma(), session.userId, tradeId)
             : body.action === "cancel"
               ? await cancelTrade(getSharedPrisma(), session.userId, tradeId)
-              : await confirmTradeCompletion(getSharedPrisma(), session.userId, tradeId);
+              : body.action === "approve"
+                ? await approveTradeCompletion(getSharedPrisma(), session.userId, tradeId)
+                : await confirmTradeCompletion(getSharedPrisma(), session.userId, tradeId);
 
       return reply.send({
         trade,
@@ -501,6 +519,8 @@ const tradeRoutes: FastifyPluginAsync = async (app) => {
           note: body.note ?? null,
           offeredEntryIds: body.offeredEntryIds,
           requestedEntryIds: body.requestedEntryIds,
+          offeredCredits: body.offeredCredits,
+          requestedCredits: body.requestedCredits,
         },
       );
 

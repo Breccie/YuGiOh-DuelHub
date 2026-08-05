@@ -45,10 +45,15 @@ describe("api server", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
+    expect(response.json()).toMatchObject({
       ok: true,
       service: "ygo-api",
+      buildSha: expect.any(String),
+      buildTime: expect.any(String),
+      schemaVersion: expect.any(String),
+      region: expect.any(String),
     });
+    expect(response.headers["x-duel-hub-build"]).toBe(response.json().buildSha);
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     expect(response.headers["x-frame-options"]).toBe("DENY");
     expect(response.headers["referrer-policy"]).toBe("no-referrer");
@@ -68,10 +73,14 @@ describe("api server", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({
+      expect(response.json()).toMatchObject({
         ok: true,
         service: "ygo-api",
         database: "reachable",
+        buildSha: expect.any(String),
+        buildTime: expect.any(String),
+        schemaVersion: expect.any(String),
+        region: expect.any(String),
       });
     },
   );
@@ -91,10 +100,14 @@ describe("api server", () => {
       });
 
       expect(response.statusCode).toBe(503);
-      expect(response.json()).toEqual({
+      expect(response.json()).toMatchObject({
         ok: false,
         service: "ygo-api",
         database: "unreachable",
+        buildSha: expect.any(String),
+        buildTime: expect.any(String),
+        schemaVersion: expect.any(String),
+        region: expect.any(String),
       });
     },
   );

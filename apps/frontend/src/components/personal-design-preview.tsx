@@ -34,7 +34,7 @@ export function BinderDesignPreview({
         <Artwork imageUrl={imageUrl} alt={alt} />
       </div>
       <Image
-        src="/app-assets/custom-shells/binder-custom-shell.png"
+        src="/app-assets/custom-shells/binder-custom-shell.webp"
         alt=""
         fill
         sizes="320px"
@@ -80,7 +80,7 @@ export function DeckBoxDesignPreview({
         <Image src={imageUrl} alt="" fill sizes="220px" className="object-cover" unoptimized />
       </div>
       <Image
-        src="/app-assets/custom-shells/deckbox-custom-shell.png"
+        src="/app-assets/custom-shells/deckbox-custom-shell.webp"
         alt=""
         fill
         sizes="320px"

@@ -282,6 +282,9 @@ const deckRoutes: FastifyPluginAsync = async (app) => {
           deckBoxKey: deckBox.key,
           deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId) ?? deckBox.imageUrl,
           deckBoxAssetId: deck.deckBoxAssetId,
+          revision: deck.revision,
+          banlistId: deck.banlistId,
+          snapshotDate: deck.snapshotDate?.toISOString() ?? null,
         },
       });
     } catch (error) {

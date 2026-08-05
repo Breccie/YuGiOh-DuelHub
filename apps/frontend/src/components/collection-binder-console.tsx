@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { MediaAssetDto } from "@ygo/contracts";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import { AssetIcon } from "@/components/asset-icon";
 import { BinderCollectionEditor } from "@/components/binder-collection-editor";
 import { BinderOpenSpread } from "@/components/binder-open-spread";
@@ -710,23 +710,17 @@ export function CollectionBinderConsole({
   }
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
-      <div className="app-background" />
-
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <AppSidebar />
-
-        <main className="app-main relative min-w-0 flex-1 overflow-hidden lg:ml-[176px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
-            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
-              <ConsoleGlobalStatusBar
-                viewer={{ displayName: viewer.displayName, duelistId: viewer.duelistId, avatarImageUrl: viewer.avatarImageUrl }}
-                fallback={{
-                  collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
-                }}
-              />
-            </div>
-
+    <div>
+      <AppShell
+        topbar={(
+          <ConsoleGlobalStatusBar
+            viewer={{ displayName: viewer.displayName, duelistId: viewer.duelistId, avatarImageUrl: viewer.avatarImageUrl }}
+            fallback={{
+              collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
+            }}
+          />
+        )}
+      >
             <header className="mt-3 flex flex-col gap-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,12,18,0.76)] p-3 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
                 <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#cb5c44]">
@@ -1047,9 +1041,7 @@ export function CollectionBinderConsole({
               </div>
             </Panel>
             ) : null}
-          </div>
-        </main>
-      </div>
+      </AppShell>
 
       {editorBinderId ? (
         <BinderCollectionEditor

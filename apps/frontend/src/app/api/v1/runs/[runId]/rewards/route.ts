@@ -60,6 +60,7 @@ export async function POST(
       recipientDuelistId: body.recipientDuelistId,
       amountCredits: body.amountCredits,
       packSetId: body.packSetId,
+      customPackVersionId: body.customPackVersionId,
       packQuantity: body.packQuantity,
       reason: body.reason,
     });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createManualTournamentRoundRequestSchema } from "@ygo/contracts";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
 import { requireViewerSession } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
@@ -20,7 +21,11 @@ export async function POST(
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const { id } = await context.params;
-    const tournament = await createSwissRound(prisma, session.userId, id);
+    const rawBody = await request.json().catch(() => null);
+    const manualPairs = rawBody
+      ? createManualTournamentRoundRequestSchema.parse(rawBody).pairs
+      : undefined;
+    const tournament = await createSwissRound(prisma, session.userId, id, manualPairs);
 
     return NextResponse.json({
       tournament,

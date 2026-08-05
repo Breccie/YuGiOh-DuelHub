@@ -1,6 +1,27 @@
 const appModes = ["desktop-demo", "online-dev", "production"] as const;
 type AppMode = (typeof appModes)[number];
 
+export const DATABASE_SCHEMA_VERSION = "20260804210000_personal_media_assets";
+
+export type ApiBuildMetadata = {
+  buildSha: string;
+  buildTime: string;
+  schemaVersion: string;
+  region: string;
+};
+
+export function getApiBuildMetadata(env: NodeJS.ProcessEnv = process.env): ApiBuildMetadata {
+  return {
+    buildSha: env.BUILD_SHA?.trim()
+      || env.RENDER_GIT_COMMIT?.trim()
+      || env.VERCEL_GIT_COMMIT_SHA?.trim()
+      || "development",
+    buildTime: env.BUILD_TIME?.trim() || "unknown",
+    schemaVersion: env.SCHEMA_VERSION?.trim() || DATABASE_SCHEMA_VERSION,
+    region: env.RENDER_REGION?.trim() || env.REGION?.trim() || "local",
+  };
+}
+
 function isAppMode(value: string): value is AppMode {
   return appModes.includes(value as AppMode);
 }

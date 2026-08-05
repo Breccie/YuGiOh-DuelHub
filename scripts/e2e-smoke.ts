@@ -8,7 +8,8 @@ const repoRoot = process.cwd();
 const port = Number(process.env.E2E_PORT ?? 3210);
 const baseUrl = `http://127.0.0.1:${port}`;
 const databaseUrl = process.env.E2E_DATABASE_URL ?? "file:./codex-e2e-smoke.db";
-const sourceDbPath = path.join(repoRoot, "prisma", "dev.db");
+const sourceDbPath = process.env.E2E_SOURCE_DATABASE_PATH
+  ?? path.join(repoRoot, "prisma", "demo.db");
 const smokeDbPath = path.join(repoRoot, "prisma", "codex-e2e-smoke.db");
 
 type SeededCatalog = {

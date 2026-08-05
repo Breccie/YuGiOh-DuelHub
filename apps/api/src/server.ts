@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { getPrisma } from "./lib/prisma";
-import { getAllowedCorsOrigins, getCookieSecret } from "./lib/runtime-config";
+import { getAllowedCorsOrigins, getApiBuildMetadata, getCookieSecret } from "./lib/runtime-config";
 import authRoutes from "./routes/auth";
 import cardRoutes from "./routes/cards";
 import campaignRulesRoutes from "./routes/campaign-rules";
@@ -27,6 +27,7 @@ const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export function createServer() {
   const allowedOrigins = getAllowedCorsOrigins();
+  const build = getApiBuildMetadata();
   const app = Fastify({
     logger: process.env.NODE_ENV !== "test",
     bodyLimit: 1024 * 1024,
@@ -55,6 +56,7 @@ export function createServer() {
     reply.header("X-Frame-Options", "DENY");
     reply.header("Referrer-Policy", "no-referrer");
     reply.header("Cross-Origin-Resource-Policy", "same-site");
+    reply.header("X-Duel-Hub-Build", build.buildSha);
 
     const origin = request.headers.origin;
 
@@ -78,6 +80,7 @@ export function createServer() {
     return {
       ok: true,
       service: "ygo-api",
+      ...build,
     };
   });
 
@@ -89,6 +92,7 @@ export function createServer() {
         ok: true,
         service: "ygo-api",
         database: "reachable",
+        ...build,
       };
     } catch (error) {
       request.log.warn({ error }, "API readiness check failed.");
@@ -97,6 +101,7 @@ export function createServer() {
         ok: false,
         service: "ygo-api",
         database: "unreachable",
+        ...build,
       });
     }
   });

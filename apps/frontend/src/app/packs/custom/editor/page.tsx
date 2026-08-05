@@ -6,6 +6,7 @@ import { fetchApiServiceJson, shouldProxyToApiService } from "@/lib/api-service-
 import { getViewerSession } from "@/lib/auth";
 import { getOnlineViewerSession } from "@/lib/online-session";
 import { getPrisma } from "@/lib/prisma";
+import { serializeRun } from "@/lib/run-service";
 
 export default async function CustomPackEditorPage() {
   if (shouldProxyToApiService()) {
@@ -20,14 +21,5 @@ export default async function CustomPackEditorPage() {
   const run = await requireActiveCampaign(prisma, session.userId);
   const role = run.memberships.find((membership) => membership.userId === session.userId)?.role ?? "PLAYER";
   if (role !== "OWNER" && role !== "ORGANIZER") redirect("/packs/custom");
-  return <CustomPackStudio session={session} activeRun={{
-    id: run.id, ownerId: run.ownerId, name: run.name, inviteCode: run.inviteCode,
-    description: run.description, status: run.status, historyCursor: run.historyCursor?.toISOString() ?? null,
-    defaultPackPrice: run.defaultPackPrice, defaultDisplaySize: run.defaultDisplaySize,
-    freePacksPerSetUnlock: run.freePacksPerSetUnlock, initialSetUnlockCount: run.initialSetUnlockCount,
-    setsPerProgressionStep: run.setsPerProgressionStep, separatePromoProgression: run.separatePromoProgression,
-    tournamentWinnerCredits: run.tournamentWinnerCredits, tournamentRunnerUpCredits: run.tournamentRunnerUpCredits,
-    tournamentParticipationCredits: run.tournamentParticipationCredits, startingCredits: run.startingCredits,
-    viewerRole: role, memberCount: run._count.memberships, createdAt: run.createdAt.toISOString(), updatedAt: run.updatedAt.toISOString(),
-  }} />;
+  return <CustomPackStudio session={session} activeRun={serializeRun(run, session.userId)} />;
 }

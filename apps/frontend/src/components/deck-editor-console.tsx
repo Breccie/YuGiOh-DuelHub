@@ -25,7 +25,7 @@ import {
 import { Panel, StatusPill } from "@/components/panel";
 import { ImageCropUpload } from "@/components/image-crop-upload";
 import { DeckBoxDesignPreview } from "@/components/personal-design-preview";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { ApiClientError, getApiErrorMessage } from "@/lib/api-client";
 import { cardCatalogClient } from "@/lib/card-catalog-client";
 import { deckClient } from "@/lib/deck-client";
 import { deckBoxCatalog, defaultDeckBoxKey, getDeckBoxMeta } from "@/lib/deckbox-config";
@@ -50,6 +50,13 @@ type DeckCard = NonNullable<DeckLegalitySnapshot["activeDeck"]>["cards"][number]
 type CollectionCard = CardCatalogItem;
 type DeckSection = DeckSectionValue;
 type MobileEditorView = "CATALOG" | "DECK" | "DETAILS";
+type DeckMetadataDraft = {
+  name: string;
+  deckBoxKey: DeckBoxKey;
+  deckBoxAssetId: string | null;
+  banlistId: string | null;
+  snapshotDate: string | null;
+};
 type PreviewTarget =
   | { source: "collection"; cardId: string }
   | { source: "deck"; cardId: string; section: DeckSection };
@@ -811,6 +818,9 @@ export function DeckEditorConsole({
   const [error, setError] = useState("");
   const [catalogError, setCatalogError] = useState("");
   const [success, setSuccess] = useState("");
+  const [metadataSaveState, setMetadataSaveState] = useState<
+    "IDLE" | "DIRTY" | "SAVING" | "SAVED" | "ERROR"
+  >("IDLE");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingCardKeys, setPendingCardKeys] = useState<string[]>([]);
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
@@ -823,11 +833,56 @@ export function DeckEditorConsole({
   const reconcileGenerationRef = useRef(0);
   const deckSortHydratedRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const metadataRevisionRef = useRef(activeDeck?.revision ?? 0);
+  const metadataSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const metadataSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enqueueMetadataSaveRef = useRef<(draft: DeckMetadataDraft) => Promise<void>>(
+    () => Promise.resolve(),
+  );
+  const lastSavedMetadataRef = useRef(
+    JSON.stringify({
+      name: activeDeck?.name ?? "",
+      deckBoxKey: (activeDeck?.deckBoxKey as DeckBoxKey | undefined) ?? defaultDeckBoxKey,
+      deckBoxAssetId: activeDeck?.deckBoxAssetId ?? null,
+      banlistId: activeDeck?.banlistId ?? availableBanlists[0]?.id ?? "",
+      snapshotDate: activeDeck?.snapshotDate.slice(0, 10) ?? "",
+    }),
+  );
   const deferredCardSearch = useDeferredValue(cardSearch);
+
+  const metadataDraft = useMemo(
+    () => ({
+      name: activeDeckName,
+      deckBoxKey: activeDeckBoxKey,
+      deckBoxAssetId: activeDeckBoxAssetId,
+      banlistId: activeBanlistId || null,
+      snapshotDate: activeSnapshotDate || null,
+    }),
+    [
+      activeBanlistId,
+      activeDeckBoxAssetId,
+      activeDeckBoxKey,
+      activeDeckName,
+      activeSnapshotDate,
+    ],
+  );
+  const metadataSignature = useMemo(() => JSON.stringify(metadataDraft), [metadataDraft]);
 
   useEffect(() => {
     activeDeckRef.current = activeDeck;
   }, [activeDeck]);
+
+  useEffect(() => {
+    if (!activeDeck || metadataSignature === lastSavedMetadataRef.current) return;
+    setMetadataSaveState("DIRTY");
+    if (metadataSaveTimerRef.current) clearTimeout(metadataSaveTimerRef.current);
+    metadataSaveTimerRef.current = setTimeout(() => {
+      void enqueueMetadataSaveRef.current(metadataDraft);
+    }, 650);
+    return () => {
+      if (metadataSaveTimerRef.current) clearTimeout(metadataSaveTimerRef.current);
+    };
+  }, [activeDeck, metadataDraft, metadataSignature]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1095,19 +1150,74 @@ export function DeckEditorConsole({
     }
   }
 
-  async function refreshEditorSnapshot(deckId: string) {
-    const payload = await deckClient.getEditorOverview(deckId);
-    setActiveDeck(payload.activeDeck);
-    activeDeckRef.current = payload.activeDeck;
-    confirmedQuantitiesRef.current = getDeckQuantityMap(payload.activeDeck);
-    if (payload.activeDeck) {
-      setActiveDeckBoxKey(
-        (payload.activeDeck.deckBoxKey as DeckBoxKey) ?? defaultDeckBoxKey,
-      );
-      setActiveDeckBoxAssetId(payload.activeDeck.deckBoxAssetId ?? null);
+  async function persistMetadataDraft(
+    deckId: string,
+    draft: DeckMetadataDraft,
+    allowConflictRetry: boolean,
+  ) {
+    try {
+      const payload = await deckClient.update(deckId, {
+        ...draft,
+        revision: metadataRevisionRef.current,
+      });
+      const nextRevision = payload.deck.revision ?? metadataRevisionRef.current + 1;
+      metadataRevisionRef.current = nextRevision;
+      lastSavedMetadataRef.current = JSON.stringify(draft);
+      setActiveDeck((current) => current && current.id === deckId
+        ? {
+            ...current,
+            name: payload.deck.name,
+            deckBoxKey: payload.deck.deckBoxKey,
+            deckBoxAssetId: payload.deck.deckBoxAssetId,
+            deckBoxImageUrl: payload.deck.deckBoxImageUrl,
+            banlistId: payload.deck.banlistId ?? draft.banlistId,
+            snapshotDate: payload.deck.snapshotDate ?? current.snapshotDate,
+            revision: nextRevision,
+          }
+        : current);
+      setMetadataSaveState("SAVED");
+      setError("");
+      setSuccess(`Deck „${payload.deck.name}“ gespeichert.`);
+    } catch (caughtError) {
+      const currentRevision = caughtError instanceof ApiClientError &&
+        caughtError.code === "deck_revision_conflict" &&
+        caughtError.details &&
+        typeof caughtError.details === "object" &&
+        "currentRevision" in caughtError.details
+          ? (caughtError.details as { currentRevision?: unknown }).currentRevision
+          : null;
+      if (allowConflictRetry && typeof currentRevision === "number") {
+        metadataRevisionRef.current = currentRevision;
+        return persistMetadataDraft(deckId, draft, false);
+      }
+      throw caughtError;
     }
-    setCatalogRevision((revision) => revision + 1);
   }
+
+  function enqueueMetadataSave(draft: DeckMetadataDraft, force = false) {
+    const deckId = activeDeckRef.current?.id;
+    if (!deckId || !draft.name.trim() || !draft.banlistId) return Promise.resolve();
+    if (!force && JSON.stringify(draft) === lastSavedMetadataRef.current) {
+      return Promise.resolve();
+    }
+    if (metadataSaveTimerRef.current) {
+      clearTimeout(metadataSaveTimerRef.current);
+      metadataSaveTimerRef.current = null;
+    }
+    setMetadataSaveState("SAVING");
+    const operation = metadataSaveChainRef.current
+      .catch(() => undefined)
+      .then(() => persistMetadataDraft(deckId, draft, true))
+      .catch((caughtError) => {
+        setMetadataSaveState("ERROR");
+        setError(getApiErrorMessage(caughtError, "Deck-Metadaten konnten nicht gespeichert werden."));
+      });
+    metadataSaveChainRef.current = operation;
+    return operation;
+  }
+  useEffect(() => {
+    enqueueMetadataSaveRef.current = (draft) => enqueueMetadataSave(draft);
+  });
 
   async function reconcileEditorSnapshotWhenIdle(deckId: string) {
     if (
@@ -1168,47 +1278,16 @@ export function DeckEditorConsole({
       return;
     }
 
-    await runMutation(async () => {
-      const payload = await deckClient.update(activeDeck.id, {
-        name: activeDeckName,
-        deckBoxKey: activeDeckBoxKey,
-        deckBoxAssetId: activeDeckBoxAssetId,
-        banlistId: activeBanlistId || null,
-        snapshotDate: activeSnapshotDate || null,
-      });
-
-      setSuccess(`Deck "${payload.deck?.name ?? activeDeck.name}" wurde aktualisiert.`);
-      await refreshEditorSnapshot(activeDeck.id);
-    });
+    await enqueueMetadataSave(metadataDraft, true);
   }
 
-  async function handleChangeActiveBanlist(nextBanlistId: string) {
-    const nextBanlist =
-      availableBanlists.find((banlist) => banlist.id === nextBanlistId) ?? null;
-
+  function handleChangeActiveBanlist(nextBanlistId: string) {
     if (!activeDeck) {
       setActiveBanlistId(nextBanlistId);
       return;
     }
 
     setActiveBanlistId(nextBanlistId);
-
-    await runMutation(async () => {
-      const payload = await deckClient.update(activeDeck.id, {
-        name: activeDeckName,
-        deckBoxKey: activeDeckBoxKey,
-        deckBoxAssetId: activeDeckBoxAssetId,
-        banlistId: nextBanlistId || null,
-        snapshotDate: activeSnapshotDate || null,
-      });
-
-      setSuccess(
-        `Bannliste für "${payload.deck?.name ?? activeDeck.name}" wurde auf "${
-          nextBanlist?.name ?? "ausgewählte Liste"
-        }" aktualisiert.`,
-      );
-      await refreshEditorSnapshot(activeDeck.id);
-    });
   }
 
   async function handleDeleteDeck() {
@@ -1733,6 +1812,16 @@ export function DeckEditorConsole({
           {activeDeck.mainCount} / {activeDeck.extraCount} / {activeDeck.sideCount}
         </span>
 
+        <span className="hidden min-w-[74px] text-right text-[0.7rem] font-semibold text-[#8798a3] sm:inline">
+          {metadataSaveState === "SAVING"
+            ? "Speichert…"
+            : metadataSaveState === "DIRTY"
+              ? "Ungespeichert"
+              : metadataSaveState === "ERROR"
+                ? "Fehler"
+                : "Gespeichert"}
+        </span>
+
         <details className="relative">
           <summary className="grid h-8 w-8 cursor-pointer list-none place-items-center rounded-[5px] border border-white/10 text-[#aab6bd] transition hover:border-white/20 hover:text-white">
             <AssetIcon name="settings" className="h-4 w-4 text-current" />
@@ -1833,10 +1922,10 @@ export function DeckEditorConsole({
           onClick={() => {
             void handleUpdateDeck();
           }}
-          disabled={isSubmitting || !activeDeckName.trim() || !activeBanlistId}
+          disabled={isSubmitting || metadataSaveState === "SAVING" || !activeDeckName.trim() || !activeBanlistId}
           className="ui-button-primary h-8 px-3 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Speichern
+          {metadataSaveState === "SAVING" ? "Speichert…" : "Speichern"}
         </button>
       </header>
 

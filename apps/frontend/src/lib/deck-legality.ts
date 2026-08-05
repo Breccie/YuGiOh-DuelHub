@@ -94,6 +94,7 @@ export type DeckLegalitySnapshot = {
     deckBoxKey: string;
     deckBoxAssetId: string | null;
     deckBoxImageUrl: string | null;
+    revision: number;
     snapshotDate: string | null;
     updatedAt: string;
     cardCount: number;
@@ -112,6 +113,7 @@ export type DeckLegalitySnapshot = {
     deckBoxKey: string;
     deckBoxAssetId: string | null;
     deckBoxImageUrl: string | null;
+    revision: number;
     snapshotDate: string;
     updatedAt: string;
     formatName: string | null;
@@ -710,6 +712,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       deckBoxKey: deck.deckBoxKey,
       deckBoxAssetId: deck.deckBoxAssetId,
       deckBoxImageUrl: getMediaAssetUrl(deck.deckBoxAssetId),
+      revision: deck.revision,
       snapshotDate: deck.snapshotDate?.toISOString() ?? evaluation.snapshotDate.toISOString(),
       updatedAt: deck.updatedAt.toISOString(),
       cardCount: evaluation.counts.cardCount,
@@ -874,6 +877,7 @@ prisma: PrismaClient = getPrisma()): Promise<DeckLegalitySnapshot> {
       deckBoxKey: selectedDeck.deckBoxKey,
       deckBoxAssetId: selectedDeck.deckBoxAssetId,
       deckBoxImageUrl: getMediaAssetUrl(selectedDeck.deckBoxAssetId),
+      revision: selectedDeck.revision,
       snapshotDate:
         selectedDeck.snapshotDate?.toISOString() ??
         activeEvaluation.snapshotDate.toISOString(),

@@ -87,7 +87,7 @@ export function BinderOpenSpread({
         }}
       >
         <Image
-          src="/app-assets/binder-open-base-clean.png"
+          src="/app-assets/binder-open-base-clean.webp"
           alt="Geöffneter Sammelordner"
           fill
           sizes="1600px"

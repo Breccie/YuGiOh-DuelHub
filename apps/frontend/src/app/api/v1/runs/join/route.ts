@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { ActiveRunResponse } from "@ygo/contracts";
+import type { JoinRunResponse } from "@ygo/contracts";
 import { joinRunRequestSchema } from "@ygo/contracts";
 import { toNextErrorResponse } from "@/lib/api-error-response";
 import { proxyApiRoute, shouldProxyToApiService } from "@/lib/api-service-proxy";
@@ -23,7 +23,19 @@ export async function POST(request: Request) {
     const prisma = getPrisma();
     const session = await requireViewerSession(prisma);
     const body = joinRunRequestSchema.parse(await request.json());
-    const run = await joinRunByInviteCode(prisma, session.userId, body.inviteCode);
+    const result = await joinRunByInviteCode(
+      prisma,
+      session.userId,
+      body.inviteCode,
+      body.message,
+    );
+    if (result.kind === "PENDING") {
+      return NextResponse.json(
+        { joinRequest: result.joinRequest } satisfies JoinRunResponse,
+        { status: 202 },
+      );
+    }
+    const run = result.run;
     const wallet = await getOrCreateWallet(prisma, {
       runId: run.id,
       userId: session.userId,
@@ -33,7 +45,7 @@ export async function POST(request: Request) {
       {
         run: serializeRun(run, session.userId),
         wallet: serializeWallet(wallet),
-      } satisfies ActiveRunResponse,
+      } satisfies JoinRunResponse,
       { status: 201 },
     );
   } catch (error) {

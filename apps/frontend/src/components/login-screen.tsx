@@ -81,11 +81,11 @@ export function LoginScreen({
     <div className="app-shell relative min-h-screen overflow-hidden bg-[#04060a] text-[#f2e5d1]">
       <div className="app-background" />
 
-      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1320px] items-center px-4 py-8 lg:px-8">
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1320px] items-start px-3 py-3 sm:px-4 sm:py-6 lg:items-center lg:px-8 lg:py-8">
         <div className="grid w-full gap-6 lg:grid-cols-[1.04fr_0.96fr]">
-          <section className="hero-surface rounded-[32px] px-6 py-8 sm:px-8 lg:px-10 lg:py-12">
+          <section className="hero-surface order-2 rounded-[24px] px-5 py-6 sm:px-8 lg:order-1 lg:rounded-[32px] lg:px-10 lg:py-12">
             <p className="ui-kicker">Duel Hub</p>
-            <h1 className="font-display inscription-text mt-5 text-[3.3rem] leading-[0.92] sm:text-[4.7rem]">
+            <h1 className="font-display inscription-text mt-4 text-[2.35rem] leading-[0.94] sm:mt-5 sm:text-[4.7rem]">
               Profile, Trades, Duelle und Turniere in einer App.
             </h1>
             <p className="ui-copy-strong mt-6 max-w-[40rem] text-[1rem]">
@@ -142,7 +142,7 @@ export function LoginScreen({
             ) : null}
           </section>
 
-          <section className="panel-surface rounded-[32px] px-6 py-8 sm:px-8 lg:px-10 lg:py-10">
+          <section className="panel-surface order-1 rounded-[24px] px-5 py-5 sm:px-8 sm:py-8 lg:order-2 lg:rounded-[32px] lg:px-10 lg:py-10">
             <div className="flex flex-wrap gap-2">
               {[
                 { id: "LOGIN", label: "Anmelden" },
@@ -167,7 +167,7 @@ export function LoginScreen({
               })}
             </div>
 
-            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            <form className="mt-5 space-y-4 sm:mt-8 sm:space-y-5" onSubmit={handleSubmit}>
               <label className="block">
                 <span className="ui-kicker">Duelist-ID</span>
                 <input

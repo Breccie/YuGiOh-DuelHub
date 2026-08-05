@@ -5,6 +5,7 @@ import {
   duplicateDeck,
   moveDeckCard,
   upsertDeckCard,
+  updateDeckMetadata,
 } from "@/lib/deck-editor";
 
 const prisma = new PrismaClient();
@@ -227,6 +228,88 @@ describe("deck card copy limit", () => {
         { section: "MAIN", quantity: 1 },
         { section: "SIDE", quantity: 2 },
       ]);
+    } finally {
+      await deleteDeckFixture(fixture);
+    }
+  });
+
+  it("rejects stale deck metadata revisions without overwriting the newer state", async () => {
+    const fixture = await createDeckFixture("revision");
+
+    try {
+      const first = await updateDeckMetadata(prisma, fixture.userId, fixture.deckId, {
+        name: "Bestätigter Name",
+        revision: 0,
+      });
+      expect(first.revision).toBe(1);
+
+      await expect(
+        updateDeckMetadata(prisma, fixture.userId, fixture.deckId, {
+          name: "Veralteter Name",
+          revision: 0,
+        }),
+      ).rejects.toMatchObject({
+        code: "deck_revision_conflict",
+        status: 409,
+        details: { currentRevision: 1 },
+      });
+
+      const persisted = await prisma.deck.findUniqueOrThrow({
+        where: { id: fixture.deckId },
+      });
+      expect(persisted.name).toBe("Bestätigter Name");
+      expect(persisted.revision).toBe(1);
+    } finally {
+      await deleteDeckFixture(fixture);
+    }
+  });
+
+  it("locks an entered tournament deck against metadata and card changes", async () => {
+    const fixture = await createDeckFixture("tournament-lock");
+
+    try {
+      const tournament = await prisma.tournament.create({
+        data: {
+          runId: fixture.runId,
+          hostId: fixture.userId,
+          title: "Locked deck tournament",
+          status: "DRAFT",
+          participants: {
+            create: {
+              userId: fixture.userId,
+              status: "ACCEPTED",
+              joinedAt: new Date(),
+              checkedInAt: new Date(),
+              registeredDeckId: fixture.deckId,
+            },
+          },
+        },
+      });
+
+      await expect(
+        updateDeckMetadata(prisma, fixture.userId, fixture.deckId, {
+          name: "Nicht erlaubt",
+          revision: 0,
+        }),
+      ).rejects.toMatchObject({ code: "tournament_deck_locked", status: 409 });
+      await expect(
+        upsertDeckCard(prisma, fixture.userId, fixture.deckId, {
+          cardId: fixture.cardId,
+          section: "MAIN",
+          quantity: 1,
+        }),
+      ).rejects.toMatchObject({ code: "tournament_deck_locked", status: 409 });
+
+      await prisma.tournament.update({
+        where: { id: tournament.id },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      });
+      await expect(
+        updateDeckMetadata(prisma, fixture.userId, fixture.deckId, {
+          name: "Nach Turnierende erlaubt",
+          revision: 0,
+        }),
+      ).resolves.toMatchObject({ name: "Nach Turnierende erlaubt", revision: 1 });
     } finally {
       await deleteDeckFixture(fixture);
     }

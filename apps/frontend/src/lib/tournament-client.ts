@@ -1,8 +1,10 @@
 import type {
   CreateTournamentRequest,
+  CreateManualTournamentRoundRequest,
   CampaignLeaderboardResponse,
   InviteTournamentParticipantRequest,
   RecordTournamentMatchResultRequest,
+  RegisterTournamentDeckRequest,
   UpdateTournamentMvpCardsRequest,
 } from "@ygo/contracts";
 import { apiPatchJson, apiPost, apiPostJson } from "@/lib/api-client";
@@ -41,6 +43,24 @@ export const tournamentClient = {
   async createRound(tournamentId: string) {
     const response = await apiPost<TournamentMutationResponse>(
       `/api/tournaments/${tournamentId}/rounds`,
+    );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
+  },
+
+  async createManualRound(tournamentId: string, input: CreateManualTournamentRoundRequest) {
+    const response = await apiPostJson<TournamentMutationResponse, CreateManualTournamentRoundRequest>(
+      `/api/tournaments/${tournamentId}/rounds`,
+      input,
+    );
+    refreshLocalSyncCacheSoon({ forceFullDelta: true });
+    return response;
+  },
+
+  async registerDeck(tournamentId: string, input: RegisterTournamentDeckRequest) {
+    const response = await apiPostJson<TournamentMutationResponse, RegisterTournamentDeckRequest>(
+      `/api/tournaments/${tournamentId}/registration`,
+      input,
     );
     refreshLocalSyncCacheSoon({ forceFullDelta: true });
     return response;

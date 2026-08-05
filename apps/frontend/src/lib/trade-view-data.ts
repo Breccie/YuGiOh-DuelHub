@@ -36,6 +36,8 @@ export function formatTradeState(value: TradeListItemDto["threadState"] | string
       return "Abschluss offen";
     case "waitingForTheirConfirmation":
       return "Partner bestätigt noch";
+    case "waitingForOrganizerApproval":
+      return "Wartet auf Organizer-Freigabe";
     case "completed":
       return "Abgeschlossen";
     case "cancelled":

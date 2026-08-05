@@ -16,7 +16,8 @@ const apiDatabaseUrl =
 const frontendDatabaseUrl =
   process.env.E2E_ONLINE_FRONTEND_DATABASE_URL ??
   "file:./codex-e2e-online-frontend.db";
-const sourceDbPath = path.join(repoRoot, "prisma", "dev.db");
+const sourceDbPath = process.env.E2E_SOURCE_DATABASE_PATH
+  ?? path.join(repoRoot, "prisma", "demo.db");
 const frontendSmokeDbPath = path.join(
   repoRoot,
   "prisma",

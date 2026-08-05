@@ -1,6 +1,6 @@
 # Online-kompatibler Release-MVP
 
-Stand: 2026-07-08
+Stand: 2026-08-05
 
 ## Ziel
 
@@ -10,14 +10,14 @@ Der naechste Release ist ein online-kompatibler Freundeskreis-Hub. Browser und D
 
 - Registrieren und Login gegen den API-Service.
 - Kampagne erstellen, beitreten oder aktive Kampagne auswaehlen.
-- Kampagneneinstellungen verwalten: Startcredits, Packpreis, Displaygroesse, Gratispacks pro Set, Turnierbelohnungen.
+- Versionierte Kampagneneinstellungen verwalten: Identität, Wirtschaft, Progression, Sammlung, Decks, Trades und Turniere.
 - Packs online oeffnen und Sammlungseintraege kampagnengebunden speichern.
 - Beliebig viele Decks und Binder pro Kampagne nutzen.
 - Decks gegen Banlists und Genesys-Werte pruefen.
 - Decks als `.ydk` fuer EDOPro exportieren.
-- Trades zwischen zwei Accounts erstellen, reservieren, akzeptieren und von beiden Seiten bestaetigen.
-- Turniere erstellen, Teilnehmer verwalten, Pairings erzeugen, externe Scores melden und vom Gegner bestaetigen lassen.
-- Turnierabschluss vergibt Credits/Rewards und kann naechste Sets/Packs freischalten.
+- Karten und Credits atomar tauschen, reservieren, beidseitig bestätigen und optional durch Organizer freigeben.
+- Swiss, Round Robin, Single Elimination und manuelle Turniere mit BO1/BO3/BO5, Deck-Check-in und Start-Snapshot verwalten.
+- Turnierabschluss vergibt Credits, Standard- oder Custom-Pack-Rewards, aktualisiert Ranglisten und kann nächste Packs freischalten.
 
 ## Bewusst nicht im Release-MVP
 

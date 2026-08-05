@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DeckBoxKey, MediaAssetDto } from "@ygo/contracts";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import { AssetIcon, type AssetIconName } from "@/components/asset-icon";
 import { DeckBoxDesignPreview } from "@/components/personal-design-preview";
 import { ImageCropUpload } from "@/components/image-crop-upload";
@@ -374,26 +374,17 @@ export function DeckOverviewConsole({
   }
 
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-transparent text-[#f2e5d1]">
-      <div className="app-background" />
-
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <AppSidebar />
-
-        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
+    <AppShell
+      topbar={(
+        <ConsoleGlobalStatusBar
+          viewer={{ displayName: viewer.displayName, duelistId: viewer.duelistId, avatarImageUrl: viewer.avatarImageUrl }}
+          fallback={{
+            collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
+          }}
+        />
+      )}
+    >
             <section className="relative">
-              <div className="relative">
-                <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl sm:px-3">
-                  <ConsoleGlobalStatusBar
-                    viewer={{ displayName: viewer.displayName, duelistId: viewer.duelistId, avatarImageUrl: viewer.avatarImageUrl }}
-                    fallback={{
-                      collectionValue: `${collectionProgress.owned} / ${collectionProgress.total}`,
-                    }}
-                  />
-                </div>
-              </div>
-
               <div className="mt-3 flex flex-col gap-3 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(8,12,18,0.78)] p-3 sm:flex-row sm:items-center">
                 {heroCard ? (
                   <div className="relative h-[76px] w-[58px] shrink-0 overflow-hidden rounded-[6px] border border-[rgba(255,255,255,0.1)] bg-[#0b1119]">
@@ -801,10 +792,6 @@ export function DeckOverviewConsole({
                 </div>
               </Panel>
             </section>
-          </div>
-        </main>
-      </div>
-
-    </div>
+    </AppShell>
   );
 }

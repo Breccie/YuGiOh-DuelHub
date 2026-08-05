@@ -22,6 +22,11 @@ type TournamentRecord = Prisma.TournamentGetPayload<{
       include: {
         user: true;
         invitedBy: true;
+        registeredDeck: {
+          include: {
+            cards: true;
+          };
+        };
       };
     };
     rounds: {
@@ -80,6 +85,8 @@ export type TournamentDetail = {
     status: string;
     seed: number | null;
     joinedAt: string | null;
+    checkedInAt: string | null;
+    registeredDeck: { id: string; name: string } | null;
     duelist: {
       userId: string;
       duelistId: string;
@@ -160,6 +167,9 @@ function toTournamentOverview(tournament: TournamentRecord): TournamentOverviewD
       tournament.rounds.length > 0
         ? Math.max(...tournament.rounds.map((round) => round.roundNumber))
         : null,
+    pairingMode: tournament.pairingMode,
+    matchMode: tournament.matchMode,
+    startedAt: tournament.startedAt?.toISOString() ?? null,
   };
 }
 
@@ -620,6 +630,9 @@ async function loadTournament(prisma: PrismaClient, tournamentId: string) {
         include: {
           user: true,
           invitedBy: true,
+          registeredDeck: {
+            include: { cards: true },
+          },
         },
       },
       rounds: {
@@ -773,6 +786,10 @@ async function mapTournamentDetail(
       status: participant.status,
       seed: participant.seed ?? null,
       joinedAt: participant.joinedAt?.toISOString() ?? null,
+      checkedInAt: participant.checkedInAt?.toISOString() ?? null,
+      registeredDeck: participant.registeredDeck
+        ? { id: participant.registeredDeck.id, name: participant.registeredDeck.name }
+        : null,
       duelist: {
         userId: participant.user.id,
         duelistId: participant.user.duelistId,
@@ -871,6 +888,8 @@ export async function createTournament(
     description?: string | null;
     formatLabel?: string | null;
     scheduledAt?: string | null;
+    pairingMode?: "SWISS" | "ROUND_ROBIN" | "SINGLE_ELIMINATION" | "MANUAL";
+    matchMode?: "BEST_OF_ONE" | "BEST_OF_THREE" | "BEST_OF_FIVE";
   },
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
@@ -879,6 +898,27 @@ export async function createTournament(
       code: "tournament_create_forbidden",
       message: "Nur Kampagnen-Owner und Organizer können Turniere erstellen.",
       status: 403,
+    });
+  }
+  const rules = await getActiveCampaignRuleConfig(prisma, activeRun.id);
+  const pairingMode = input.pairingMode ?? rules.tournaments.pairingMode;
+  const matchMode = input.matchMode ?? (
+    rules.tournaments.matchMode === "SINGLE"
+      ? "BEST_OF_ONE"
+      : rules.tournaments.matchMode
+  );
+  if (!rules.tournaments.allowedPairingModes.includes(pairingMode)) {
+    throw new DomainError({
+      code: "tournament_pairing_mode_disabled",
+      message: "Diese Paarungsart ist in der Kampagne nicht erlaubt.",
+      status: 409,
+    });
+  }
+  if (!rules.tournaments.allowedMatchModes.includes(matchMode)) {
+    throw new DomainError({
+      code: "tournament_match_mode_disabled",
+      message: "Dieser Matchmodus ist in der Kampagne nicht erlaubt.",
+      status: 409,
     });
   }
   const ruleVersionId = await getActiveCampaignRuleVersionId(prisma, activeRun.id);
@@ -891,6 +931,8 @@ export async function createTournament(
       formatLabel: input.formatLabel?.trim() || null,
       scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
       status: "DRAFT",
+      pairingMode,
+      matchMode,
       ruleVersionId,
       participants: {
         create: {
@@ -967,54 +1009,78 @@ export async function createSwissRound(
   prisma: PrismaClient,
   viewerId: string,
   tournamentId: string,
+  manualPairs?: TournamentPair[],
 ) {
   const activeRun = await getActiveRun(prisma, viewerId);
   const ruleConfig = await getActiveCampaignRuleConfig(prisma, activeRun.id);
   const tournament = await loadTournament(prisma, tournamentId);
-
   if (!tournament || tournament.runId !== activeRun.id || !canOperateTournament(activeRun, viewerId, tournament.hostId)) {
-    throw new Error("Nur Host oder Kampagnen-Organizer können neue Swiss-Runden erzeugen.");
+    throw new Error("Nur Host oder Kampagnen-Organizer können neue Runden erzeugen.");
   }
-
-  const acceptedParticipants = tournament.participants.filter(
-    (participant) => participant.status === "ACCEPTED",
-  );
-
-  if (acceptedParticipants.length < 2) {
-    throw new Error("Für eine Runde werden mindestens zwei akzeptierte Teilnehmer benötigt.");
+  const acceptedParticipants = tournament.participants.filter((participant) => participant.status === "ACCEPTED");
+  if (acceptedParticipants.length < ruleConfig.tournaments.minimumParticipants) {
+    throw new DomainError({
+      code: "tournament_participants_missing",
+      message: `Für den Start werden mindestens ${ruleConfig.tournaments.minimumParticipants} akzeptierte Teilnehmer benötigt.`,
+      status: 409,
+    });
   }
-
-  const nextRoundNumber =
-    tournament.rounds.length > 0
-      ? Math.max(...tournament.rounds.map((round) => round.roundNumber)) + 1
-      : 1;
+  const nextRoundNumber = tournament.rounds.length > 0
+    ? Math.max(...tournament.rounds.map((round) => round.roundNumber)) + 1
+    : 1;
   const standings = computeStandings(tournament);
-  const pairs = pairSwissRound({
-    participants: acceptedParticipants.map((participant) => ({
-      userId: participant.userId,
-      seed: participant.seed ?? null,
-    })),
-    standings: standings.standings.map((standing) => ({
-      userId: standing.userId,
-      rank: standing.rank,
-      seed: acceptedParticipants.find((participant) => participant.userId === standing.userId)?.seed ?? null,
-    })),
-    historicMatches: tournament.matches.map((match) => ({
-      playerOneId: match.playerOneId,
-      playerTwoId: match.playerTwoId ?? null,
-    })),
-  });
+  let pairs: TournamentPair[];
+  if (tournament.pairingMode === "MANUAL") {
+    if (!manualPairs) {
+      throw new DomainError({ code: "manual_pairings_required", message: "Für dieses Turnier müssen Paarungen manuell angegeben werden.", status: 400 });
+    }
+    const acceptedIds = new Set(acceptedParticipants.map((participant) => participant.userId));
+    const usedIds = manualPairs.flatMap((pair) => [pair.playerOneId, pair.playerTwoId].filter((id): id is string => Boolean(id)));
+    if (new Set(usedIds).size !== usedIds.length || usedIds.some((id) => !acceptedIds.has(id))) {
+      throw new DomainError({ code: "invalid_manual_pairings", message: "Manuelle Paarungen dürfen nur akzeptierte Teilnehmer genau einmal verwenden.", status: 400 });
+    }
+    pairs = manualPairs;
+  } else if (tournament.pairingMode === "ROUND_ROBIN") {
+    pairs = createRoundRobinPairs(acceptedParticipants.map((participant) => participant.userId), nextRoundNumber - 1);
+  } else if (tournament.pairingMode === "SINGLE_ELIMINATION") {
+    const previousRound = tournament.rounds.at(-1);
+    const advancing = previousRound
+      ? previousRound.matches.map((match) => {
+          if (match.status !== "COMPLETED" && match.status !== "BYE") {
+            throw new DomainError({ code: "elimination_round_open", message: "Die vorherige Eliminationsrunde ist noch nicht abgeschlossen.", status: 409 });
+          }
+          return match.winnerId ?? match.playerOneId;
+        })
+      : acceptedParticipants.map((participant) => participant.userId);
+    if (previousRound && advancing.length <= 1) {
+      throw new DomainError({ code: "elimination_complete", message: "Das Eliminationsfinale ist bereits entschieden.", status: 409 });
+    }
+    pairs = [];
+    for (let index = 0; index < advancing.length; index += 2) {
+      pairs.push({ playerOneId: advancing[index]!, playerTwoId: advancing[index + 1] ?? null });
+    }
+  } else {
+    pairs = pairSwissRound({
+      participants: acceptedParticipants.map((participant) => ({ userId: participant.userId, seed: participant.seed ?? null })),
+      standings: standings.standings.map((standing) => ({
+        userId: standing.userId,
+        rank: standing.rank,
+        seed: acceptedParticipants.find((participant) => participant.userId === standing.userId)?.seed ?? null,
+      })),
+      historicMatches: tournament.matches.map((match) => ({ playerOneId: match.playerOneId, playerTwoId: match.playerTwoId ?? null })),
+    });
+  }
 
   await prisma.$transaction(async (tx) => {
+    if (!tournament.startedAt) {
+      await snapshotRegisteredDecksAtStart(tx, tournament, ruleConfig.tournaments.requireDeckRegistration);
+    }
     const round = await tx.tournamentRound.create({
-      data: {
-        tournamentId,
-        roundNumber: nextRoundNumber,
-        status: "PAIRED",
-      },
+      data: { tournamentId, roundNumber: nextRoundNumber, status: "PAIRED" },
     });
-
     for (const [index, pair] of pairs.entries()) {
+      const playerOne = acceptedParticipants.find((participant) => participant.userId === pair.playerOneId);
+      const playerTwo = acceptedParticipants.find((participant) => participant.userId === pair.playerTwoId);
       await tx.tournamentMatch.create({
         data: {
           tournamentId,
@@ -1022,30 +1088,21 @@ export async function createSwissRound(
           tableNumber: index + 1,
           playerOneId: pair.playerOneId,
           playerTwoId: pair.playerTwoId,
+          playerOneDeckId: playerOne?.registeredDeckId ?? null,
+          playerTwoDeckId: playerTwo?.registeredDeckId ?? null,
           status: pair.playerTwoId ? "PENDING" : "BYE",
           winnerId: pair.playerTwoId ? null : pair.playerOneId,
-          playerOneScore:
-            pair.playerTwoId
-              ? 0
-              : ruleConfig.tournaments.matchMode === "SINGLE"
-                ? 1
-                : 2,
+          playerOneScore: pair.playerTwoId ? 0 : tournament.matchMode === "BEST_OF_ONE" ? 1 : tournament.matchMode === "BEST_OF_FIVE" ? 3 : 2,
           playerTwoScore: 0,
           notes: pair.playerTwoId ? null : "Automatisches Bye",
         },
       });
     }
-
     await tx.tournament.update({
-      where: {
-        id: tournamentId,
-      },
-      data: {
-        status: "ACTIVE",
-      },
+      where: { id: tournamentId },
+      data: { status: "ACTIVE", startedAt: tournament.startedAt ?? new Date() },
     });
   });
-
   return getTournamentDetail(prisma, viewerId, tournamentId);
 }
 
@@ -1144,13 +1201,12 @@ export async function recordTournamentMatchResult(
   if (playerOneScore === undefined || playerTwoScore === undefined) {
     throw new Error("Bitte beide Scores eintragen.");
   }
-  const maximumScore =
-    ruleConfig.tournaments.matchMode === "SINGLE" ? 1 : 2;
+  const maximumScore = match.tournament.matchMode === "BEST_OF_ONE"
+    ? 1
+    : match.tournament.matchMode === "BEST_OF_FIVE" ? 3 : 2;
   if (playerOneScore > maximumScore || playerTwoScore > maximumScore) {
     throw new Error(
-      ruleConfig.tournaments.matchMode === "SINGLE"
-        ? "Im Best-of-1 darf ein Spieler höchstens einen Sieg melden."
-        : "Im Best-of-3 darf ein Spieler höchstens zwei Siege melden.",
+      `Im ${match.tournament.matchMode === "BEST_OF_ONE" ? "Best-of-1" : match.tournament.matchMode === "BEST_OF_FIVE" ? "Best-of-5" : "Best-of-3"} wurde ein zu hoher Score gemeldet.`,
     );
   }
 
@@ -1208,6 +1264,9 @@ export async function completeTournament(
         include: {
           user: true,
           invitedBy: true,
+          registeredDeck: {
+            include: { cards: true },
+          },
         },
       },
       rounds: {
@@ -1271,6 +1330,151 @@ export async function completeTournament(
   });
 
   return getTournamentDetail(prisma, viewerId, tournamentId);
+}
+
+export async function registerTournamentDeck(
+  prisma: PrismaClient,
+  viewerId: string,
+  tournamentId: string,
+  deckId: string,
+) {
+  const activeRun = await getActiveRun(prisma, viewerId);
+  const [tournament, deck, rules] = await Promise.all([
+    prisma.tournament.findUnique({ where: { id: tournamentId } }),
+    prisma.deck.findFirst({
+      where: { id: deckId, userId: viewerId, runId: activeRun.id },
+      include: { cards: true },
+    }),
+    getActiveCampaignRuleConfig(prisma, activeRun.id),
+  ]);
+  if (!tournament || tournament.runId !== activeRun.id) {
+    throw new DomainError({ code: "tournament_not_found", message: "Turnier nicht gefunden.", status: 404 });
+  }
+  if (tournament.status !== "DRAFT" || tournament.startedAt) {
+    throw new DomainError({ code: "tournament_already_started", message: "Nach dem Turnierstart kann das Deck nicht mehr gewechselt werden.", status: 409 });
+  }
+  if (!deck) {
+    throw new DomainError({ code: "tournament_deck_not_found", message: "Dieses Kampagnendeck wurde nicht gefunden.", status: 404 });
+  }
+  const sectionCounts = deck.cards.reduce(
+    (counts, row) => {
+      counts[row.section] += row.quantity;
+      return counts;
+    },
+    { MAIN: 0, EXTRA: 0, SIDE: 0 },
+  );
+  if (
+    sectionCounts.MAIN < rules.decks.minMainDeck
+    || sectionCounts.MAIN > rules.decks.maxMainDeck
+    || sectionCounts.EXTRA > rules.decks.maxExtraDeck
+    || sectionCounts.SIDE > rules.decks.maxSideDeck
+  ) {
+    throw new DomainError({
+      code: "tournament_deck_size_invalid",
+      message: `Das Turnierdeck muss ${rules.decks.minMainDeck}–${rules.decks.maxMainDeck} Main-, höchstens ${rules.decks.maxExtraDeck} Extra- und höchstens ${rules.decks.maxSideDeck} Side-Deck-Karten enthalten.`,
+      status: 409,
+    });
+  }
+  if (rules.decks.ownershipRequired && !rules.decks.allowProxies) {
+    const owned = await prisma.collectionEntry.groupBy({
+      by: ["cardId"],
+      where: {
+        runId: activeRun.id,
+        userId: viewerId,
+        lockState: "AVAILABLE",
+        cardId: { in: deck.cards.map((row) => row.cardId) },
+      },
+      _count: { _all: true },
+    });
+    const ownedByCardId = new Map(owned.map((row) => [row.cardId, row._count._all]));
+    const missing = deck.cards.find(
+      (row) => row.quantity > (ownedByCardId.get(row.cardId) ?? 0),
+    );
+    if (missing) {
+      throw new DomainError({
+        code: "tournament_deck_ownership_invalid",
+        message: "Das Turnierdeck enthält mehr Kopien einer Karte als aktuell verfügbar sind.",
+        status: 409,
+        details: {
+          cardId: missing.cardId,
+          required: missing.quantity,
+          available: ownedByCardId.get(missing.cardId) ?? 0,
+        },
+      });
+    }
+  }
+  const participant = await prisma.tournamentParticipant.findUnique({
+    where: { tournamentId_userId: { tournamentId, userId: viewerId } },
+  });
+  if (!participant || participant.status === "DECLINED" || participant.status === "DROPPED") {
+    throw new DomainError({ code: "tournament_not_invited", message: "Du bist für dieses Turnier nicht registriert.", status: 403 });
+  }
+  await prisma.tournamentParticipant.update({
+    where: { id: participant.id },
+    data: {
+      status: "ACCEPTED",
+      joinedAt: participant.joinedAt ?? new Date(),
+      checkedInAt: new Date(),
+      registeredDeckId: deck.id,
+    },
+  });
+  return getTournamentDetail(prisma, viewerId, tournamentId);
+}
+
+type TournamentPair = { playerOneId: string; playerTwoId: string | null };
+
+function createRoundRobinPairs(userIds: string[], roundIndex: number): TournamentPair[] {
+  const rotating = [...userIds];
+  if (rotating.length % 2 === 1) rotating.push("__BYE__");
+  const roundCount = rotating.length - 1;
+  if (roundIndex >= roundCount) {
+    throw new DomainError({ code: "round_robin_complete", message: "Alle Round-Robin-Runden wurden bereits gespielt.", status: 409 });
+  }
+  const fixed = rotating[0]!;
+  const rest = rotating.slice(1);
+  for (let step = 0; step < roundIndex; step += 1) rest.unshift(rest.pop()!);
+  const arranged = [fixed, ...rest];
+  const pairs: TournamentPair[] = [];
+  for (let index = 0; index < arranged.length / 2; index += 1) {
+    const left = arranged[index]!;
+    const right = arranged[arranged.length - 1 - index]!;
+    if (left === "__BYE__") pairs.push({ playerOneId: right, playerTwoId: null });
+    else pairs.push({ playerOneId: left, playerTwoId: right === "__BYE__" ? null : right });
+  }
+  return pairs;
+}
+
+async function snapshotRegisteredDecksAtStart(
+  tx: Prisma.TransactionClient,
+  tournament: TournamentRecord,
+  requireDeckRegistration: boolean,
+) {
+  const accepted = tournament.participants.filter((participant) => participant.status === "ACCEPTED");
+  if (requireDeckRegistration && accepted.some((participant) => !participant.registeredDeck)) {
+    throw new DomainError({
+      code: "tournament_decks_missing",
+      message: "Alle akzeptierten Teilnehmer müssen vor dem Start ein Deck einchecken.",
+      status: 409,
+    });
+  }
+  for (const participant of accepted) {
+    const deck = participant.registeredDeck;
+    await tx.tournamentDeckSnapshot.upsert({
+      where: { tournamentId_userId: { tournamentId: tournament.id, userId: participant.userId } },
+      create: {
+        tournamentId: tournament.id,
+        userId: participant.userId,
+        deckId: deck?.id ?? null,
+        deckName: deck?.name ?? null,
+        cards: (deck?.cards ?? []).map((card) => ({
+          cardId: card.cardId,
+          section: card.section,
+          quantity: card.quantity,
+        })),
+      },
+      update: {},
+    });
+  }
 }
 
 export async function getCampaignLeaderboard(

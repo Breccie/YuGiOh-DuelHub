@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { OwnershipSource, Prisma, type CustomPackEra, type PrismaClient } from "@prisma/client";
+import { Prisma, type CustomPackEra, type PrismaClient } from "@prisma/client";
 import type { CreateCustomPackRequest, UpdateCustomPackDraftRequest } from "@ygo/contracts";
 import { DomainError } from "@ygo/domain";
 import { getActiveCampaignRuleVersionId } from "@/lib/campaign-rule-service";
@@ -16,6 +16,7 @@ import { getOrCreateWallet, requireRunMembership } from "@/lib/run-service";
 import { createCustomPackImage } from "@/lib/custom-pack-artwork";
 import { getCardAssetUrl } from "@/lib/asset-urls";
 import { resolveOwnedMediaAsset } from "@/lib/media-service";
+import { addPulledCardsToCollection } from "@/lib/collection-rule-service";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -156,9 +157,20 @@ export async function listCustomPacks(prisma: PrismaClient, viewerId: string, ru
       },
     },
   });
-  if (isOrganizer) return packs;
+  const packsWithEffectiveAccess = packs.map((pack) => ({
+    ...pack,
+    versions: pack.versions.map((version) => ({
+      ...version,
+      accesses: version.accesses.map((access) => ({
+        ...access,
+        isAvailableNow: !access.rewardOnly && isCampaignPackAvailableNow(access),
+      })),
+    })),
+  }));
 
-  return packs
+  if (isOrganizer) return packsWithEffectiveAccess;
+
+  return packsWithEffectiveAccess
     .map((pack) => ({
       ...pack,
       versions: pack.versions
@@ -166,8 +178,7 @@ export async function listCustomPacks(prisma: PrismaClient, viewerId: string, ru
           version.status === "PUBLISHED"
             && version.accesses.some((access) =>
               access.runId === runId
-              && !access.rewardOnly
-              && isCampaignPackAvailableNow(access),
+              && access.isAvailableNow,
             ),
         )
         .map((version) => ({
@@ -487,7 +498,7 @@ export async function openCustomPackVersion(
   viewerId: string,
   runId: string,
   versionId: string,
-  options: { idempotencyKey: string },
+  options: { idempotencyKey: string; chargeCredits?: boolean; allowRewardOnly?: boolean },
 ) {
   await requireRunMembership(prisma, { runId, userId: viewerId });
   const idempotencyKey = options.idempotencyKey.trim();
@@ -522,21 +533,33 @@ export async function openCustomPackVersion(
           },
         },
       });
-      const version = access?.version;
-      if (!access || !version || version.status !== "PUBLISHED" || !version.generatedSetId) {
+      const rewardVersion = !access && options.allowRewardOnly
+        ? await tx.customPackVersion.findFirst({
+            where: { id: versionId, status: "PUBLISHED", definition: { runId } },
+            include: {
+              definition: true,
+              poolEntries: { include: { card: true, setCard: true } },
+              slots: true,
+            },
+          })
+        : null;
+      const version = access?.version ?? rewardVersion;
+      if (!version || (!access && !options.allowRewardOnly) || version.status !== "PUBLISHED" || !version.generatedSetId) {
         throw new DomainError({ code: "custom_pack_unavailable", message: "Diese Packversion ist in der Kampagne nicht freigeschaltet.", status: 409 });
       }
       if (version.definition.runId !== runId) {
         throw new DomainError({ code: "custom_pack_cross_campaign", message: "Diese Packversion gehört nicht zu dieser Kampagne.", status: 409 });
       }
-      assertPackAccessAvailable({
-        ...access,
-        productName: version.definition.name,
-      });
-      if (access.rewardOnly) {
+      if (!options.allowRewardOnly && access) {
+        assertPackAccessAvailable({
+          ...access,
+          productName: version.definition.name,
+        });
+      }
+      if (access?.rewardOnly && !options.allowRewardOnly) {
         throw new DomainError({ code: "custom_pack_reward_only", message: "Dieses Pack ist nur als Belohnung erhältlich.", status: 409 });
       }
-      const price = access.price ?? version.price;
+      const price = options.chargeCredits === false ? 0 : access?.price ?? version.price;
       const ruleVersionId = await getActiveCampaignRuleVersionId(tx, runId);
       const wallet = await getOrCreateWallet(tx, { runId, userId: viewerId });
       const random = createDeterministicRandom(seed);
@@ -560,18 +583,20 @@ export async function openCustomPackVersion(
           });
         }
       }
-      const debit = await tx.creditWallet.updateMany({
-        where: { id: wallet.id, balance: { gte: price } },
-        data: { balance: { decrement: price } },
-      });
-      if (debit.count !== 1) {
-        const currentWallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: wallet.id } });
-        throw new DomainError({
-          code: "insufficient_credits",
-          message: "Nicht genug Credits für diesen Kauf.",
-          status: 409,
-          details: { balance: currentWallet.balance, cost: price },
+      if (price > 0) {
+        const debit = await tx.creditWallet.updateMany({
+          where: { id: wallet.id, balance: { gte: price } },
+          data: { balance: { decrement: price } },
         });
+        if (debit.count !== 1) {
+          const currentWallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: wallet.id } });
+          throw new DomainError({
+            code: "insufficient_credits",
+            message: "Nicht genug Credits für diesen Kauf.",
+            status: 409,
+            details: { balance: currentWallet.balance, cost: price },
+          });
+        }
       }
       const updatedWallet = await tx.creditWallet.findUniqueOrThrow({ where: { id: wallet.id } });
       const balanceAfter = updatedWallet.balance;
@@ -584,7 +609,7 @@ export async function openCustomPackVersion(
           userId: viewerId,
           setId: version.generatedSetId,
           ruleVersionId,
-          type: "SINGLE_PACK",
+          type: options.chargeCredits === false ? "REWARD" : "SINGLE_PACK",
           quantity: 1,
           totalCost: price,
           idempotencyKey,
@@ -606,18 +631,18 @@ export async function openCustomPackVersion(
       await tx.packPull.createMany({
         data: pulls.map((pull) => ({ ...pull, openingId: opening.id })),
       });
-      await tx.collectionEntry.createMany({
-        data: pulls.map((pull) => ({
-          userId: viewerId,
-          runId,
+      await addPulledCardsToCollection(tx, {
+        userId: viewerId,
+        runId,
+        pulls: pulls.map((pull) => ({
           cardId: pull.cardId,
           setCardId: pull.setCardId,
-          source: OwnershipSource.PACK_OPENING,
           sourceReferenceId: opening.id,
         })),
       });
-      await tx.creditLedgerEntry.create({
-        data: {
+      if (price > 0) {
+        await tx.creditLedgerEntry.create({
+          data: {
           runId,
           walletId: wallet.id,
           userId: viewerId,
@@ -627,8 +652,9 @@ export async function openCustomPackVersion(
           referenceType: "CustomPackVersion",
           referenceId: version.id,
           note: `Custom Pack geöffnet: ${version.definition.name} v${version.version}`,
-        },
-      });
+          },
+        });
+      }
       return {
         id: opening.id,
         versionId: version.id,

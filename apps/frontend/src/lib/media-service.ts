@@ -84,14 +84,15 @@ function imageUrl(assetId: string) {
 }
 
 async function usageCount(prisma: PrismaClient, assetId: string) {
-  const [avatars, binders, decks, artwork, packImages] = await Promise.all([
+  const [avatars, campaigns, binders, decks, artwork, packImages] = await Promise.all([
     prisma.user.count({ where: { avatarAssetId: assetId } }),
+    prisma.playGroupRun.count({ where: { campaignImageAssetId: assetId } }),
     prisma.collectionBinder.count({ where: { coverAssetId: assetId } }),
     prisma.deck.count({ where: { deckBoxAssetId: assetId } }),
     prisma.customPackVersion.count({ where: { artworkAssetId: assetId } }),
     prisma.customPackVersion.count({ where: { packImageAssetId: assetId } }),
   ]);
-  return avatars + binders + decks + artwork + packImages;
+  return avatars + campaigns + binders + decks + artwork + packImages;
 }
 
 async function assertMediaQuota(prisma: PrismaClient, ownerId: string, incomingBytes: number) {
@@ -215,6 +216,7 @@ async function removeStaging(intent: UploadIntent) {
 
 function outputSize(kind: MediaAssetKind) {
   if (kind === "AVATAR") return { width: 512, height: 512 };
+  if (kind === "CAMPAIGN_IMAGE") return { width: 1600, height: 900 };
   if (kind === "PACK_ARTWORK") return { width: 900, height: 1125 };
   return { width: 1024, height: 1536 };
 }

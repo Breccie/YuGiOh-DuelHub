@@ -23,6 +23,9 @@ type DeckMutationResponse = {
     deckBoxKey: string;
     deckBoxImageUrl: string;
     deckBoxAssetId: string | null;
+    revision?: number;
+    banlistId?: string | null;
+    snapshotDate?: string | null;
   };
 };
 

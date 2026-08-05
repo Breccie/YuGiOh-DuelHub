@@ -7,7 +7,7 @@ function createFallbackResponse(request: Request, reason: "FALLBACK" | "ERROR") 
   return new Response(null, {
     status: 307,
     headers: {
-      Location: new URL("/app-assets/fallback-card.png", request.url).toString(),
+      Location: new URL("/app-assets/fallback-card.webp", request.url).toString(),
       "Cache-Control":
         reason === "FALLBACK"
           ? "public, max-age=3600, stale-while-revalidate=86400"

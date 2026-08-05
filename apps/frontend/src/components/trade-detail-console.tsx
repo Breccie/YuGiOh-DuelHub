@@ -110,6 +110,8 @@ export function TradeDetailConsole({
   const [counterNote, setCounterNote] = useState("");
   const [counterOfferedIds, setCounterOfferedIds] = useState<string[]>([]);
   const [counterRequestedIds, setCounterRequestedIds] = useState<string[]>([]);
+  const [counterOfferedCredits, setCounterOfferedCredits] = useState("0");
+  const [counterRequestedCredits, setCounterRequestedCredits] = useState("0");
 
   const counterpart = trade.proposer.userId === viewerUserId ? trade.responder : trade.proposer;
   const activeVersion = trade.activeVersion;
@@ -121,6 +123,12 @@ export function TradeDetailConsole({
     : [];
   const cardsYouGive = referenceCards.filter((card) => card.fromUserId === viewerUserId);
   const cardsYouReceive = referenceCards.filter((card) => card.toUserId === viewerUserId);
+  const creditsYouGive = referenceVersion
+    ? referenceVersion.sender.userId === viewerUserId ? referenceVersion.offeredCredits : referenceVersion.requestedCredits
+    : 0;
+  const creditsYouReceive = referenceVersion
+    ? referenceVersion.sender.userId === viewerUserId ? referenceVersion.requestedCredits : referenceVersion.offeredCredits
+    : 0;
   const canAccept = trade.allowedActions.includes("accept");
   const canReject = trade.allowedActions.includes("reject");
   const canCancel = trade.allowedActions.includes("cancel");
@@ -131,7 +139,8 @@ export function TradeDetailConsole({
       ? trade.proposerConfirmedAt
       : trade.responderConfirmedAt;
   const canSubmitCounter =
-    counterOfferedIds.length > 0 || counterRequestedIds.length > 0;
+    counterOfferedIds.length > 0 || counterRequestedIds.length > 0
+    || Number(counterOfferedCredits) > 0 || Number(counterRequestedCredits) > 0;
 
   function toggleCounterForm() {
     if (showCounterForm) {
@@ -155,6 +164,8 @@ export function TradeDetailConsole({
     setCounterOfferedIds(defaultOfferedIds);
     setCounterRequestedIds(defaultRequestedIds);
     setCounterNote(activeVersion.note ?? "");
+    setCounterOfferedCredits(String(activeVersion.requestedCredits));
+    setCounterRequestedCredits(String(activeVersion.offeredCredits));
     setShowCounterForm(true);
   }
 
@@ -189,6 +200,8 @@ export function TradeDetailConsole({
         note: counterNote || null,
         offeredEntryIds: counterOfferedIds,
         requestedEntryIds: counterRequestedIds,
+        offeredCredits: Number(counterOfferedCredits) || 0,
+        requestedCredits: Number(counterRequestedCredits) || 0,
       });
 
       setShowCounterForm(false);
@@ -233,6 +246,7 @@ export function TradeDetailConsole({
                 <p className="mt-3 font-display text-[2rem] leading-none text-[#f0dcc0]">
                   {cardsYouGive.length}
                 </p>
+                <p className="mt-2 text-xs text-[#baa58a]">+ {creditsYouGive} Credits</p>
               </div>
               <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4">
                 <p className="text-[0.72rem] uppercase tracking-[0.18em] text-[#9f8c77]">
@@ -241,6 +255,7 @@ export function TradeDetailConsole({
                 <p className="mt-3 font-display text-[2rem] leading-none text-[#f0dcc0]">
                   {cardsYouReceive.length}
                 </p>
+                <p className="mt-2 text-xs text-[#baa58a]">+ {creditsYouReceive} Credits</p>
               </div>
             </div>
 
@@ -250,11 +265,23 @@ export function TradeDetailConsole({
                   Finale Version reserviert
                 </p>
                 <p className="mt-2 leading-7 text-[#c6ddde]">
-                  Besitzwechsel erfolgt erst nach zwei Bestätigungen.{" "}
+                  Besitzwechsel erfolgt erst nach zwei Bestätigungen
+                  {trade.requiresOrganizerApproval
+                    ? " und der Freigabe durch einen Organizer. "
+                    : ". "}
                   {viewerConfirmedAt
                     ? `Deine Bestätigung liegt seit ${new Date(viewerConfirmedAt).toLocaleString("de-DE")} vor.`
                     : "Deine Abschlussbestätigung fehlt noch."}
                 </p>
+                {trade.requiresOrganizerApproval &&
+                trade.proposerConfirmedAt &&
+                trade.responderConfirmedAt &&
+                !trade.approvedAt ? (
+                  <p className="mt-3 rounded-[12px] border border-[rgba(214,171,92,0.28)] bg-[rgba(214,171,92,0.1)] px-3 py-2 text-sm text-[#f1d8aa]">
+                    Beide Duellanten haben bestätigt. Der Tausch bleibt sicher
+                    reserviert, bis ein Owner oder Organizer ihn freigibt.
+                  </p>
+                ) : null}
                 {trade.reservationExpiresAt ? (
                   <p className="mt-2 text-xs text-[#a8cfd1]">
                     Reserviert bis{" "}
@@ -411,6 +438,11 @@ export function TradeDetailConsole({
                     placeholder="Was änderst du an dieser Version?"
                   />
                 </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label><span className="ui-kicker">Du bietest Credits</span><input className="ui-input mt-2" type="number" min="0" step="1" value={counterOfferedCredits} onChange={(event) => setCounterOfferedCredits(event.target.value)} /></label>
+                  <label><span className="ui-kicker">Du verlangst Credits</span><input className="ui-input mt-2" type="number" min="0" step="1" value={counterRequestedCredits} onChange={(event) => setCounterRequestedCredits(event.target.value)} /></label>
+                </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-[18px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] px-4 py-4">

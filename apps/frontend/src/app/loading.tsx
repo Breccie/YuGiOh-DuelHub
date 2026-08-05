@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppShell } from "@/components/app-shell";
 import { AssetIcon } from "@/components/asset-icon";
 
 function SkeletonBar({
@@ -35,16 +35,9 @@ function LoadingMetric({
 
 export default function Loading() {
   return (
-    <div className="app-shell relative min-h-screen overflow-x-hidden bg-[#04060a] text-[#f2e5d1]">
-      <div className="app-background" />
-
-      <div className="relative z-10 flex min-h-screen flex-col lg:block">
-        <AppSidebar />
-
-        <main className="app-main relative flex-1 overflow-hidden lg:ml-[176px]">
-          <div className="app-workspace relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-3 pb-20 pt-3 sm:px-4 lg:px-5 lg:pb-4">
-            <div className="app-topbar flex min-h-[52px] items-center justify-end rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(7,10,14,0.78)] px-2 py-1.5 backdrop-blur-xl sm:px-3">
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+    <AppShell
+      topbar={(
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
                 <LoadingMetric iconName="shield" label="Kampagne" />
                 <LoadingMetric iconName="book" label="Sammlung" />
                 <LoadingMetric iconName="users" label="Freunde" />
@@ -58,9 +51,9 @@ export default function Loading() {
                     <SkeletonBar className="mt-2 h-3 w-20" />
                   </div>
                 </div>
-              </div>
-            </div>
-
+        </div>
+      )}
+    >
             <section className="mt-5 grid flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_392px]">
               <div className="rounded-[24px] border border-[rgba(255,255,255,0.10)] bg-[linear-gradient(180deg,rgba(10,13,18,0.82),rgba(7,9,13,0.92))] p-5 shadow-[0_28px_56px_rgba(0,0,0,0.38)] backdrop-blur-xl">
                 <p className="text-[0.75rem] uppercase tracking-[0.24em] text-[#cb5c44]">
@@ -106,9 +99,6 @@ export default function Loading() {
                 </div>
               </aside>
             </section>
-          </div>
-        </main>
-      </div>
-    </div>
+    </AppShell>
   );
 }

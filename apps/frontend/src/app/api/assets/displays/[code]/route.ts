@@ -24,7 +24,7 @@ function createFallbackResponse(
   error?: unknown,
 ) {
   const headers: Record<string, string> = {
-    Location: new URL("/app-assets/fallback-display.png", request.url).toString(),
+    Location: new URL("/app-assets/fallback-display.webp", request.url).toString(),
     "Cache-Control":
       reason === "FALLBACK"
         ? "public, max-age=3600, stale-while-revalidate=86400"
