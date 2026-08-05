@@ -278,25 +278,25 @@ async function mirrorCatalogToApiWhenEmpty() {
 
       const apiSet = await apiPrisma.cardSet.upsert({
         where: {
-          code: sourceSet.code,
+          code: "E2E-CORE",
         },
         update: {
-          name: sourceSet.name,
+          name: "E2E Core Booster",
           releaseDate: sourceSet.releaseDate,
           region: sourceSet.region,
-          productType: sourceSet.productType,
+          productType: "CORE_BOOSTER",
           isOpenable: true,
           packSize: Math.max(1, Math.min(sourceSet.packSize, sourceSet.setCards.length)),
           imageUrl: sourceSet.imageUrl,
           notes: sourceSet.notes,
         },
         create: {
-          id: sourceSet.id,
-          code: sourceSet.code,
-          name: sourceSet.name,
+          id: `e2e-${sourceSet.id}`,
+          code: "E2E-CORE",
+          name: "E2E Core Booster",
           releaseDate: sourceSet.releaseDate,
           region: sourceSet.region,
-          productType: sourceSet.productType,
+          productType: "CORE_BOOSTER",
           isOpenable: true,
           packSize: Math.max(1, Math.min(sourceSet.packSize, sourceSet.setCards.length)),
           imageUrl: sourceSet.imageUrl,
@@ -366,7 +366,7 @@ async function mirrorCatalogToApiWhenEmpty() {
       }
 
       console.log(
-        `[e2e-online] Mirrored API catalog fixture: ${sourceSet.name} (${sourceSet.setCards.length} cards)`,
+        `[e2e-online] Mirrored API catalog fixture: E2E Core Booster (${sourceSet.setCards.length} cards)`,
       );
     });
   } finally {
