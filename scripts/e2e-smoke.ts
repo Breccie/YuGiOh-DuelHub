@@ -437,6 +437,19 @@ async function runBrowserSmoke(catalog: SeededCatalog) {
     await page.goto(`${baseUrl}/decks`);
     await assertVisible(page.getByText("Decks").first(), "decks page");
 
+    console.log("[e2e] Creating a deck through the library UI");
+    await page.getByRole("button", { name: "Neues Deck erstellen" }).click();
+    await page.getByRole("textbox", { name: "Deckname" }).fill("Smoke UI Deck");
+    await page.getByRole("button", { name: "Erstellen", exact: true }).click();
+    await assertVisible(
+      page.getByRole("heading", { name: "Smoke UI Deck" }),
+      "newly created deck heading",
+    );
+    await assertVisible(
+      page.getByText("Smoke UI Deck", { exact: true }).first(),
+      "newly created deck library item",
+    );
+
     console.log("[e2e] Verifying duel page");
     await page.goto(`${baseUrl}/duels`);
     await assertVisible(

@@ -104,6 +104,60 @@ export function DeckOverviewLoader() {
     void loadDeckDetail(deckId, false).catch(() => null);
   }, [loadDeckDetail]);
 
+  const handleDeckCreated = useCallback(async (deck: {
+    id: string;
+    name: string;
+    deckBoxKey: string;
+    deckBoxAssetId: string | null;
+    deckBoxImageUrl: string;
+  }) => {
+    const optimisticDeck = {
+      id: deck.id,
+      name: deck.name,
+      updatedAt: new Date().toISOString(),
+      mainCount: 0,
+      extraCount: 0,
+      sideCount: 0,
+      isLegal: false,
+      issueCount: 1,
+      missingCardCount: 0,
+      formatName: null,
+      banlistName: null,
+      deckBoxKey: deck.deckBoxKey,
+      deckBoxAssetId: deck.deckBoxAssetId,
+      deckBoxImageUrl: deck.deckBoxImageUrl,
+      previewImageUrl: null,
+      previewLabel: deck.name,
+    };
+
+    detailRequestRef.current += 1;
+    setPayload((current) => ({
+      ...current,
+      decks: [optimisticDeck, ...current.decks.filter((item) => item.id !== deck.id)],
+      selectedDeckId: deck.id,
+      activeDeck: null,
+    }));
+    router.replace(`/decks?deck=${encodeURIComponent(deck.id)}`, { scroll: false });
+
+    try {
+      const [library, detail] = await Promise.all([
+        syncClient.getDeckLibrary(),
+        syncClient.getDeckDetail(deck.id),
+      ]);
+      if (detail.activeDeck) {
+        deckDetailCache.set(deck.id, detail.activeDeck);
+      }
+      setPayload((current) => ({
+        ...current,
+        ...library,
+        selectedDeckId: deck.id,
+        activeDeck: detail.activeDeck,
+      }));
+    } catch (error) {
+      setLoadError(getApiErrorMessage(error, "Das neue Deck wurde erstellt, konnte aber noch nicht synchronisiert werden."));
+    }
+  }, [router]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -187,6 +241,7 @@ export function DeckOverviewLoader() {
         detailsLoading={detailsLoading}
         onSelectDeck={selectDeck}
         onPrefetchDeck={prefetchDeck}
+        onDeckCreated={handleDeckCreated}
       />
     </>
   );
