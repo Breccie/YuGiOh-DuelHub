@@ -7,7 +7,7 @@
     "dev": "cross-env APP_MODE=desktop-demo next dev apps/frontend",
     "frontend:dev": "cross-env APP_MODE=desktop-demo next dev apps/frontend",
     "frontend:online:dev": "cross-env APP_MODE=online-dev next dev apps/frontend",
-    "build": "next build apps/frontend",
+    "build": "next build apps/frontend --webpack",
     "start": "next start apps/frontend",
     "lint": "eslint apps packages electron prisma scripts",
     "typecheck": "tsc -p apps/frontend/tsconfig.json --noEmit && tsc -p packages/contracts/tsconfig.json --noEmit && tsc -p packages/domain/tsconfig.json --noEmit && tsc -p apps/api/tsconfig.json --noEmit",
