@@ -67,6 +67,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Validate bundled pack assets
+        run: npm run assets:validate:packs
+
       - name: Test Fastify API against PostgreSQL
         run: npm run test:api:integration
 
@@ -78,6 +81,18 @@ jobs:
 
       - name: Seed browser-smoke catalog
         run: npm run db:seed:demo
+
+      - name: Enforce Lighthouse accessibility score
+        timeout-minutes: 12
+        run: npm run test:lighthouse:a11y
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-accessibility
+          path: artifacts/lighthouse
+          if-no-files-found: warn
 
       - name: Test local browser flows
         timeout-minutes: 8

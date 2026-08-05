@@ -80,6 +80,11 @@ Nach dem Turnierabschluss berechnet Duel Hub die Rangliste und verteilt die eing
 
 Duel Hub ist als Online-Version für private Kampagnen und Freundesgruppen nutzbar. Packs, Sammlungen, Binder, Deckbau, Bannlisten, Export, Freunde, Trades und Turnierorganisation sind miteinander verbunden und kampagnengebunden.
 
+Da die API im Render-Free-Tarif betrieben wird, kann der erste Aufruf nach
+einer Ruhephase ungefähr eine Minute benötigen. Die App zeigt in diesem Fall
+einen Startstatus und setzt Login beziehungsweise Ansicht automatisch fort,
+statt einen technischen Timeoutfehler anzuzeigen.
+
 Fehler oder Verbesserungsvorschläge können über die [GitHub-Issues](https://github.com/Breccie/YuGiOh-DuelHub/issues) gemeldet werden.
 
 ## Hinweis

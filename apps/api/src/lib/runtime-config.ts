@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 const appModes = ["desktop-demo", "online-dev", "production"] as const;
 type AppMode = (typeof appModes)[number];
 
@@ -10,15 +13,40 @@ export type ApiBuildMetadata = {
   region: string;
 };
 
+function readGeneratedBuildMetadata() {
+  try {
+    return JSON.parse(
+      readFileSync(resolve(process.cwd(), "apps/api/.runtime-build-metadata.json"), "utf8"),
+    ) as Partial<ApiBuildMetadata>;
+  } catch {
+    return {};
+  }
+}
+
+function inferRenderRegion(env: NodeJS.ProcessEnv) {
+  return env.RENDER_SERVICE_NAME?.toLowerCase().includes("frankfurt")
+    ? "frankfurt"
+    : null;
+}
+
 export function getApiBuildMetadata(env: NodeJS.ProcessEnv = process.env): ApiBuildMetadata {
+  const generated = env === process.env ? readGeneratedBuildMetadata() : {};
+
   return {
     buildSha: env.BUILD_SHA?.trim()
       || env.RENDER_GIT_COMMIT?.trim()
       || env.VERCEL_GIT_COMMIT_SHA?.trim()
+      || generated.buildSha
       || "development",
-    buildTime: env.BUILD_TIME?.trim() || "unknown",
-    schemaVersion: env.SCHEMA_VERSION?.trim() || DATABASE_SCHEMA_VERSION,
-    region: env.RENDER_REGION?.trim() || env.REGION?.trim() || "local",
+    buildTime: env.BUILD_TIME?.trim() || generated.buildTime || "unknown",
+    schemaVersion:
+      env.SCHEMA_VERSION?.trim() || generated.schemaVersion || DATABASE_SCHEMA_VERSION,
+    region:
+      env.RENDER_REGION?.trim()
+      || env.REGION?.trim()
+      || generated.region
+      || inferRenderRegion(env)
+      || "local",
   };
 }
 

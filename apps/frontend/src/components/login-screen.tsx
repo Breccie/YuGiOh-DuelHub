@@ -4,6 +4,7 @@ import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetIcon } from "@/components/asset-icon";
 import { clearAccountCaches } from "@/lib/account-cache";
+import { useApiWake } from "@/lib/use-api-wake";
 
 type RecentAccount = {
   id: string;
@@ -28,6 +29,7 @@ export function LoginScreen({
   const [rememberDevice, setRememberDevice] = useState(true);
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { phase: apiWakePhase, wake: wakeApi } = useApiWake();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,6 +37,14 @@ export function LoginScreen({
     setErrorMessage(null);
 
     try {
+      const apiReady = await wakeApi();
+
+      if (!apiReady) {
+        throw new Error(
+          "Der Server konnte noch nicht gestartet werden. Bitte versuche es gleich erneut.",
+        );
+      }
+
       const endpoint = mode === "LOGIN" ? "/api/auth/login" : "/api/auth/register";
       const payload =
         mode === "LOGIN"
@@ -237,6 +247,26 @@ export function LoginScreen({
                 <div className="rounded-[18px] border border-[rgba(204,97,78,0.22)] bg-[rgba(141,61,48,0.14)] px-4 py-3 text-sm text-[#ffd8cf]">
                   {errorMessage}
                 </div>
+              ) : null}
+
+              {apiWakePhase === "WAKING" ? (
+                <div
+                  role="status"
+                  className="rounded-[18px] border border-[rgba(208,170,110,0.2)] bg-[rgba(208,170,110,0.08)] px-4 py-3 text-sm text-[#f0dcc0]"
+                >
+                  Server wird gestartet. Im kostenlosen Betrieb kann der erste Aufruf
+                  bis zu etwa einer Minute dauern.
+                </div>
+              ) : null}
+
+              {apiWakePhase === "UNAVAILABLE" ? (
+                <button
+                  type="button"
+                  className="ui-button-secondary w-full"
+                  onClick={() => void wakeApi()}
+                >
+                  Server erneut starten
+                </button>
               ) : null}
 
               <button type="submit" className="ui-button-primary w-full" disabled={pending}>

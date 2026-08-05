@@ -114,7 +114,11 @@ export async function GET(
   try {
     const match = await resolvePackAsset(code, setName);
 
-    if (match?.assetStatus === "APPROVED_REAL" && match.imageUrl.startsWith("/")) {
+    if (
+      (match?.assetStatus === "APPROVED_REAL" ||
+        match?.assetStatus === "APPROVED_GENERATED") &&
+      match.imageUrl.startsWith("/")
+    ) {
       return new Response(null, {
         status: 307,
         headers: {

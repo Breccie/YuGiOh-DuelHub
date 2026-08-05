@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-05T14:10:23.642Z",
+  "generatedAt": "2026-08-05T18:01:12.173Z",
   "referenceStyle": {
     "codes": [
       "LOB",
@@ -28,62 +28,6 @@
       "qualityScore": 79,
       "approvedImageUrl": "/pack-renders/LOB.png",
       "reviewNote": "Real pack render is approved for direct display."
-    },
-    {
-      "code": "VITEST-RUN-ISOLATION-1783466950258-SET",
-      "setName": "vitest-run-isolation-1783466950258 Booster",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
-    },
-    {
-      "code": "VITEST-RUN-ISOLATION-1783625481414-SET",
-      "setName": "vitest-run-isolation-1783625481414 Booster",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
-    },
-    {
-      "code": "VITEST-RUN-ISOLATION-1783674587225-SET",
-      "setName": "vitest-run-isolation-1783674587225 Booster",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
-    },
-    {
-      "code": "VITEST-BINDER-RESERVED-1783674587226-SET",
-      "setName": "vitest-binder-reserved-1783674587226 Test Booster",
-      "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
     },
     {
       "code": "MRD",
@@ -185,18 +129,18 @@
       "code": "LON",
       "setName": "Labyrinth of Nightmare",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/LON.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/LON.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 296,
-        "height": 499
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 62,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/LON.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "TP3",
@@ -216,35 +160,35 @@
       "code": "LOD",
       "setName": "Legacy of Darkness",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/LOD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/LOD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 281,
-        "height": 500
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 62,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/LOD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "PGD",
       "setName": "Pharaonic Guardian",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/PGD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/PGD.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 150,
-        "height": 270
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 42,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/PGD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "TP4",
@@ -264,35 +208,35 @@
       "code": "MFC",
       "setName": "Magician's Force",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/MFC.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/MFC.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 150,
-        "height": 270
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 42,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/MFC.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DCR",
       "setName": "Dark Crisis",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DCR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DCR.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 287,
-        "height": 499
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 62,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DCR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "IOC",
@@ -315,18 +259,18 @@
       "code": "AST",
       "setName": "Ancient Sanctuary",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/AST.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/AST.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 301,
-        "height": 500
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 63,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/AST.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "EP1",
@@ -360,18 +304,18 @@
       "code": "SOD",
       "setName": "Soul of the Duelist",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SOD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SOD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 275,
-        "height": 474
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 60,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SOD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DB1",
@@ -405,35 +349,35 @@
       "code": "RDS",
       "setName": "Rise of Destiny",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/RDS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/RDS.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/RDS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "FET",
       "setName": "Flaming Eternity",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/FET.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/FET.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/FET.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DR1",
@@ -453,18 +397,18 @@
       "code": "TLM",
       "setName": "The Lost Millennium",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/TLM.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/TLM.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 101,
-        "height": 174
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 39,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/TLM.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "TP6",
@@ -498,18 +442,18 @@
       "code": "CRV",
       "setName": "Cybernetic Revolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/CRV.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/CRV.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/CRV.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DR2",
@@ -543,18 +487,18 @@
       "code": "EEN",
       "setName": "Elemental Energy",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/EEN.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/EEN.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/EEN.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DP2",
@@ -588,18 +532,18 @@
       "code": "SOI",
       "setName": "Shadow of Infinity",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/SOI.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/SOI.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/SOI.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "TP8",
@@ -619,35 +563,35 @@
       "code": "EOJ",
       "setName": "Enemy of Justice",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/EOJ.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/EOJ.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/EOJ.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "POTD",
       "setName": "Power of the Duelist",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/POTD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/POTD.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/POTD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "CP01",
@@ -667,18 +611,18 @@
       "code": "CDIP",
       "setName": "Cyberdark Impact",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/CDIP.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/CDIP.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/CDIP.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DR3",
@@ -740,18 +684,18 @@
       "code": "STON",
       "setName": "Strike of Neos",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/STON.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/STON.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/STON.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DP04",
@@ -785,18 +729,18 @@
       "code": "FOTB",
       "setName": "Force of the Breaker",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/FOTB.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/FOTB.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/FOTB.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "PP01",
@@ -816,18 +760,18 @@
       "code": "TAEV",
       "setName": "Tactical Evolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/TAEV.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/TAEV.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 283,
-        "height": 488
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 61,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/TAEV.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "CP04",
@@ -861,18 +805,18 @@
       "code": "GLAS",
       "setName": "Gladiator's Assault",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/GLAS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/GLAS.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/GLAS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "CP05",
@@ -920,18 +864,18 @@
       "code": "PTDN",
       "setName": "Phantom Darkness",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/PTDN.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/PTDN.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 279,
-        "height": 480
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 61,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/PTDN.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "CP06",
@@ -951,18 +895,18 @@
       "code": "LODT",
       "setName": "Light of Destruction",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/LODT.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/LODT.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 142,
-        "height": 245
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/LODT.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "RP01",
@@ -1024,35 +968,35 @@
       "code": "TDGS",
       "setName": "The Duelist Genesis",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/TDGS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/TDGS.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 307,
-        "height": 527
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/TDGS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "CSOC",
       "setName": "Crossroads of Chaos",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/CSOC.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/CSOC.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 310,
-        "height": 530
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/CSOC.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DLG1",
@@ -1114,18 +1058,18 @@
       "code": "CRMS",
       "setName": "Crimson Crisis",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/CRMS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/CRMS.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 245,
-        "height": 420
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 48,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/CRMS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DPYG",
@@ -1173,18 +1117,18 @@
       "code": "ANPR",
       "setName": "Ancient Prophecy",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/ANPR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/ANPR.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 284,
-        "height": 504
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 62,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/ANPR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "HA01",
@@ -1204,18 +1148,18 @@
       "code": "SOVR",
       "setName": "Stardust Overdrive",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SOVR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SOVR.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 258,
-        "height": 459
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 59,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SOVR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "TU02",
@@ -1263,18 +1207,18 @@
       "code": "ABPF",
       "setName": "Absolute Powerforce",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/ABPF.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/ABPF.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 398,
-        "height": 700
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 84,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/ABPF.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DPKB",
@@ -1294,18 +1238,18 @@
       "code": "TSHD",
       "setName": "The Shining Darkness",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/TSHD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/TSHD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 325,
-        "height": 580
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 67,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/TSHD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DT02",
@@ -1367,18 +1311,18 @@
       "code": "DREV",
       "setName": "Duelist Revolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/DREV.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/DREV.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 111,
-        "height": 198
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 39,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/DREV.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DT03",
@@ -1398,18 +1342,18 @@
       "code": "STBL",
       "setName": "Starstrike Blast",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/STBL.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/STBL.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 215,
-        "height": 397
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 46,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/STBL.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "TU04",
@@ -1471,18 +1415,18 @@
       "code": "STOR",
       "setName": "Storm of Ragnarok",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/STOR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/STOR.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 168,
-        "height": 308
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 43,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/STOR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DEM1",
@@ -1544,18 +1488,18 @@
       "code": "EXVC",
       "setName": "Extreme Victory",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/EXVC.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/EXVC.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 432,
-        "height": 795
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 91,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/EXVC.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DP11",
@@ -1617,35 +1561,35 @@
       "code": "GENF",
       "setName": "Generation Force",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/GENF.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/GENF.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 222,
-        "height": 406
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 47,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/GENF.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "PHSW",
       "setName": "Photon Shockwave",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/PHSW.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/PHSW.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 432,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 91,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/PHSW.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "HA05",
@@ -1679,18 +1623,18 @@
       "code": "ORCS",
       "setName": "Order of Chaos",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/ORCS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/ORCS.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 314,
-        "height": 580
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 66,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/ORCS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DT06",
@@ -1710,35 +1654,35 @@
       "code": "RYMP",
       "setName": "Ra Yellow Mega Pack",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/RYMP.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/RYMP.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 335,
-        "height": 599
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 68,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/RYMP.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "GAOV",
       "setName": "Galactic Overlord",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/GAOV.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/GAOV.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 400,
-        "height": 732
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 86,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/GAOV.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BP01",
@@ -1786,18 +1730,18 @@
       "code": "REDU",
       "setName": "Return of the Duelist",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/REDU.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/REDU.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 273,
-        "height": 501
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 61,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/REDU.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DT07",
@@ -1817,18 +1761,18 @@
       "code": "ABYR",
       "setName": "Abyss Rising",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/ABYR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/ABYR.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 350,
-        "height": 652
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 78,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/ABYR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "AP01",
@@ -1848,18 +1792,18 @@
       "code": "CBLZ",
       "setName": "Cosmo Blazer",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/CBLZ.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/CBLZ.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 400,
-        "height": 722
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 85,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/CBLZ.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SP13",
@@ -1907,18 +1851,18 @@
       "code": "LTGY",
       "setName": "Lord of the Tachyon Galaxy",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/LTGY.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/LTGY.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 250,
-        "height": 452
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 59,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/LTGY.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BP02",
@@ -1952,18 +1896,18 @@
       "code": "JOTL",
       "setName": "Judgment of the Light",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/JOTL.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/JOTL.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 303,
-        "height": 561
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 65,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/JOTL.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "AP03",
@@ -1983,69 +1927,69 @@
       "code": "SHSP",
       "setName": "Shadow Specters",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SHSP.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SHSP.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 436,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 92,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SHSP.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "WGRT",
       "setName": "War of the Giants Reinforcements",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/WGRT.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/WGRT.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 170,
-        "height": 306
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 43,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/WGRT.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BPW2",
       "setName": "War of the Giants: Round 2",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/BPW2.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/BPW2.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 714,
-        "height": 1280
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/BPW2.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "LVAL",
       "setName": "Legacy of the Valiant",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/LVAL.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/LVAL.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 435,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 92,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/LVAL.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "AP04",
@@ -2079,18 +2023,18 @@
       "code": "PGLD",
       "setName": "Premium Gold",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/PGLD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/PGLD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 440,
-        "height": 840
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 94,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/PGLD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DRLG",
@@ -2110,18 +2054,18 @@
       "code": "PRIO",
       "setName": "Primal Origin",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/PRIO.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/PRIO.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 222,
-        "height": 412
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 47,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/PRIO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "AP05",
@@ -2155,18 +2099,18 @@
       "code": "DUEA",
       "setName": "Duelist Alliance",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DUEA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DUEA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 295,
-        "height": 529
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 63,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DUEA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "MP14",
@@ -2186,35 +2130,35 @@
       "code": "NECH",
       "setName": "The New Challengers",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/NECH.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/NECH.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 267,
-        "height": 472
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 60,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/NECH.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "NKRT",
       "setName": "Noble Knights of the Round Table Box Set",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/NKRT.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/NKRT.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 316,
-        "height": 600
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 67,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/NKRT.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "AP06",
@@ -2234,18 +2178,18 @@
       "code": "SECE",
       "setName": "Secrets of Eternity",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/SECE.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/SECE.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 211,
-        "height": 374
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 46,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/SECE.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "THSF",
@@ -2265,18 +2209,18 @@
       "code": "PGL2",
       "setName": "Premium Gold: Return of the Bling",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/PGL2.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/PGL2.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 159,
-        "height": 306
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 42,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/PGL2.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "WSUP",
@@ -2296,18 +2240,18 @@
       "code": "CROS",
       "setName": "Crossed Souls",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/CROS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/CROS.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 452,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 93,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/CROS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "AP07",
@@ -2369,18 +2313,18 @@
       "code": "CORE",
       "setName": "Clash of Rebellions",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/CORE.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/CORE.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 200,
-        "height": 351
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 45,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/CORE.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "MP15",
@@ -2428,69 +2372,69 @@
       "code": "DOCS",
       "setName": "Dimension of Chaos",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DOCS.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DOCS.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 260,
-        "height": 458
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 59,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DOCS.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BOSH",
       "setName": "Breakers of Shadow",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/BOSH.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/BOSH.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 296,
-        "height": 532
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 63,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/BOSH.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "WIRA",
       "setName": "Wing Raiders",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/WIRA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/WIRA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 564,
-        "height": 1000
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/WIRA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "PGL3",
       "setName": "Premium Gold: Infinite Gold",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/PGL3.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/PGL3.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 404,
-        "height": 762
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 87,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/PGL3.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP01",
@@ -2510,35 +2454,35 @@
       "code": "MIL1",
       "setName": "Millennium Pack",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/MIL1.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/MIL1.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 836,
-        "height": 1484
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/MIL1.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SHVI",
       "setName": "Shining Victories",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SHVI.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SHVI.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 460,
-        "height": 820
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SHVI.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP02",
@@ -2572,18 +2516,18 @@
       "code": "TDIL",
       "setName": "The Dark Illusion",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/TDIL.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/TDIL.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 451,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 93,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/TDIL.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DRL3",
@@ -2631,18 +2575,18 @@
       "code": "INOV",
       "setName": "Invasion: Vengeance",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/INOV.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/INOV.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 448,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 93,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/INOV.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DESO",
@@ -2676,35 +2620,35 @@
       "code": "RATE",
       "setName": "Raging Tempest",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/RATE.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/RATE.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 239,
-        "height": 426
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 48,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/RATE.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "FUEN",
       "setName": "Fusion Enforcers",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/FUEN.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/FUEN.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 289,
-        "height": 510
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 62,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/FUEN.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SP17",
@@ -2724,18 +2668,18 @@
       "code": "DUSA",
       "setName": "Duelist Saga",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DUSA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DUSA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 318,
-        "height": 612
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 68,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DUSA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP04",
@@ -2755,18 +2699,18 @@
       "code": "MACR",
       "setName": "Maximum Crisis",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/MACR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/MACR.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 450,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 93,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/MACR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DPDG",
@@ -2786,18 +2730,18 @@
       "code": "PEVO",
       "setName": "Pendulum Evolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/PEVO.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/PEVO.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 241,
-        "height": 428
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 48,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/PEVO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BLLR",
@@ -2817,18 +2761,18 @@
       "code": "COTD",
       "setName": "Code of the Duelist",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/COTD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/COTD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 383,
-        "height": 675
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 82,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/COTD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP05",
@@ -2876,35 +2820,35 @@
       "code": "CIBR",
       "setName": "Circuit Break",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/CIBR.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/CIBR.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 481,
-        "height": 843
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/CIBR.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SPWA",
       "setName": "Spirit Warriors",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SPWA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SPWA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 481,
-        "height": 842
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SPWA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP06",
@@ -2924,18 +2868,18 @@
       "code": "EXFO",
       "setName": "Extreme Force",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/EXFO.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/EXFO.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 453,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 93,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/EXFO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "LED2",
@@ -2983,35 +2927,35 @@
       "code": "FLOD",
       "setName": "Flames of Destruction",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/FLOD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/FLOD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 447,
-        "height": 815
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 93,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/FLOD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "DASA",
       "setName": "Dark Saviors",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DASA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DASA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 689,
-        "height": 1280
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DASA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BLRR",
@@ -3048,18 +2992,18 @@
       "code": "SHVA",
       "setName": "Shadows in Valhalla",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SHVA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SHVA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 863,
-        "height": 1513
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SHVA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP08",
@@ -3183,18 +3127,18 @@
       "code": "INCH",
       "setName": "The Infinity Chasers",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/INCH.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/INCH.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 563,
-        "height": 1000
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/INCH.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "SBLS",
@@ -3405,18 +3349,18 @@
       "code": "MYFI",
       "setName": "Mystic Fighters",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/MYFI.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/MYFI.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 706,
-        "height": 1252
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/MYFI.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP12",
@@ -3481,18 +3425,18 @@
       "code": "SESL",
       "setName": "Secret Slayers",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/SESL.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/SESL.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 664,
-        "height": 1176
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/SESL.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "ETCO",
@@ -3664,18 +3608,18 @@
       "code": "GEIM",
       "setName": "Genesis Impact",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprog.com/pack/GEIM.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display. Seed only; quality is below the normalized Pack-Hero threshold.",
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/GEIM.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
       "dimensions": {
-        "width": 144,
-        "height": 253
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 41,
-      "approvedImageUrl": null,
-      "reviewNote": "Best real source is too low-resolution or off-style; use it only as generation/reference input."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/GEIM.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "LDS2",
@@ -3875,18 +3819,18 @@
       "code": "BACH",
       "setName": "Battle of Chaos",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/BACH.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/BACH.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 440,
-        "height": 800
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 92,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/BACH.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP18",
@@ -3948,18 +3892,18 @@
       "code": "DIFO",
       "setName": "Dimension Force",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DIFO.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DIFO.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 543,
-        "height": 952
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DIFO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP19",
@@ -4097,18 +4041,18 @@
       "code": "MAMA",
       "setName": "Magnificent Mavens",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/MAMA.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/MAMA.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 305,
-        "height": 533
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/MAMA.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BLCR",
@@ -4319,15 +4263,18 @@
       "code": "TBC1",
       "setName": "The Pot Collection",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprodeck.com/images/sets/TBC1.jpg",
-      "sourceName": "Seed image from imported set metadata",
-      "source": null,
-      "licenseNote": "Seed only; not approved for direct hero display.",
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/TBC1.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "dimensions": {
+        "width": 840,
+        "height": 1300
+      },
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/TBC1.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "STP6",
@@ -4406,18 +4353,18 @@
       "code": "VASM",
       "setName": "Valiant Smashers",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/VASM.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/VASM.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 509,
-        "height": 902
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/VASM.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "MZMI",
@@ -4482,15 +4429,18 @@
       "code": "KC01",
       "setName": "25th Anniversary Ultimate Kaiba Set",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": null,
-      "sourceName": null,
-      "source": null,
-      "licenseNote": null,
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/KC01.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "dimensions": {
+        "width": 840,
+        "height": 1300
+      },
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/KC01.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "LEDE",
@@ -4555,18 +4505,18 @@
       "code": "INFO",
       "setName": "The Infinite Forbidden",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/INFO.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/INFO.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 631,
-        "height": 1113
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 95,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/INFO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "ROTA",
@@ -4690,18 +4640,18 @@
       "code": "ALIN",
       "setName": "Alliance Insight",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/ALIN.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/ALIN.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 303,
-        "height": 549
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/ALIN.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP28",
@@ -4794,18 +4744,18 @@
       "code": "DOOD",
       "setName": "Doom of Dimensions",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/DOOD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/DOOD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 298,
-        "height": 545
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/DOOD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP29",
@@ -4825,35 +4775,35 @@
       "code": "PHRE",
       "setName": "Phantom Revenge",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/PHRE.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/PHRE.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 297,
-        "height": 545
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/PHRE.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BPRO",
       "setName": "Burst Protocol",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/BPRO.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/BPRO.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 303,
-        "height": 538
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/BPRO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "OP30",
@@ -4901,18 +4851,18 @@
       "code": "BLZD",
       "setName": "Blazing Dominion",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_NORMALIZE",
-      "sourceUrl": "https://images.ygoprog.com/pack/BLZD.jpg",
-      "sourceName": "YGO Prog Pack-CDN",
-      "source": "YGOPROG",
-      "licenseNote": "Third-party pack image CDN; use as real-image source and normalize before display.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "/pack-renders/normalized/BLZD.webp",
+      "sourceName": "Lokal normalisierter Pack-Render",
+      "source": "MANUAL",
+      "licenseNote": "Audited source normalized and bundled for stable app delivery.",
       "dimensions": {
-        "width": 298,
-        "height": 543
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 64,
-      "approvedImageUrl": null,
-      "reviewNote": "Real pack image exists but must be normalized before display."
+      "qualityScore": 100,
+      "approvedImageUrl": "/pack-renders/normalized/BLZD.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     },
     {
       "code": "BLGG",
@@ -4932,15 +4882,18 @@
       "code": "MAMO",
       "setName": "Magnificent Monsters",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "NEEDS_GENERATION",
-      "sourceUrl": "https://images.ygoprodeck.com/images/sets/MAMO.jpg",
-      "sourceName": "Seed image from imported set metadata",
-      "source": null,
-      "licenseNote": "Seed only; not approved for direct hero display.",
-      "dimensions": null,
-      "qualityScore": 0,
-      "approvedImageUrl": null,
-      "reviewNote": "No acceptable real pack image source found; prepare a generation job."
+      "assetStatus": "APPROVED_GENERATED",
+      "sourceUrl": "/pack-renders/generated/MAMO.webp",
+      "sourceName": "Original Duel Hub pack artwork",
+      "source": "GENERATED",
+      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "dimensions": {
+        "width": 840,
+        "height": 1300
+      },
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/generated/MAMO.webp",
+      "reviewNote": "Real pack render is approved for direct display."
     }
   ]
 }

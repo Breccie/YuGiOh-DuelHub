@@ -74,4 +74,14 @@ describe("API-Buildmetadaten", () => {
       region: "frankfurt",
     });
   });
+
+  it("erkennt den Frankfurter Render-Dienst am Servicenamen", () => {
+    expect(getApiBuildMetadata({
+      RENDER_GIT_COMMIT: "render-sha",
+      RENDER_SERVICE_NAME: "yugioh-duel-hub-api-frankfurt",
+    })).toMatchObject({
+      buildSha: "render-sha",
+      region: "frankfurt",
+    });
+  });
 });

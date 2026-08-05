@@ -11,6 +11,7 @@ export type PackAssetSource =
 
 export type PackAssetStatus =
   | "APPROVED_REAL"
+  | "APPROVED_GENERATED"
   | "NEEDS_NORMALIZE"
   | "NEEDS_GENERATION"
   | "SPECIAL_PRODUCT"

@@ -68,6 +68,11 @@ Pruefpunkt.
 Den Oregon-Service nach dem Umzug nicht löschen. Er bleibt ungenutzt als
 Rollback-Ziel erhalten.
 
+Der Render-Build führt `scripts/write-api-build-metadata.mjs` aus. Dadurch
+stammen Commit, Buildzeit, Schema und Region aus dem tatsächlich laufenden
+Artefakt. In Produktion sind `buildTime: "unknown"` und `region: "local"`
+Abnahmefehler.
+
 ## 3. Vercel Frontend deployen
 
 In Vercel setzen:
@@ -121,10 +126,41 @@ Render-Inaktivität separat dokumentieren und nicht in diese Warmmessung mischen
 Erst danach `API_BASE_URL` auch für Vercel Production umstellen und erneut
 deployen.
 
+Frontend und API müssen aus demselben Commit stammen. Der abschließende Check
+läuft mit:
+
+```bash
+FRONTEND_URL=https://<frontend> \
+API_URL=https://<api> \
+EXPECTED_SHA=<vollstaendiger-git-sha> \
+npm run release:verify
+```
+
+Der Check vergleicht beide Build-Header, Buildzeiten, Frankfurter Region,
+Schema und Datenbank-Readiness.
+
 ## Free-Tier-Hinweise
 
-- Render Free kann schlafen; erster Request nach Sleep kann langsam sein.
+- Render Free schläft nach Inaktivität. `/api/system/wake` wartet kontrolliert
+  auf `/ready`; Login und temporäre App-Fehler zeigen währenddessen
+  „Server wird gestartet“ und setzen danach automatisch fort.
+- GET-/HEAD-Abfragen dürfen nach erfolgreichem Wake-up einmal wiederholt werden.
+  Mutationen werden niemals ohne vorhandenen Idempotenzschlüssel wiederholt.
+- Es gibt absichtlich keinen künstlichen Keep-alive-Job.
 - Supabase Free hat Speicher- und Compute-Grenzen.
 - Fuer Prisma nicht die Transaction-pooler-URL auf Port `6543` als alleinige `API_DATABASE_URL` verwenden; Migrationen brauchen Session/direct semantics.
 - Vercel Free ist fuer Freundeskreis-Traffic geeignet, nicht fuer oeffentlichen Massendienst.
 - Kein Produktions-SLA: fuer den ersten Release ist das akzeptiert.
+
+## Qualitätsgates
+
+`npm run test:lighthouse:a11y` prüft Login, Kampagnen, Packs, Sammlung, Decks
+und Turniere bei Desktop- und Mobilbreite. Jede Ansicht muss im
+Accessibility-Bereich mindestens 95 Punkte erreichen. Berichte landen als
+CI-Artefakte unter `artifacts/lighthouse`.
+
+Der Packassetaudit verwendet den vollständigen lokalen Katalog, entfernt
+Testfixtures und muss für echte Standardbooster sowohl
+`NEEDS_GENERATION: 0` als auch `NEEDS_NORMALIZE: 0` melden. Fehlende Motive
+werden mit `npm run assets:compose:packs`, auditierte Quellen mit
+`npm run assets:materialize:packs` als lokale WebP-Assets erzeugt.
