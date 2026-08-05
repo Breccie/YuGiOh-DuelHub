@@ -79,6 +79,15 @@ async function stopChrome(chrome) {
   }
 }
 
+async function closeBrowser(browser) {
+  if (!browser) return;
+
+  await Promise.race([
+    browser.close().catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, 5_000)),
+  ]);
+}
+
 async function waitForServer() {
   const deadline = Date.now() + 60_000;
 
@@ -132,6 +141,7 @@ async function auditRoute(chromePort, route, viewport) {
 async function main() {
   let server = null;
   let chrome = null;
+  let browser = null;
 
   try {
     await rm(artifactDir, { recursive: true, force: true });
@@ -150,7 +160,7 @@ async function main() {
       await auditRoute(chrome.port, "/login", viewport);
     }
 
-    const browser = await chromium.connectOverCDP(`http://127.0.0.1:${chrome.port}`);
+    browser = await chromium.connectOverCDP(`http://127.0.0.1:${chrome.port}`);
     const context = browser.contexts()[0] ?? (await browser.newContext());
     const page = context.pages()[0] ?? (await context.newPage());
     await page.goto(`${baseUrl}/login`);
@@ -165,8 +175,8 @@ async function main() {
       }
     }
 
-    await browser.close();
   } finally {
+    await closeBrowser(browser);
     await stopChrome(chrome);
     await stopProcess(server);
   }
