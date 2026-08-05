@@ -35,6 +35,7 @@ function startServer() {
         DATABASE_URL: "file:./demo.db",
         NEXT_TELEMETRY_DISABLED: "1",
       },
+      detached: process.platform !== "win32",
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     },
@@ -50,6 +51,15 @@ async function stopProcess(child) {
       stdio: "ignore",
     });
     return;
+  }
+
+  if (child.pid) {
+    try {
+      process.kill(-child.pid, "SIGTERM");
+      return;
+    } catch {
+      // Falls die Prozessgruppe bereits weg ist, bleibt der direkte Fallback.
+    }
   }
 
   child.kill("SIGTERM");
