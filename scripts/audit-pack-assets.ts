@@ -12,6 +12,7 @@ type CardSetRow = {
 
 type AssetStatus =
   | "APPROVED_REAL"
+  | "APPROVED_GENERATED"
   | "NEEDS_NORMALIZE"
   | "NEEDS_GENERATION"
   | "SPECIAL_PRODUCT"
@@ -219,17 +220,49 @@ function isStandardBooster(set: CardSetRow) {
 
 function getLocalRenderCandidate(set: CardSetRow) {
   const code = normalizeCode(set.code);
-  const localPath = path.join(FRONTEND_PUBLIC_DIR, "pack-renders", `${code}.png`);
+  const generatedPath = path.join(
+    FRONTEND_PUBLIC_DIR,
+    "pack-renders",
+    "generated",
+    `${code}.webp`,
+  );
+  const normalizedPath = path.join(
+    FRONTEND_PUBLIC_DIR,
+    "pack-renders",
+    "normalized",
+    `${code}.webp`,
+  );
+  const approvedPath = path.join(FRONTEND_PUBLIC_DIR, "pack-renders", `${code}.png`);
+  const localPath = existsSync(generatedPath)
+    ? generatedPath
+    : existsSync(normalizedPath)
+      ? normalizedPath
+      : approvedPath;
 
   if (!existsSync(localPath)) {
     return null;
   }
 
   return {
-    source: "MANUAL" as const,
-    sourceName: "Lokaler freigegebener Pack-Render",
-    sourceUrl: `/pack-renders/${code}.png`,
-    licenseNote: "Bundled, already approved for the app reference style.",
+    source: (localPath === generatedPath ? "GENERATED" : "MANUAL") as AssetSource,
+    sourceName:
+      localPath === generatedPath
+        ? "Original Duel Hub pack artwork"
+        : localPath === normalizedPath
+          ? "Lokal normalisierter Pack-Render"
+        : "Lokaler freigegebener Pack-Render",
+    sourceUrl:
+      localPath === generatedPath
+        ? `/pack-renders/generated/${code}.webp`
+        : localPath === normalizedPath
+          ? `/pack-renders/normalized/${code}.webp`
+        : `/pack-renders/${code}.png`,
+    licenseNote:
+      localPath === generatedPath
+        ? "Original Duel Hub artwork generated for this project; no official packaging reproduction."
+        : localPath === normalizedPath
+          ? "Audited source normalized and bundled for stable app delivery."
+        : "Bundled, already approved for the app reference style.",
     localPath,
   };
 }
@@ -248,7 +281,7 @@ async function getLocalRenderMetadata(candidate: NonNullable<ReturnType<typeof g
     licenseNote: candidate.licenseNote,
     width: metadata.width,
     height: metadata.height,
-    contentType: "image/png",
+    contentType: candidate.localPath.endsWith(".webp") ? "image/webp" : "image/png",
     qualityScore: scoreCandidate(candidate.source, metadata.width, metadata.height),
   } satisfies Candidate;
 }
@@ -376,7 +409,11 @@ function chooseManifestEntry(set: CardSetRow, candidates: Candidate[]) {
 
   const localOrKonami = best.source === "MANUAL" || best.source === "KONAMI";
   const assetStatus: AssetStatus =
-    localOrKonami && best.qualityScore >= 70 ? "APPROVED_REAL" : "NEEDS_NORMALIZE";
+    best.source === "GENERATED"
+      ? "APPROVED_GENERATED"
+      : localOrKonami && best.qualityScore >= 70
+        ? "APPROVED_REAL"
+        : "NEEDS_NORMALIZE";
 
   return {
     code,
@@ -392,9 +429,12 @@ function chooseManifestEntry(set: CardSetRow, candidates: Candidate[]) {
       height: best.height,
     },
     qualityScore: best.qualityScore,
-    approvedImageUrl: assetStatus === "APPROVED_REAL" ? best.sourceUrl : null,
+    approvedImageUrl:
+      assetStatus === "APPROVED_REAL" || assetStatus === "APPROVED_GENERATED"
+        ? best.sourceUrl
+        : null,
     reviewNote:
-      assetStatus === "APPROVED_REAL"
+      assetStatus === "APPROVED_REAL" || assetStatus === "APPROVED_GENERATED"
         ? "Real pack render is approved for direct display."
         : "Real pack image exists but must be normalized before display.",
   } satisfies ManifestEntry;
@@ -504,13 +544,16 @@ function createGenerationJobs(entries: ManifestEntry[]) {
 
 async function main() {
   loadEnvFile();
-  process.env.DATABASE_URL ??= "file:./prisma/dev.db";
+  process.env.DATABASE_URL =
+    process.env.PACK_ASSET_AUDIT_DATABASE_URL?.trim()
+    || process.env.DATABASE_URL
+    || "file:./dev.db";
 
   const { PrismaClient } = await import("@prisma/client");
   const prisma = new PrismaClient();
 
   try {
-    const sets = await prisma.cardSet.findMany({
+    const allSets = await prisma.cardSet.findMany({
       where: {
         isOpenable: true,
       },
@@ -525,6 +568,9 @@ async function main() {
         imageUrl: true,
       },
     });
+    const sets = allSets.filter(
+      (set) => !/^(?:VITEST|SMOKE|E2E|AUDIT)-/i.test(set.code),
+    );
     const officialAssets = await fetchOfficialPackAssets();
     const entries: ManifestEntry[] = [];
 
@@ -588,6 +634,7 @@ async function main() {
         },
         {
           APPROVED_REAL: 0,
+          APPROVED_GENERATED: 0,
           NEEDS_NORMALIZE: 0,
           NEEDS_GENERATION: 0,
           SPECIAL_PRODUCT: 0,

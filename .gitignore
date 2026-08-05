@@ -44,6 +44,8 @@ test-results/
 /.codex-*.db
 /.playwright-cli/
 /apps/api/dist/
+/apps/api/.runtime-build-metadata.json
+/artifacts/
 
 # debug
 npm-debug.log*

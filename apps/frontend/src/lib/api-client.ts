@@ -44,7 +44,22 @@ async function requestApiJson<TResponse>(
   input: RequestInfo | URL,
   init?: RequestInit,
 ) {
-  const response = await fetch(input, init);
+  let response = await fetch(input, init);
+  const method = (init?.method ?? "GET").toUpperCase();
+
+  if (
+    response.status === 503 &&
+    typeof window !== "undefined" &&
+    (method === "GET" || method === "HEAD") &&
+    !String(input).includes("/api/system/wake")
+  ) {
+    const { wakeApiService } = await import("@/lib/api-wake-client");
+    const wakeResult = await wakeApiService();
+
+    if (wakeResult.ready) {
+      response = await fetch(input, init);
+    }
+  }
 
   return readApiJsonResponse<TResponse>(response);
 }

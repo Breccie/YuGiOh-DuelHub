@@ -3,7 +3,7 @@ services:
     name: yugioh-duel-hub-api
     runtime: node
     plan: free
-    buildCommand: npm ci --include=dev && npm run db:generate
+    buildCommand: npm ci --include=dev && npm run db:generate && node scripts/write-api-build-metadata.mjs
     startCommand: npm run db:migrate && node ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts
     healthCheckPath: /ready
     envVars:
@@ -36,7 +36,7 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    buildCommand: npm ci --include=dev && npm run db:generate
+    buildCommand: npm ci --include=dev && npm run db:generate && node scripts/write-api-build-metadata.mjs
     startCommand: npm run db:migrate && node ./node_modules/tsx/dist/cli.mjs --tsconfig apps/api/tsconfig.json apps/api/src/server.ts
     healthCheckPath: /ready
     envVars:

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   apiDeleteJson,
+  apiGetJson,
   apiPatchJson,
   apiPost,
   apiPostJson,
@@ -10,6 +11,7 @@ import {
 describe("api-client", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("returns parsed json payloads for successful requests", async () => {
@@ -128,5 +130,45 @@ describe("api-client", () => {
         headers: undefined,
       }),
     );
+  });
+
+  it("weckt den Service und wiederholt ausschließlich fehlgeschlagene Lesezugriffe", async () => {
+    vi.stubGlobal("window", {});
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ error: "offline" }, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ ready: true }))
+      .mockResolvedValueOnce(Response.json({ decks: ["deck-1"] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(apiGetJson<{ decks: string[] }>("/api/decks")).resolves.toEqual({
+      decks: ["deck-1"],
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/system/wake",
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("wiederholt eine fehlgeschlagene Mutation nicht automatisch", async () => {
+    vi.stubGlobal("window", {});
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json(
+        {
+          error: "Service nicht erreichbar",
+          errorDetail: { code: "service_unavailable", message: "Service nicht erreichbar" },
+        },
+        { status: 503 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(apiPostJson("/api/pack-openings", { setId: "set-1" })).rejects.toMatchObject({
+      status: 503,
+      code: "service_unavailable",
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
