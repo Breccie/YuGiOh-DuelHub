@@ -28,6 +28,14 @@ describe("pack contents", () => {
       imageUrl: null,
       setCode: "TEST-EN001",
       collectorNumber: null,
+      kind: "MONSTER" as const,
+      attribute: "DARK",
+      monsterType: "Spellcaster / Effect",
+      levelRankLink: 4,
+      atk: 1800,
+      def: 1600,
+      oracleText: "A test effect.",
+      pendulumText: null,
     };
     const groups = groupPackContents([
       { ...base, printingId: "p1", name: "Zulu", rarity: "Common" },
@@ -40,5 +48,12 @@ describe("pack contents", () => {
       "Common",
     ]);
     expect(groups[0]?.cards.map((card) => card.name)).toEqual(["Alpha", "Beta"]);
+    expect(groups[0]?.cards[0]).toMatchObject({
+      kind: "MONSTER",
+      attribute: "DARK",
+      atk: 1800,
+      def: 1600,
+      oracleText: "A test effect.",
+    });
   });
 });

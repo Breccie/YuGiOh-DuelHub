@@ -1103,16 +1103,18 @@ export function PackOpeningStation({
             ) : null}
 
             <div className="relative z-10 w-full">
-              <PackOpeningActor
-                imageUrl={packRenderAssets.frontImageUrl}
-                label={activeSet.name}
-                code={activeSet.code}
-                phase={packPhase}
-                variantId={openingVariant.id}
-                speed={openingSpeed}
-                highlightTier={highestRarityTier}
-                onCutComplete={handlePackCutComplete}
-              />
+              <div className="relative z-20">
+                <PackOpeningActor
+                  imageUrl={packRenderAssets.frontImageUrl}
+                  label={activeSet.name}
+                  code={activeSet.code}
+                  phase={packPhase}
+                  variantId={openingVariant.id}
+                  speed={openingSpeed}
+                  highlightTier={highestRarityTier}
+                  onCutComplete={handlePackCutComplete}
+                />
+              </div>
 
               {(openingFlow.phase === "stacking" ||
                 openingFlow.phase === "dealing" ||

@@ -76,6 +76,14 @@ export async function buildPackContentsPayload(
             select: {
               name: true,
               externalCardId: true,
+              kind: true,
+              attribute: true,
+              monsterType: true,
+              levelRankLink: true,
+              atk: true,
+              def: true,
+              currentOracleText: true,
+              currentPendulumText: true,
             },
           },
         },
@@ -102,6 +110,14 @@ export async function buildPackContentsPayload(
         rarity: printing.rarity.trim() || "Common",
         setCode: printing.setCode,
         collectorNumber: printing.collectorNumber,
+        kind: printing.card.kind,
+        attribute: printing.card.attribute,
+        monsterType: printing.card.monsterType,
+        levelRankLink: printing.card.levelRankLink,
+        atk: printing.card.atk,
+        def: printing.card.def,
+        oracleText: printing.card.currentOracleText,
+        pendulumText: printing.card.currentPendulumText,
       }))
       .sort(
         (left, right) =>

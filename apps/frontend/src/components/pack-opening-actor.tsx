@@ -320,7 +320,7 @@ export function PackOpeningActor({
   const speedScale = 1 / Math.max(1, speed);
   const tearDurationMs = variant.tearDurationMs * speedScale;
   const packDurationMs = variant.packDurationMs * speedScale;
-  const packFadeMs = 680 * speedScale;
+  const packFadeMs = 680 * 1.15 * speedScale;
   const highlightProfile = rarityHighlightProfiles[highlightTier];
   const cutPercent = Math.round(cutPosition * 10000) / 100;
   const visibleTearPath = tearPath.length > 1 ? tearPath : buildDefaultTearPath(cutPercent);

@@ -405,6 +405,15 @@ function DeckCount({
   );
 }
 
+type PackContentCard = PackContentsResponse["cards"][number];
+
+function getCardKindLabel(kind: PackContentCard["kind"]) {
+  if (kind === "MONSTER") return "Monsterkarte";
+  if (kind === "SPELL") return "Zauberkarte";
+  if (kind === "TRAP") return "Fallenkarte";
+  return "Spielmarke";
+}
+
 function PackContentsDialog({
   pack,
   payload,
@@ -420,6 +429,7 @@ function PackContentsDialog({
   onClose: () => void;
   onRetry: () => void;
 }) {
+  const [selectedCard, setSelectedCard] = useState<PackContentCard | null>(null);
   const rarityGroups = useMemo(
     () => groupPackContents(payload?.cards ?? []),
     [payload],
@@ -428,13 +438,17 @@ function PackContentsDialog({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        if (selectedCard) {
+          setSelectedCard(null);
+        } else {
+          onClose();
+        }
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, selectedCard]);
 
   return (
     <div
@@ -449,7 +463,7 @@ function PackContentsDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pack-contents-title"
-        className="flex max-h-[min(90vh,920px)] w-full max-w-6xl flex-col overflow-hidden rounded-[20px] border border-[rgba(211,176,138,0.32)] bg-[rgba(7,10,15,0.97)] shadow-[0_32px_90px_rgba(0,0,0,0.72)]"
+        className="relative flex max-h-[min(90vh,920px)] w-full max-w-6xl flex-col overflow-hidden rounded-[20px] border border-[rgba(211,176,138,0.32)] bg-[rgba(7,10,15,0.97)] shadow-[0_32px_90px_rgba(0,0,0,0.72)]"
       >
         <header className="flex items-start justify-between gap-5 border-b border-[rgba(255,255,255,0.09)] px-5 py-4 sm:px-7 sm:py-5">
           <div>
@@ -525,7 +539,13 @@ function PackContentsDialog({
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
                     {group.cards.map((card) => (
-                      <article key={card.printingId} className="min-w-0">
+                      <button
+                        key={card.printingId}
+                        type="button"
+                        onClick={() => setSelectedCard(card)}
+                        className="group min-w-0 rounded-[10px] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3b08a]"
+                        aria-label={`Details zu ${card.name} anzeigen`}
+                      >
                         <div className="relative aspect-[59/86] overflow-hidden rounded-[9px] border border-[rgba(255,255,255,0.1)] bg-[#10151c]">
                           <CardArtwork
                             src={card.imageUrl}
@@ -533,6 +553,7 @@ function PackContentsDialog({
                             sizes="(max-width: 640px) 28vw, 128px"
                             fallbackLabel={card.name}
                           />
+                          <span className="pointer-events-none absolute inset-0 rounded-[9px] border border-transparent transition group-hover:border-[rgba(211,176,138,0.68)] group-focus-visible:border-[rgba(211,176,138,0.68)]" />
                         </div>
                         <p className="mt-2 line-clamp-2 text-xs leading-4 text-[#e5d4bf]">
                           {card.name}
@@ -540,7 +561,7 @@ function PackContentsDialog({
                         <p className="mt-0.5 truncate text-[0.65rem] uppercase tracking-[0.09em] text-[#887a69]">
                           {card.setCode}
                         </p>
-                      </article>
+                      </button>
                     ))}
                   </div>
                 </section>
@@ -548,6 +569,114 @@ function PackContentsDialog({
             </div>
           )}
         </div>
+
+        {selectedCard ? (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(2,4,7,0.76)] p-3 backdrop-blur-sm sm:p-7"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setSelectedCard(null);
+              }
+            }}
+          >
+            <aside
+              aria-label={`Kartendetails zu ${selectedCard.name}`}
+              className="grid max-h-full w-full max-w-4xl overflow-y-auto rounded-[18px] border border-[rgba(211,176,138,0.34)] bg-[rgba(9,12,17,0.98)] shadow-[0_30px_80px_rgba(0,0,0,0.68)] md:grid-cols-[minmax(220px,0.72fr)_minmax(0,1.28fr)]"
+            >
+              <div className="border-b border-[rgba(255,255,255,0.08)] p-5 md:border-b-0 md:border-r md:p-7">
+                <div className="relative mx-auto aspect-[59/86] w-full max-w-[270px] overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.12)] bg-[#10151c] shadow-[0_20px_44px_rgba(0,0,0,0.42)]">
+                  <CardArtwork
+                    src={selectedCard.imageUrl}
+                    alt={selectedCard.name}
+                    sizes="270px"
+                    fallbackLabel={selectedCard.name}
+                  />
+                </div>
+              </div>
+
+              <div className="min-w-0 p-5 sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[#cb5c44]">
+                      {selectedCard.rarity} · {selectedCard.setCode}
+                      {selectedCard.collectorNumber
+                        ? ` · ${selectedCard.collectorNumber}`
+                        : ""}
+                    </p>
+                    <h3 className="mt-2 font-display text-2xl leading-tight text-[#f1e1ce] sm:text-3xl">
+                      {selectedCard.name}
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCard(null)}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-2xl leading-none text-[#d8c7b0] transition hover:border-[rgba(255,255,255,0.24)] hover:text-white"
+                    aria-label="Kartendetails schließen"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {selectedCard.kind ? (
+                    <span className="rounded-full border border-[rgba(211,176,138,0.24)] bg-[rgba(211,176,138,0.07)] px-3 py-1 text-xs text-[#e1c6a5]">
+                      {getCardKindLabel(selectedCard.kind)}
+                    </span>
+                  ) : null}
+                  {selectedCard.attribute ? (
+                    <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[#c8b59d]">
+                      {selectedCard.attribute}
+                    </span>
+                  ) : null}
+                  {selectedCard.monsterType ? (
+                    <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[#c8b59d]">
+                      {selectedCard.monsterType}
+                    </span>
+                  ) : null}
+                  {typeof selectedCard.levelRankLink === "number" ? (
+                    <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-xs text-[#c8b59d]">
+                      Stufe/Rang/Link {selectedCard.levelRankLink}
+                    </span>
+                  ) : null}
+                </div>
+
+                {typeof selectedCard.atk === "number" ||
+                typeof selectedCard.def === "number" ? (
+                  <div className="mt-5 grid grid-cols-2 gap-3">
+                    <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                      <p className="text-[0.66rem] uppercase tracking-[0.15em] text-[#917f69]">ATK</p>
+                      <p className="mt-1 text-lg font-semibold text-[#f0ddc5]">
+                        {typeof selectedCard.atk === "number" ? selectedCard.atk : "–"}
+                      </p>
+                    </div>
+                    <div className="rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                      <p className="text-[0.66rem] uppercase tracking-[0.15em] text-[#917f69]">DEF</p>
+                      <p className="mt-1 text-lg font-semibold text-[#f0ddc5]">
+                        {typeof selectedCard.def === "number" ? selectedCard.def : "–"}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedCard.pendulumText ? (
+                  <div className="mt-5 rounded-[12px] border border-[rgba(73,176,160,0.2)] bg-[rgba(35,105,95,0.1)] p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-[#79bdb2]">Pendeleffekt</p>
+                    <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#d5e5df]">
+                      {selectedCard.pendulumText}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="mt-5 rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-[#a9957b]">Kartentext</p>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#d8c7b1]">
+                    {selectedCard.oracleText || "Für diese Karte ist noch kein Kartentext hinterlegt."}
+                  </p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        ) : null}
       </section>
     </div>
   );
@@ -858,8 +987,6 @@ export function PackSelectionConsole({
                     imageSrc={heroPackImage}
                     label={selectedSet.name}
                     code={selectedSet.code}
-                    onActivate={selectedSet.canBuy ? () => openPackSet(selectedSet.id) : undefined}
-                    pending={navigatingSetId === selectedSet.id}
                   />
                 </div>
 
