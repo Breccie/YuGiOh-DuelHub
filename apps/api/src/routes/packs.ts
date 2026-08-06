@@ -4,6 +4,7 @@ import {
   openPackResponseSchema,
   openDisplayRequestSchema,
   openDisplayResponseSchema,
+  packContentsResponseSchema,
   packDashboardSnapshotSchema,
   packDetailResponseSchema,
   packSelectionResponseSchema,
@@ -12,6 +13,7 @@ import { DomainError } from "@ygo/domain";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { getPackDashboardSnapshot, openDisplay, openPack } from "@/lib/pack-openings";
+import { buildPackContentsPayload } from "@/lib/pack-contents";
 import { buildPackDetailPayload, buildPackSelectionPayload } from "@/lib/packs-data";
 import { getActiveRun } from "@/lib/run-service";
 import { requireViewerSession } from "../lib/auth";
@@ -97,6 +99,26 @@ const packsRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(201).send(openDisplayResponseSchema.parse(payload));
     } catch (error) {
       return sendApiError(reply, error, "Display konnte nicht geöffnet werden.");
+    }
+  });
+
+  app.get("/:setId/contents", async (request, reply) => {
+    try {
+      await requireViewerSession(request, getPrisma());
+      const { setId } = packParamsSchema.parse(request.params);
+      const payload = await buildPackContentsPayload(getSharedPrisma(), setId);
+
+      if (!payload) {
+        throw new DomainError({
+          code: "not_found",
+          message: "Dieses Pack existiert nicht.",
+          status: 404,
+        });
+      }
+
+      return reply.send(packContentsResponseSchema.parse(payload));
+    } catch (error) {
+      return sendApiError(reply, error, "Packinhalt konnte nicht geladen werden.");
     }
   });
 

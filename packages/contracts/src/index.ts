@@ -1153,6 +1153,26 @@ export const packSelectionResponseSchema = z.object({
 });
 export type PackSelectionResponse = z.infer<typeof packSelectionResponseSchema>;
 
+export const packContentsResponseSchema = z.object({
+  set: z.object({
+    id: z.string(),
+    code: z.string(),
+    name: z.string(),
+  }),
+  cards: z.array(
+    z.object({
+      printingId: z.string(),
+      cardId: z.string(),
+      name: z.string(),
+      imageUrl: z.string().nullable(),
+      rarity: z.string(),
+      setCode: z.string(),
+      collectorNumber: z.string().nullable(),
+    }),
+  ),
+});
+export type PackContentsResponse = z.infer<typeof packContentsResponseSchema>;
+
 export const packDetailResponseSchema = z.object({
   viewer: z.object({
     displayName: z.string(),
