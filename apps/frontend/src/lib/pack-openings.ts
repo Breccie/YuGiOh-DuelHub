@@ -841,15 +841,10 @@ export async function getPackDashboardSnapshot(
   const unlockBySetId = new Map(setUnlocks.map((unlock) => [unlock.setId, unlock]));
 
   const hydratedSets = catalogSets;
-  const latestUnlockedSetIndex = runId
-    ? hydratedSets.reduce((latestIndex, set, index) => {
-        return unlockBySetId.has(set.id) ? Math.max(latestIndex, index) : latestIndex;
-      }, -1)
-    : hydratedSets.length - 1;
-  const visibleSetLimit = Math.max(latestUnlockedSetIndex + 25, 32);
-  const displaySets = runId
-    ? hydratedSets.filter((set, index) => unlockBySetId.has(set.id) || index < visibleSetLimit)
-    : hydratedSets.slice(0, 64);
+  // The regular pack catalog is already restricted to openable progression
+  // boosters. Return the complete chronology so the selection does not stop
+  // at an arbitrary catalog index (previously the 32nd pack, SOI).
+  const displaySets = hydratedSets;
 
   return {
     viewer: {

@@ -428,6 +428,7 @@ export function PackSelectionConsole({
   const [currentSetId, setCurrentSetId] = useState(
     selectedSetId ?? timelineSets[0]?.id ?? sets[0]?.id ?? "",
   );
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
   const [isTimelineDragging, setIsTimelineDragging] = useState(false);
   const [navigatingSetId, setNavigatingSetId] = useState<string | null>(null);
   const timelineRowRef = useRef<HTMLDivElement | null>(null);
@@ -759,43 +760,58 @@ export function PackSelectionConsole({
                     Chronologische Reihe
                   </p>
                   <div className="flex items-center gap-2">
+                    {!isTimelineExpanded ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => scrollTimeline("left")}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#c9b79f] transition hover:border-[rgba(207,91,66,0.26)] hover:text-[#f2dfcb]"
+                          aria-label="Packreihe nach links scrollen"
+                        >
+                          <AssetIcon name="chevron-left" className="h-4 w-4 text-current" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollTimeline("right")}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#c9b79f] transition hover:border-[rgba(207,91,66,0.26)] hover:text-[#f2dfcb]"
+                          aria-label="Packreihe nach rechts scrollen"
+                        >
+                          <AssetIcon name="chevron-right" className="h-4 w-4 text-current" />
+                        </button>
+                      </>
+                    ) : null}
                     <button
                       type="button"
-                      onClick={() => scrollTimeline("left")}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#c9b79f] transition hover:border-[rgba(207,91,66,0.26)] hover:text-[#f2dfcb]"
-                      aria-label="Packreihe nach links scrollen"
-                    >
-                      <AssetIcon name="chevron-left" className="h-4 w-4 text-current" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollTimeline("right")}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#c9b79f] transition hover:border-[rgba(207,91,66,0.26)] hover:text-[#f2dfcb]"
-                      aria-label="Packreihe nach rechts scrollen"
-                    >
-                      <AssetIcon name="chevron-right" className="h-4 w-4 text-current" />
-                    </button>
-                    <Link
-                      href="/packs"
+                      onClick={() => setIsTimelineExpanded((current) => !current)}
+                      aria-expanded={isTimelineExpanded}
+                      aria-controls="pack-chronology"
                       className="ml-2 inline-flex items-center gap-2 text-sm uppercase tracking-[0.18em] text-[#b19b84] transition hover:text-[#f0ddc8]"
                     >
-                      <span>Alle anzeigen</span>
-                      <AssetIcon name="chevron-right" className="h-4 w-4 text-current" />
-                    </Link>
+                      <span>{isTimelineExpanded ? "Kompakt anzeigen" : "Alle anzeigen"}</span>
+                      <AssetIcon
+                        name={isTimelineExpanded ? "chevron-left" : "chevron-right"}
+                        className="h-4 w-4 text-current"
+                      />
+                    </button>
                   </div>
                 </div>
 
                 <div
+                  id="pack-chronology"
                   ref={timelineRowRef}
                   className={classes(
-                    "no-scrollbar mt-4 flex select-none gap-3 overflow-x-auto pb-3",
-                    isTimelineDragging ? "cursor-grabbing" : "cursor-grab",
+                    "mt-4 select-none gap-3 pb-3",
+                    isTimelineExpanded
+                      ? "grid max-h-[68vh] grid-cols-[repeat(auto-fill,minmax(112px,1fr))] overflow-y-auto pr-1"
+                      : "no-scrollbar flex overflow-x-auto",
+                    !isTimelineExpanded &&
+                      (isTimelineDragging ? "cursor-grabbing" : "cursor-grab"),
                   )}
                   onClickCapture={handleTimelineClickCapture}
-                  onPointerDown={handleTimelinePointerDown}
-                  onPointerMove={handleTimelinePointerMove}
-                  onPointerUp={finishTimelineDrag}
-                  onPointerCancel={finishTimelineDrag}
+                  onPointerDown={isTimelineExpanded ? undefined : handleTimelinePointerDown}
+                  onPointerMove={isTimelineExpanded ? undefined : handleTimelinePointerMove}
+                  onPointerUp={isTimelineExpanded ? undefined : finishTimelineDrag}
+                  onPointerCancel={isTimelineExpanded ? undefined : finishTimelineDrag}
                   style={{ touchAction: "pan-y" }}
                 >
                   {timelineSets.map((set) => {
@@ -825,13 +841,19 @@ export function PackSelectionConsole({
                         }
                         aria-busy={navigatingSetId === set.id}
                         className={classes(
-                          "group relative shrink-0 rounded-[16px] border p-2 transition",
+                          "group relative rounded-[16px] border p-2 transition",
+                          isTimelineExpanded ? "min-w-0" : "shrink-0",
                           selected
                             ? "border-[rgba(207,91,66,0.48)] bg-[rgba(207,91,66,0.08)] shadow-[0_0_0_1px_rgba(207,91,66,0.16)]"
                             : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.16)]",
                         )}
                       >
-                        <div className="relative flex h-[150px] w-[98px] items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2">
+                        <div
+                          className={classes(
+                            "relative flex h-[150px] items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2",
+                            isTimelineExpanded ? "w-full" : "w-[98px]",
+                          )}
+                        >
                           {timelineImage ? (
                           <Image
                               src={timelineImage}
@@ -849,6 +871,16 @@ export function PackSelectionConsole({
                             </div>
                           )}
                         </div>
+                        {isTimelineExpanded ? (
+                          <div className="mt-2 min-h-[44px] px-1 text-left">
+                            <strong className="block text-[0.68rem] uppercase tracking-[0.12em] text-[#dfc3a0]">
+                              {set.code}
+                            </strong>
+                            <span className="mt-0.5 line-clamp-2 block text-[0.68rem] leading-4 text-[#bca990]">
+                              {set.name}
+                            </span>
+                          </div>
+                        ) : null}
                         {!set.canBuy ? (
                           <span className="absolute left-3 top-3 rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(5,7,10,0.82)] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.12em] text-[#d7c7b1]">
                             {set.rewardOnly ? "Reward" : "Locked"}
@@ -861,7 +893,12 @@ export function PackSelectionConsole({
                               <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#cf5b42]" />
                             </div>
                             {set.canBuy ? (
-                              <span className="absolute inset-x-2 bottom-3 rounded-[4px] bg-[rgba(75,13,9,0.9)] px-1 py-1.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#fff0e1]">
+                              <span
+                                className={classes(
+                                  "absolute inset-x-2 rounded-[4px] bg-[rgba(75,13,9,0.9)] px-1 py-1.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#fff0e1]",
+                                  isTimelineExpanded ? "bottom-[58px]" : "bottom-3",
+                                )}
+                              >
                                 {navigatingSetId === set.id ? "Lädt..." : "Öffnen"}
                               </span>
                             ) : null}
