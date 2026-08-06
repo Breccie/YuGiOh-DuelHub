@@ -8,26 +8,49 @@ import {
   hasOfficialPackRender,
 } from "@/lib/pack-renders";
 
-const MVP_PACK_CODES = ["LOB", "MRD", "SRL", "PSV", "IOC"];
+const EARLY_CORE_PACK_RENDERS = {
+  LOB: "/pack-renders/LOB.png",
+  MRD: "/pack-renders/MRD.png",
+  MRL: "/pack-renders/normalized/MRL.webp",
+  SRL: "/pack-renders/SRL.png",
+  PSV: "/pack-renders/PSV.png",
+  IOC: "/pack-renders/IOC.png",
+} as const;
 const frontendPublicDir = path.join(process.cwd(), "apps", "frontend", "public");
 
 describe("MVP pack renders", () => {
   it("keeps the early core boosters approved and bundled locally", () => {
-    for (const code of MVP_PACK_CODES) {
+    for (const [code, renderUrl] of Object.entries(EARLY_CORE_PACK_RENDERS)) {
       const manifestEntry = getPackAssetManifestEntry(code);
       const heroImageUrl = getPreferredPackHeroImage(code, code, null);
 
       expect(hasOfficialPackRender(code)).toBe(true);
-      expect(heroImageUrl).toBe(`/pack-renders/${code}.png`);
+      expect(heroImageUrl).toBe(renderUrl);
       expect(manifestEntry).toMatchObject({
         code,
         assetStatus: "APPROVED_REAL",
-        approvedImageUrl: `/pack-renders/${code}.png`,
+        approvedImageUrl: renderUrl,
       });
       expect(
-        existsSync(path.join(frontendPublicDir, "pack-renders", `${code}.png`)),
+        existsSync(path.join(frontendPublicDir, ...renderUrl.split("/").filter(Boolean))),
       ).toBe(true);
     }
+  });
+
+  it("keeps Magic Ruler and Spell Ruler on distinct verified wrappers", () => {
+    const magicRuler = getPackAssetManifestEntry("MRL");
+    const spellRuler = getPackAssetManifestEntry("SRL");
+
+    expect(magicRuler).toMatchObject({
+      setName: "Magic Ruler",
+      approvedImageUrl: "/pack-renders/normalized/MRL.webp",
+    });
+    expect(magicRuler?.sourceUrl).not.toContain("SRL");
+    expect(spellRuler).toMatchObject({
+      setName: "Spell Ruler",
+      approvedImageUrl: "/pack-renders/SRL.png",
+    });
+    expect(magicRuler?.approvedImageUrl).not.toBe(spellRuler?.approvedImageUrl);
   });
 
   it("uses imported real images for special products without approved pack renders", () => {
