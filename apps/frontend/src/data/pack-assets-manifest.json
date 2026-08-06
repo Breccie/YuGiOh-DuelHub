@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-06T09:39:08.056Z",
+  "generatedAt": "2026-08-06T10:07:58.373Z",
   "referenceStyle": {
     "codes": [
       "LOB",
@@ -177,18 +177,18 @@
       "code": "PGD",
       "setName": "Pharaonic Guardian",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/PGD.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/PGD.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/PGD.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/PGD.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "TP4",
@@ -208,18 +208,18 @@
       "code": "MFC",
       "setName": "Magician's Force",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/MFC.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/MFC.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/MFC.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/MFC.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DCR",
@@ -349,35 +349,35 @@
       "code": "RDS",
       "setName": "Rise of Destiny",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/RDS.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/RDS.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/RDS.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/RDS.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "FET",
       "setName": "Flaming Eternity",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/FET.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/FET.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/FET.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/FET.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DR1",
@@ -397,18 +397,18 @@
       "code": "TLM",
       "setName": "The Lost Millennium",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/TLM.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/TLM.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/TLM.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/TLM.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "TP6",
@@ -442,18 +442,18 @@
       "code": "CRV",
       "setName": "Cybernetic Revolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/CRV.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/CRV.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/CRV.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/CRV.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DR2",
@@ -487,18 +487,18 @@
       "code": "EEN",
       "setName": "Elemental Energy",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/EEN.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/EEN.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/EEN.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/EEN.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DP2",
@@ -532,18 +532,18 @@
       "code": "SOI",
       "setName": "Shadow of Infinity",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/SOI.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/SOI.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/SOI.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/SOI.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "TP8",
@@ -563,35 +563,35 @@
       "code": "EOJ",
       "setName": "Enemy of Justice",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/EOJ.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/EOJ.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/EOJ.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/EOJ.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "POTD",
       "setName": "Power of the Duelist",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/POTD.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/POTD.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/POTD.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/POTD.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "CP01",
@@ -611,18 +611,18 @@
       "code": "CDIP",
       "setName": "Cyberdark Impact",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/CDIP.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/CDIP.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/CDIP.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/CDIP.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DR3",
@@ -684,18 +684,18 @@
       "code": "STON",
       "setName": "Strike of Neos",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/STON.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/STON.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/STON.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/STON.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DP04",
@@ -729,18 +729,18 @@
       "code": "FOTB",
       "setName": "Force of the Breaker",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/FOTB.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/FOTB.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/FOTB.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/FOTB.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "PP01",
@@ -805,18 +805,18 @@
       "code": "GLAS",
       "setName": "Gladiator's Assault",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/GLAS.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/GLAS.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/GLAS.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/GLAS.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "CP05",
@@ -895,18 +895,18 @@
       "code": "LODT",
       "setName": "Light of Destruction",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/LODT.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/LODT.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/LODT.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/LODT.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "RP01",
@@ -1058,18 +1058,18 @@
       "code": "CRMS",
       "setName": "Crimson Crisis",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/CRMS.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/CRMS.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/CRMS.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/CRMS.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DPYG",
@@ -1311,18 +1311,18 @@
       "code": "DREV",
       "setName": "Duelist Revolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/DREV.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/DREV.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/DREV.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/DREV.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DT03",
@@ -1342,18 +1342,18 @@
       "code": "STBL",
       "setName": "Starstrike Blast",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/STBL.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/STBL.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/STBL.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/STBL.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "TU04",
@@ -1415,18 +1415,18 @@
       "code": "STOR",
       "setName": "Storm of Ragnarok",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/STOR.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/STOR.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/STOR.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/STOR.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "DEM1",
@@ -1561,18 +1561,18 @@
       "code": "GENF",
       "setName": "Generation Force",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/GENF.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/GENF.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/GENF.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/GENF.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "PHSW",
@@ -1944,18 +1944,18 @@
       "code": "WGRT",
       "setName": "War of the Giants Reinforcements",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/WGRT.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/WGRT.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/WGRT.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/WGRT.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "BPW2",
@@ -2054,18 +2054,18 @@
       "code": "PRIO",
       "setName": "Primal Origin",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/PRIO.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/PRIO.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/PRIO.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/PRIO.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "AP05",
@@ -2178,18 +2178,18 @@
       "code": "SECE",
       "setName": "Secrets of Eternity",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/SECE.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/SECE.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/SECE.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/SECE.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "THSF",
@@ -2209,18 +2209,18 @@
       "code": "PGL2",
       "setName": "Premium Gold: Return of the Bling",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/PGL2.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/PGL2.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/PGL2.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/PGL2.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "WSUP",
@@ -2313,18 +2313,18 @@
       "code": "CORE",
       "setName": "Clash of Rebellions",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/CORE.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/CORE.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/CORE.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/CORE.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "MP15",
@@ -2620,18 +2620,18 @@
       "code": "RATE",
       "setName": "Raging Tempest",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/RATE.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/RATE.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/RATE.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/RATE.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "FUEN",
@@ -2730,18 +2730,18 @@
       "code": "PEVO",
       "setName": "Pendulum Evolution",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/PEVO.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/PEVO.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/PEVO.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/PEVO.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "BLLR",
@@ -3608,18 +3608,18 @@
       "code": "GEIM",
       "setName": "Genesis Impact",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/GEIM.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprog.com/pack/GEIM.jpg",
+      "sourceName": "Original sealed booster render",
+      "source": "YGOPROG",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/GEIM.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 90,
+      "approvedImageUrl": "/pack-renders/original/GEIM.webp",
+      "reviewNote": "Original sealed booster artwork normalized without redesign."
     },
     {
       "code": "LDS2",
@@ -4263,18 +4263,18 @@
       "code": "TBC1",
       "setName": "The Pot Collection",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/TBC1.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2023/01/tubo_EN-all.png",
+      "sourceName": "Konami official The Pot Collection product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/TBC1.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 88,
+      "approvedImageUrl": "/pack-renders/original/TBC1.webp",
+      "reviewNote": "Original product form retained; no fictional booster wrapper added."
     },
     {
       "code": "STP6",
@@ -4429,18 +4429,18 @@
       "code": "KC01",
       "setName": "25th Anniversary Ultimate Kaiba Set",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/KC01.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2023/04/25th-KaibaSet_01_550.jpg",
+      "sourceName": "Konami official Ultimate Kaiba Set product image",
+      "source": "KONAMI",
+      "licenseNote": "Official Konami product image, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/KC01.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 88,
+      "approvedImageUrl": "/pack-renders/original/KC01.webp",
+      "reviewNote": "Original product form retained; no fictional booster wrapper added."
     },
     {
       "code": "LEDE",
@@ -4882,18 +4882,18 @@
       "code": "MAMO",
       "setName": "Magnificent Monsters",
       "productType": "CORE_BOOSTER",
-      "assetStatus": "APPROVED_GENERATED",
-      "sourceUrl": "/pack-renders/generated/MAMO.webp",
-      "sourceName": "Original Duel Hub pack artwork",
-      "source": "GENERATED",
-      "licenseNote": "Original Duel Hub artwork generated for this project; no official packaging reproduction.",
+      "assetStatus": "APPROVED_REAL",
+      "sourceUrl": "https://images.ygoprodeck.com/images/sets/MAMO.jpg",
+      "sourceName": "Magnificent Monsters original product render",
+      "source": "YGOPRODECK",
+      "licenseNote": "Original product packaging reference, bundled for stable app display.",
       "dimensions": {
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 100,
-      "approvedImageUrl": "/pack-renders/generated/MAMO.webp",
-      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
+      "qualityScore": 88,
+      "approvedImageUrl": "/pack-renders/original/MAMO.webp",
+      "reviewNote": "Original product form retained; no fictional booster wrapper added."
     }
   ]
 }
