@@ -4,6 +4,7 @@ import { getPackAssetManifestEntry } from "@/lib/pack-asset-manifest";
 const OFFICIAL_PACK_RENDERS: Record<string, string> = {
   LOB: "/pack-renders/LOB.png",
   MRD: "/pack-renders/MRD.png",
+  MRL: "/pack-renders/normalized/MRL.webp",
   SRL: "/pack-renders/SRL.png",
   PSV: "/pack-renders/PSV.png",
   IOC: "/pack-renders/IOC.png",

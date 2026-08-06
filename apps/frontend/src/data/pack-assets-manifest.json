@@ -65,17 +65,17 @@
       "setName": "Magic Ruler",
       "productType": "CORE_BOOSTER",
       "assetStatus": "APPROVED_REAL",
-      "sourceUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2022/12/SRL__25th_550.png",
-      "sourceName": "Konami official product image",
-      "source": "KONAMI",
-      "licenseNote": "Official Konami product image.",
+      "sourceUrl": "https://www.destocktcg.fr/assets/uploads/products/magic-ruler-en-booster-mrl-en-1st-print-yu-gi-oh-664a26a1498f1.png",
+      "sourceName": "Original English Magic Ruler booster product photo",
+      "source": "MANUAL",
+      "licenseNote": "Bundled product photo of the original English Magic Ruler booster; source retained for audit.",
       "dimensions": {
-        "width": 550,
-        "height": 550
+        "width": 840,
+        "height": 1300
       },
-      "qualityScore": 70,
-      "approvedImageUrl": "https://www.yugioh-card.com/en/wp-content/uploads/2022/12/SRL__25th_550.png",
-      "reviewNote": "Real pack render is approved for direct display."
+      "qualityScore": 84,
+      "approvedImageUrl": "/pack-renders/normalized/MRL.webp",
+      "reviewNote": "Verified original Magic Ruler wrapper, normalized and bundled separately from Spell Ruler."
     },
     {
       "code": "SRL",
