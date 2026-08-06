@@ -7,6 +7,7 @@ import type { MouseEvent, PointerEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ClaimRewardResponse,
+  PackContentsResponse,
   PackOpeningSummaryDto,
   RunRewardGrantDto,
   RunRewardsResponse,
@@ -17,6 +18,7 @@ import { ConsoleGlobalStatusBar } from "@/components/console-shell-primitives";
 import { InteractiveBoosterPack } from "@/components/interactive-booster-pack";
 import { PackSectionNav } from "@/components/pack-section-nav";
 import { apiGetJson, apiPostJson, getApiErrorMessage } from "@/lib/api-client";
+import { groupPackContents } from "@/lib/pack-contents";
 import { getPreferredPackHeroImage } from "@/lib/pack-renders";
 
 type PackSelectionConsoleProps = {
@@ -403,6 +405,154 @@ function DeckCount({
   );
 }
 
+function PackContentsDialog({
+  pack,
+  payload,
+  loading,
+  error,
+  onClose,
+  onRetry,
+}: {
+  pack: PackSelectionConsoleProps["sets"][number];
+  payload: PackContentsResponse | null;
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+  onRetry: () => void;
+}) {
+  const rarityGroups = useMemo(
+    () => groupPackContents(payload?.cards ?? []),
+    [payload],
+  );
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-[rgba(2,4,7,0.78)] p-3 backdrop-blur-sm sm:p-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pack-contents-title"
+        className="flex max-h-[min(90vh,920px)] w-full max-w-6xl flex-col overflow-hidden rounded-[20px] border border-[rgba(211,176,138,0.32)] bg-[rgba(7,10,15,0.97)] shadow-[0_32px_90px_rgba(0,0,0,0.72)]"
+      >
+        <header className="flex items-start justify-between gap-5 border-b border-[rgba(255,255,255,0.09)] px-5 py-4 sm:px-7 sm:py-5">
+          <div>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-[#cb5c44]">
+              Packinhalt · {pack.code}
+            </p>
+            <h2
+              id="pack-contents-title"
+              className="mt-1 text-xl font-semibold text-[#f1e1ce] sm:text-2xl"
+            >
+              {pack.name}
+            </h2>
+            <p className="mt-1 text-sm text-[#ae9d88]">
+              {payload
+                ? `${formatNumber(payload.cards.length)} Drucke, nach Seltenheit geordnet`
+                : "Die Kartenliste wird geladen."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.04)] text-2xl leading-none text-[#d8c7b0] transition hover:border-[rgba(255,255,255,0.24)] hover:text-white"
+            aria-label="Packinhalt schließen"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+          {loading ? (
+            <div className="space-y-7" role="status" aria-label="Packinhalt wird geladen">
+              {[0, 1, 2].map((group) => (
+                <div key={group}>
+                  <div className="h-5 w-40 animate-pulse rounded bg-[rgba(255,255,255,0.08)]" />
+                  <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-8">
+                    {Array.from({ length: 8 }, (_, index) => (
+                      <div
+                        key={index}
+                        className="aspect-[59/86] animate-pulse rounded-[10px] bg-[rgba(255,255,255,0.06)]"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-[14px] border border-[rgba(207,91,66,0.35)] bg-[rgba(110,25,18,0.22)] p-5" role="alert">
+              <p className="text-sm text-[#f2c9bd]">{error}</p>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="mt-4 rounded-[10px] border border-[#b84a37] bg-[#8f2419] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#a72f22]"
+              >
+                Erneut laden
+              </button>
+            </div>
+          ) : rarityGroups.length === 0 ? (
+            <p className="rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] p-5 text-sm text-[#c8b59d]">
+              Für dieses Pack sind keine Karten hinterlegt.
+            </p>
+          ) : (
+            <div className="space-y-8">
+              {rarityGroups.map((group) => (
+                <section key={group.rarity}>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-[#e4c39c]">
+                      {group.rarity}
+                    </h3>
+                    <span className="rounded-full border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] px-2 py-0.5 text-xs text-[#aa9881]">
+                      {group.cards.length}
+                    </span>
+                    <div className="h-px flex-1 bg-[rgba(255,255,255,0.08)]" />
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8">
+                    {group.cards.map((card) => (
+                      <article key={card.printingId} className="min-w-0">
+                        <div className="relative aspect-[59/86] overflow-hidden rounded-[9px] border border-[rgba(255,255,255,0.1)] bg-[#10151c]">
+                          <CardArtwork
+                            src={card.imageUrl}
+                            alt={card.name}
+                            sizes="(max-width: 640px) 28vw, 128px"
+                            fallbackLabel={card.name}
+                          />
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-xs leading-4 text-[#e5d4bf]">
+                          {card.name}
+                        </p>
+                        <p className="mt-0.5 truncate text-[0.65rem] uppercase tracking-[0.09em] text-[#887a69]">
+                          {card.setCode}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function PackSelectionConsole({
   viewer,
   wallet,
@@ -425,12 +575,18 @@ export function PackSelectionConsole({
     return coreSets.length ? coreSets : orderedSets;
   }, [sets]);
 
-  const [currentSetId, setCurrentSetId] = useState(
-    selectedSetId ?? timelineSets[0]?.id ?? sets[0]?.id ?? "",
-  );
+  const currentSetId = selectedSetId ?? timelineSets[0]?.id ?? sets[0]?.id ?? "";
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
   const [isTimelineDragging, setIsTimelineDragging] = useState(false);
   const [navigatingSetId, setNavigatingSetId] = useState<string | null>(null);
+  const [contentsPack, setContentsPack] = useState<
+    PackSelectionConsoleProps["sets"][number] | null
+  >(null);
+  const [contentsPayload, setContentsPayload] = useState<PackContentsResponse | null>(null);
+  const [contentsLoading, setContentsLoading] = useState(false);
+  const [contentsError, setContentsError] = useState<string | null>(null);
+  const contentsCacheRef = useRef(new Map<string, PackContentsResponse>());
+  const contentsRequestRef = useRef(0);
   const timelineRowRef = useRef<HTMLDivElement | null>(null);
   const timelineDragRef = useRef<TimelineDragState>(emptyTimelineDragState);
   const timelineMomentumFrameRef = useRef<number | null>(null);
@@ -472,6 +628,56 @@ export function PackSelectionConsole({
 
     setNavigatingSetId(setId);
     router.push(`/packs/${setId}`);
+  }
+
+  async function loadPackContents(pack: PackSelectionConsoleProps["sets"][number]) {
+    const cached = contentsCacheRef.current.get(pack.id);
+    const requestId = ++contentsRequestRef.current;
+
+    setContentsPack(pack);
+    setContentsError(null);
+
+    if (cached) {
+      setContentsPayload(cached);
+      setContentsLoading(false);
+      return;
+    }
+
+    setContentsPayload(null);
+    setContentsLoading(true);
+
+    try {
+      const payload = await apiGetJson<PackContentsResponse>(
+        `/api/packs/${pack.id}/contents`,
+      );
+
+      if (requestId !== contentsRequestRef.current) {
+        return;
+      }
+
+      contentsCacheRef.current.set(pack.id, payload);
+      setContentsPayload(payload);
+    } catch (error) {
+      if (requestId !== contentsRequestRef.current) {
+        return;
+      }
+
+      setContentsError(
+        getApiErrorMessage(error, "Der Packinhalt konnte nicht geladen werden."),
+      );
+    } finally {
+      if (requestId === contentsRequestRef.current) {
+        setContentsLoading(false);
+      }
+    }
+  }
+
+  function closePackContents() {
+    contentsRequestRef.current += 1;
+    setContentsPack(null);
+    setContentsPayload(null);
+    setContentsError(null);
+    setContentsLoading(false);
   }
 
   function scrollTimeline(direction: "left" | "right") {
@@ -534,6 +740,10 @@ export function PackSelectionConsole({
 
   function handleTimelinePointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) {
+      return;
+    }
+
+    if ((event.target as HTMLElement).closest("[data-timeline-action]")) {
       return;
     }
 
@@ -823,29 +1033,15 @@ export function PackSelectionConsole({
                     );
 
                     return (
-                      <button
+                      <article
                         key={set.id}
-                        type="button"
-                        onClick={() => {
-                          if (selected && set.canBuy) {
-                            openPackSet(set.id);
-                            return;
-                          }
-
-                          setCurrentSetId(set.id);
-                        }}
-                        aria-label={
-                          selected && set.canBuy
-                            ? `${set.name} öffnen`
-                            : `${set.name} auswählen`
-                        }
-                        aria-busy={navigatingSetId === set.id}
+                        aria-label={set.name}
                         className={classes(
-                          "group relative rounded-[16px] border p-2 transition",
+                          "group relative rounded-[16px] border p-2",
                           isTimelineExpanded ? "min-w-0" : "shrink-0",
                           selected
                             ? "border-[rgba(207,91,66,0.48)] bg-[rgba(207,91,66,0.08)] shadow-[0_0_0_1px_rgba(207,91,66,0.16)]"
-                            : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] hover:border-[rgba(255,255,255,0.16)]",
+                            : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]",
                         )}
                       >
                         <div
@@ -881,6 +1077,20 @@ export function PackSelectionConsole({
                             </span>
                           </div>
                         ) : null}
+                        <button
+                          type="button"
+                          data-timeline-action
+                          onClick={() => void loadPackContents(set)}
+                          className={classes(
+                            "mt-2 flex w-full items-center justify-center rounded-[8px] border border-[rgba(211,176,138,0.28)] bg-[rgba(211,176,138,0.07)] px-2 font-semibold text-[#e6ceb0] transition hover:border-[rgba(211,176,138,0.52)] hover:bg-[rgba(211,176,138,0.13)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3b08a]",
+                            isTimelineExpanded
+                              ? "min-h-9 text-xs"
+                              : "min-h-8 text-[0.62rem] uppercase tracking-[0.08em]",
+                          )}
+                          aria-label={`Inhalt von ${set.name} ansehen`}
+                        >
+                          {isTimelineExpanded ? "Inhalt ansehen" : "Inhalt"}
+                        </button>
                         {!set.canBuy ? (
                           <span className="absolute left-3 top-3 rounded-full border border-[rgba(255,255,255,0.12)] bg-[rgba(5,7,10,0.82)] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.12em] text-[#d7c7b1]">
                             {set.rewardOnly ? "Reward" : "Locked"}
@@ -892,19 +1102,9 @@ export function PackSelectionConsole({
                             <div className="absolute inset-x-0 -bottom-2 flex justify-center">
                               <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent border-t-[#cf5b42]" />
                             </div>
-                            {set.canBuy ? (
-                              <span
-                                className={classes(
-                                  "absolute inset-x-2 rounded-[4px] bg-[rgba(75,13,9,0.9)] px-1 py-1.5 text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-[#fff0e1]",
-                                  isTimelineExpanded ? "bottom-[58px]" : "bottom-3",
-                                )}
-                              >
-                                {navigatingSetId === set.id ? "Lädt..." : "Öffnen"}
-                              </span>
-                            ) : null}
                           </>
                         ) : null}
-                      </button>
+                      </article>
                     );
                   })}
                 </div>
@@ -1041,6 +1241,16 @@ export function PackSelectionConsole({
                 </div>
               </Panel>
             </section>
+            {contentsPack ? (
+              <PackContentsDialog
+                pack={contentsPack}
+                payload={contentsPayload}
+                loading={contentsLoading}
+                error={contentsError}
+                onClose={closePackContents}
+                onRetry={() => void loadPackContents(contentsPack)}
+              />
+            ) : null}
     </AppShell>
   );
 }
