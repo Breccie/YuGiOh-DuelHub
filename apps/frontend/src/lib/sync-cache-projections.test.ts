@@ -197,6 +197,27 @@ describe("sync cache projections", () => {
     );
   });
 
+  it("keeps the complete chronological pack catalog beyond the former 32-pack limit", () => {
+    const cache = createCache();
+    const template = cache.bootstrap!.catalog.packSets[0]!;
+
+    cache.bootstrap!.catalog.packSets = Array.from({ length: 40 }, (_, index) => ({
+      ...template,
+      id: `set-${index + 1}`,
+      code: `SET${String(index + 1).padStart(2, "0")}`,
+      name: `Chronology Set ${index + 1}`,
+      releaseDate: new Date(Date.UTC(2002, 0, index + 1)).toISOString(),
+    }));
+
+    const payload = buildCachedPackSelectionPayload(cache);
+
+    expect(payload?.sets).toHaveLength(40);
+    expect(payload?.sets.at(-1)).toMatchObject({
+      id: "set-40",
+      name: "Chronology Set 40",
+    });
+  });
+
   it("returns null without cached pack catalog data", () => {
     const cache = createCache();
     cache.bootstrap = null;

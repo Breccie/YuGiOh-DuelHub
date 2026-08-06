@@ -298,13 +298,9 @@ export function buildCachedPackSelectionPayload(
     (left, right) =>
       new Date(left.releaseDate).getTime() - new Date(right.releaseDate).getTime(),
   );
-  const latestUnlockedSetIndex = sortedSets.reduce((latestIndex, set, index) => {
-    return unlockBySetId.has(set.id) ? Math.max(latestIndex, index) : latestIndex;
-  }, -1);
-  const visibleSetLimit = Math.max(latestUnlockedSetIndex + 25, 32);
-  const displaySets = sortedSets.filter(
-    (set, index) => unlockBySetId.has(set.id) || index < visibleSetLimit,
-  );
+  // Keep the cached view consistent with the authoritative pack endpoint: the
+  // full progression chronology remains selectable, including locked packs.
+  const displaySets = sortedSets;
   const sets = displaySets.map((set) => {
     const unlock = unlockBySetId.get(set.id) ?? null;
     const packPrice = unlock ? unlock.packPrice ?? defaultPackPrice : null;
