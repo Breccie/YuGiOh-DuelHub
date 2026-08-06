@@ -168,8 +168,7 @@ export function PackSelectionLoader() {
             className="fixed inset-x-4 bottom-24 z-[80] mx-auto max-w-lg rounded-[10px] border border-[rgba(88,163,169,0.3)] bg-[rgba(8,20,24,0.96)] px-4 py-3 text-center text-sm text-[#d5eeee] shadow-2xl backdrop-blur-xl lg:bottom-6"
             role="status"
           >
-            Der Pack-Katalog wird geladen. Ein schlafender Onlineserver kann beim
-            ersten Aufruf kurz anlaufen.
+            Der Pack-Katalog wird geladen. Einen Moment bitte.
           </div>
         ) : null}
       </div>

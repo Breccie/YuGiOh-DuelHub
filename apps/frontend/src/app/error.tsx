@@ -56,9 +56,9 @@ export default function AppError({
           </h1>
           <p className="mt-4 max-w-[42rem] text-sm leading-7 text-[#cdb79a]">
             {phase === "CHECKING" || phase === "WAKING"
-              ? "Im kostenlosen Betrieb kann der erste Aufruf bis zu etwa einer Minute dauern. Die Ansicht wird danach automatisch erneut geladen."
+              ? "Einen Moment bitte. Die Verbindung wird hergestellt und die Ansicht danach automatisch geladen."
               : serviceUnavailable
-              ? "Der kostenlose Server konnte noch nicht gestartet werden. Versuche es direkt erneut. Deine Daten und Eingaben bleiben erhalten."
+              ? "Der Online-Service antwortet noch nicht. Versuche es direkt erneut. Deine Daten und Eingaben bleiben erhalten."
               : "Die App hat den Fehler abgefangen. Du kannst es direkt nochmal versuchen; falls es bleibt, prüfen wir den betroffenen Bereich gezielt."}
           </p>
           <button

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-05T18:01:12.173Z",
+  "generatedAt": "2026-08-06T09:39:08.056Z",
   "referenceStyle": {
     "codes": [
       "LOB",
@@ -186,9 +186,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/PGD.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "TP4",
@@ -217,9 +217,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/MFC.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DCR",
@@ -358,9 +358,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/RDS.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "FET",
@@ -375,9 +375,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/FET.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DR1",
@@ -406,9 +406,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/TLM.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "TP6",
@@ -451,9 +451,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/CRV.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DR2",
@@ -496,9 +496,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/EEN.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DP2",
@@ -541,9 +541,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/SOI.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "TP8",
@@ -572,9 +572,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/EOJ.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "POTD",
@@ -589,9 +589,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/POTD.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "CP01",
@@ -620,9 +620,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/CDIP.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DR3",
@@ -693,9 +693,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/STON.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DP04",
@@ -738,9 +738,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/FOTB.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "PP01",
@@ -814,9 +814,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/GLAS.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "CP05",
@@ -904,9 +904,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/LODT.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "RP01",
@@ -1067,9 +1067,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/CRMS.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DPYG",
@@ -1320,9 +1320,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/DREV.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DT03",
@@ -1351,9 +1351,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/STBL.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "TU04",
@@ -1424,9 +1424,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/STOR.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "DEM1",
@@ -1570,9 +1570,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/GENF.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "PHSW",
@@ -1953,9 +1953,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/WGRT.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "BPW2",
@@ -2063,9 +2063,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/PRIO.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "AP05",
@@ -2187,9 +2187,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/SECE.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "THSF",
@@ -2218,9 +2218,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/PGL2.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "WSUP",
@@ -2322,9 +2322,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/CORE.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "MP15",
@@ -2629,9 +2629,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/RATE.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "FUEN",
@@ -2739,9 +2739,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/PEVO.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "BLLR",
@@ -3617,9 +3617,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/GEIM.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "LDS2",
@@ -4272,9 +4272,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/TBC1.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "STP6",
@@ -4438,9 +4438,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/KC01.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     },
     {
       "code": "LEDE",
@@ -4891,9 +4891,9 @@
         "width": 840,
         "height": 1300
       },
-      "qualityScore": 90,
+      "qualityScore": 100,
       "approvedImageUrl": "/pack-renders/generated/MAMO.webp",
-      "reviewNote": "Real pack render is approved for direct display."
+      "reviewNote": "Deterministically composed Duel Hub wrapper with original artwork."
     }
   ]
 }
