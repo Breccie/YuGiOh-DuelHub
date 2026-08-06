@@ -63,7 +63,11 @@ export function getPackAssetUrl(code: string | null, name: string | null) {
 
   // The pack endpoint returns a long-lived redirect. Bump this value whenever
   // bundled pack renders move so browsers do not reuse an obsolete location.
-  params.set("v", "original-pack-v9");
+  // v10 invalidates redirects and image bodies cached before every official
+  // booster was routed through the shared normalization policy. Keeping this
+  // value in the URL is intentional: browsers may retain successful 307s and
+  // image responses for a full day.
+  params.set("v", "original-pack-v10");
 
   if (normalizedName) {
     params.set("name", normalizedName);

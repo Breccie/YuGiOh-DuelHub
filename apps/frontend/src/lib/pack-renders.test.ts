@@ -50,7 +50,7 @@ describe("MVP pack renders", () => {
     );
 
     expect(heroImageUrl).toBe(
-      "/api/assets/packs/PGD?v=original-pack-v9&name=Pharaonic+Guardian",
+      "/api/assets/packs/PGD?v=original-pack-v10&name=Pharaonic+Guardian",
     );
   });
 
