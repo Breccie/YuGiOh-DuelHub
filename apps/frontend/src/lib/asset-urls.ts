@@ -61,6 +61,10 @@ export function getPackAssetUrl(code: string | null, name: string | null) {
   const params = new URLSearchParams();
   const normalizedName = name?.trim();
 
+  // The pack endpoint returns a long-lived redirect. Bump this value whenever
+  // bundled pack renders move so browsers do not reuse an obsolete location.
+  params.set("v", "original-pack-v9");
+
   if (normalizedName) {
     params.set("name", normalizedName);
   }
