@@ -3,6 +3,7 @@ import {
   normalizePackImageAsset,
   resolvePackAsset,
 } from "@/lib/pack-assets";
+import { shouldNormalizePackAsset } from "@/lib/pack-asset-render-policy";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -139,10 +140,7 @@ export async function GET(
 
     const headers = createPackAssetHeaders(match, resolved);
 
-    if (
-      match.assetStatus === "NEEDS_NORMALIZE" ||
-      match.assetStatus === "NEEDS_GENERATION"
-    ) {
+    if (shouldNormalizePackAsset(match)) {
       const normalizedAsset = await normalizePackImageAsset(resolved.asset);
 
       return createImageResponse(normalizedAsset, "image/png", {
