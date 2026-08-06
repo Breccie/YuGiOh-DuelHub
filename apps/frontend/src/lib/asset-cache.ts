@@ -9,6 +9,7 @@ const ALLOWED_REMOTE_HOSTS = new Set([
   "db.ygoprodeck.com",
   "tcgplayer-cdn.tcgplayer.com",
   "www.yugioh-card.com",
+  "img.yugioh-card.com",
   "static.wikia.nocookie.net",
   "images.ygoprog.com",
 ]);
