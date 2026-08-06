@@ -42,6 +42,18 @@ describe("MVP pack renders", () => {
     );
   });
 
+  it("versions resolver URLs so stale redirect caches cannot hide replaced pack art", () => {
+    const heroImageUrl = getPreferredPackHeroImage(
+      "PGD",
+      "Pharaonic Guardian",
+      null,
+    );
+
+    expect(heroImageUrl).toBe(
+      "/api/assets/packs/PGD?v=original-pack-v9&name=Pharaonic+Guardian",
+    );
+  });
+
   it("uses the bundled raster asset instead of a text-based pack-back placeholder", () => {
     const backImageUrl = getPreferredPackBackImage("UNLISTED");
 
