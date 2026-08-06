@@ -66,6 +66,36 @@ describe("asset cache limits", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("follows Konami pack-image redirects to the official image host", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: {
+            location:
+              "https://img.yugioh-card.com/en/wp-content/uploads/2020/09/CYHO_mock-foil_EN.png",
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array([1, 2, 3]), {
+          headers: { "content-type": "image/png" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const asset = await getCachedRemoteAsset(
+      "https://www.yugioh-card.com/en/wp-content/uploads/2020/09/CYHO_mock-foil_EN.png",
+    );
+
+    expect(asset.contentType).toBe("image/png");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "https://img.yugioh-card.com/en/wp-content/uploads/2020/09/CYHO_mock-foil_EN.png",
+    );
+  });
+
   it("serves allowed raster assets with sandboxing and sniffing protection", async () => {
     vi.stubGlobal(
       "fetch",
