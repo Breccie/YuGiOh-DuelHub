@@ -254,8 +254,7 @@ export function LoginScreen({
                   role="status"
                   className="rounded-[18px] border border-[rgba(208,170,110,0.2)] bg-[rgba(208,170,110,0.08)] px-4 py-3 text-sm text-[#f0dcc0]"
                 >
-                  Server wird gestartet. Im kostenlosen Betrieb kann der erste Aufruf
-                  bis zu etwa einer Minute dauern.
+                  Verbindung wird hergestellt. Einen Moment bitte.
                 </div>
               ) : null}
 
