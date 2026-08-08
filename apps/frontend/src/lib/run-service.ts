@@ -1298,11 +1298,43 @@ export async function ensureCampaignStartingAssets(
 ) {
   const run = await prisma.playGroupRun.findUnique({
     where: { id: options.runId },
-    include: { activeRuleVersion: { select: { id: true, config: true } } },
+    include: {
+      activeRuleVersion: { select: { id: true, config: true } },
+      setUnlocks: {
+        where: { note: "Initialer Kampagnen-Shop-Unlock." },
+        select: { setId: true },
+      },
+    },
   });
   const rules = parseStoredCampaignRules(run?.activeRuleVersion?.config);
-  if (!run || !rules) return;
+  if (!run) return;
   const sourceReferenceId = `CAMPAIGN_START:${options.runId}`;
+
+  const initialFreePackQuantity =
+    rules?.progression.freePacksPerSetUnlock ?? run.freePacksPerSetUnlock;
+  if (initialFreePackQuantity > 0) {
+    for (const unlock of run.setUnlocks) {
+      await prisma.rewardGrant.upsert({
+        where: {
+          id: `initial-free-packs:${options.runId}:${options.userId}:${unlock.setId}`,
+        },
+        create: {
+          id: `initial-free-packs:${options.runId}:${options.userId}:${unlock.setId}`,
+          runId: options.runId,
+          recipientId: options.userId,
+          grantedById: run.ownerId,
+          packSetId: unlock.setId,
+          packQuantity: initialFreePackQuantity,
+          status: "PENDING",
+          reason: `INITIAL_SET_FREE_PACKS | ${sourceReferenceId}`,
+          ruleVersionId: run.activeRuleVersion?.id ?? null,
+        },
+        update: {},
+      });
+    }
+  }
+
+  if (!rules) return;
 
   if (rules.progression.startingCardIds.length > 0) {
     const existing = await prisma.collectionEntry.count({

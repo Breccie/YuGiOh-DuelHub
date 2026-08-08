@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   chooseCampaignStartingPack,
   decideRunJoinRequest,
+  ensureCampaignStartingAssets,
   getCampaignStartingPackChoice,
   joinRunByInviteCode,
   listRunJoinRequests,
@@ -112,6 +113,34 @@ describe("campaign join approval", () => {
       await prisma.playGroupRun.update({
         where: { id: run.id },
         data: { activeRuleVersionId: version.id },
+      });
+      await prisma.runSetUnlock.create({
+        data: {
+          runId: run.id,
+          setId: startingSets[0]!.id,
+          note: "Initialer Kampagnen-Shop-Unlock.",
+        },
+      });
+      await ensureCampaignStartingAssets(prisma, {
+        runId: run.id,
+        userId: applicant.id,
+      });
+      await ensureCampaignStartingAssets(prisma, {
+        runId: run.id,
+        userId: applicant.id,
+      });
+      const initialFreePacks = await prisma.rewardGrant.findMany({
+        where: {
+          runId: run.id,
+          recipientId: applicant.id,
+          packSetId: startingSets[0]!.id,
+          reason: { startsWith: "INITIAL_SET_FREE_PACKS" },
+        },
+      });
+      expect(initialFreePacks).toHaveLength(1);
+      expect(initialFreePacks[0]).toMatchObject({
+        packQuantity: config.progression.freePacksPerSetUnlock,
+        status: "PENDING",
       });
 
       const choice = await getCampaignStartingPackChoice(prisma, {

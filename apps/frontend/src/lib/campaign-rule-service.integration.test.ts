@@ -200,4 +200,92 @@ describe("campaign rule activation", () => {
       if (userId) await prisma.user.deleteMany({ where: { id: userId } });
     }
   });
+
+  it("lets packs that stored the former default inherit a changed campaign price", async () => {
+    const tag = `vitest-rule-price-${Date.now()}`;
+    let userId: string | undefined;
+    let runId: string | undefined;
+    const setIds: string[] = [];
+
+    try {
+      const user = await prisma.user.create({
+        data: {
+          duelistId: tag.toUpperCase(),
+          email: `${tag}@example.test`,
+          passwordHash: "test-hash",
+          displayName: "Price Rule Tester",
+        },
+      });
+      userId = user.id;
+      const run = await prisma.playGroupRun.create({
+        data: {
+          ownerId: user.id,
+          name: `${tag} run`,
+          defaultPackPrice: 100,
+          defaultDisplaySize: 24,
+          memberships: { create: { userId: user.id, role: "OWNER" } },
+        },
+      });
+      runId = run.id;
+      const sets = await Promise.all(["INHERIT", "CUSTOM"].map((suffix) =>
+        prisma.cardSet.create({
+          data: {
+            code: `${tag}-${suffix}`,
+            name: `${tag} ${suffix}`,
+            releaseDate: new Date("2002-03-08T00:00:00.000Z"),
+            region: "TCG",
+            productType: "CORE_BOOSTER",
+            isOpenable: true,
+            packSize: 9,
+          },
+        }),
+      ));
+      setIds.push(...sets.map((set) => set.id));
+      await prisma.runSetUnlock.createMany({
+        data: [
+          { runId: run.id, setId: sets[0]!.id, packPrice: 100, displaySize: 24 },
+          { runId: run.id, setId: sets[1]!.id, packPrice: 175, displaySize: 24 },
+        ],
+      });
+      await ensureInitialCampaignRuleVersion(prisma, {
+        runId: run.id,
+        createdById: user.id,
+      });
+      const config = buildCampaignRuleConfig(run);
+      await createCampaignRuleVersion(prisma, {
+        runId: run.id,
+        viewerId: user.id,
+        preset: "CUSTOM",
+        reason: "Globalen Packpreis auf null setzen",
+        activateImmediately: true,
+        config: {
+          ...config,
+          economy: { ...config.economy, packPrice: 0, displaySize: 24 },
+        },
+      });
+
+      const [updatedRun, inheritedUnlock, customUnlock] = await Promise.all([
+        prisma.playGroupRun.findUniqueOrThrow({ where: { id: run.id } }),
+        prisma.runSetUnlock.findUniqueOrThrow({
+          where: { runId_setId: { runId: run.id, setId: sets[0]!.id } },
+        }),
+        prisma.runSetUnlock.findUniqueOrThrow({
+          where: { runId_setId: { runId: run.id, setId: sets[1]!.id } },
+        }),
+      ]);
+      expect(updatedRun.defaultPackPrice).toBe(0);
+      expect(inheritedUnlock.packPrice).toBeNull();
+      expect(inheritedUnlock.displaySize).toBeNull();
+      expect(customUnlock.packPrice).toBe(175);
+    } finally {
+      if (runId) {
+        await prisma.playGroupRun.updateMany({ where: { id: runId }, data: { activeRuleVersionId: null } });
+        await prisma.campaignRuleVersion.deleteMany({ where: { runId } });
+        await prisma.runSetUnlock.deleteMany({ where: { runId } });
+        await prisma.playGroupRun.deleteMany({ where: { id: runId } });
+      }
+      if (setIds.length > 0) await prisma.cardSet.deleteMany({ where: { id: { in: setIds } } });
+      if (userId) await prisma.user.deleteMany({ where: { id: userId } });
+    }
+  });
 });

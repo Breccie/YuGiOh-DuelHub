@@ -25,6 +25,7 @@ import {
 import { isStandardProgressionPack } from "@/lib/pack-product-classification";
 import {
   creditWallet,
+  ensureCampaignStartingAssets,
   getOrCreateWallet,
   requireRunMembership,
   serializeWallet,
@@ -1064,6 +1065,7 @@ export async function listRunRewardGrants(
     runId,
     userId: viewerId,
   });
+  await ensureCampaignStartingAssets(prisma, { runId, userId: viewerId });
 
   const rewards = await prisma.rewardGrant.findMany({
     where: {
@@ -1441,47 +1443,63 @@ export async function claimRewardPack(
       },
     });
 
-    for (let index = 0; index < grant.packQuantity; index += 1) {
+    const rewardOpenedAtBase = Date.now();
+    const rewardOpenings = Array.from({ length: grant.packQuantity }, (_, index) => {
+      const id = randomUUID();
       const randomSeed = randomUUID();
       const auditHash = createHash("sha1")
-        .update(`${options.viewerId}:${set.id}:${randomSeed}:${Date.now()}:reward:${grant.id}:${index}`)
+        .update(`${options.viewerId}:${set.id}:${randomSeed}:${rewardOpenedAtBase}:reward:${grant.id}:${index}`)
         .digest("hex");
-      const pulls = buildPackPulls(set);
-      const opening = await tx.packOpening.create({
-        data: {
-          userId: options.viewerId,
-          setId: set.id,
-          runId: options.runId,
-          batchId: batch.id,
-          randomSeed,
-          auditHash,
-          notes: `RewardGrant:${grant.id}`,
-          ruleVersionId,
-        },
-      });
+      return {
+        id,
+        randomSeed,
+        auditHash,
+        openedAt: new Date(rewardOpenedAtBase + index),
+        pulls: buildPackPulls(set),
+      };
+    });
 
-      await tx.packPull.createMany({
-        data: pulls.map((pull) => ({
+    await tx.packOpening.createMany({
+      data: rewardOpenings.map((opening) => ({
+        id: opening.id,
+        userId: options.viewerId,
+        setId: set.id,
+        runId: options.runId,
+        batchId: batch.id,
+        randomSeed: opening.randomSeed,
+        auditHash: opening.auditHash,
+        openedAt: opening.openedAt,
+        notes: `RewardGrant:${grant.id}`,
+        ruleVersionId,
+      })),
+    });
+    await tx.packPull.createMany({
+      data: rewardOpenings.flatMap((opening) =>
+        opening.pulls.map((pull) => ({
           openingId: opening.id,
           cardId: pull.cardId,
           setCardId: pull.setCardId,
           slotIndex: pull.slotIndex,
           rarity: pull.rarity,
         })),
-      });
-
-      await addPulledCardsToCollection(tx, {
-        userId: options.viewerId,
-        runId: options.runId,
-        pulls: pulls.map((pull) => ({
+      ),
+    });
+    await addPulledCardsToCollection(tx, {
+      userId: options.viewerId,
+      runId: options.runId,
+      pulls: rewardOpenings.flatMap((opening) =>
+        opening.pulls.map((pull) => ({
           cardId: pull.cardId,
           setCardId: pull.setCardId,
           sourceReferenceId: opening.id,
         })),
-      });
-    }
+      ),
+    });
 
     return batch.id;
+  }, {
+    maxWait: 10_000,
+    timeout: 60_000,
   });
 
   const [reward, batch] = await Promise.all([

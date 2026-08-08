@@ -102,6 +102,58 @@ function classes(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
 }
 
+type ExtendedCollectionSortMode =
+  | CollectionSortModeValue
+  | "NAME_DESC"
+  | "LEVEL_ASC"
+  | "LEVEL_DESC"
+  | "ATK_ASC"
+  | "ATK_DESC"
+  | "DEF_ASC"
+  | "DEF_DESC"
+  | "KIND_ASC"
+  | "MONSTER_TYPE_ASC"
+  | "ATTRIBUTE_ASC"
+  | "SET_CODE_ASC"
+  | "RARITY_ASC"
+  | "NEWEST_SET";
+
+const rarityPriority = [
+  "common",
+  "short print",
+  "rare",
+  "super rare",
+  "ultra rare",
+  "ultimate rare",
+  "secret rare",
+  "prismatic secret rare",
+  "collector's rare",
+  "collectors rare",
+  "ghost rare",
+  "starlight rare",
+  "quarter century secret rare",
+] as const;
+
+function getRarityPriority(rarity: string | null) {
+  if (!rarity) return -1;
+  const normalized = rarity.trim().toLocaleLowerCase("en");
+  const exactIndex = rarityPriority.indexOf(normalized as (typeof rarityPriority)[number]);
+  if (exactIndex >= 0) return exactIndex;
+  if (normalized.includes("quarter century")) return rarityPriority.length + 4;
+  if (normalized.includes("starlight")) return rarityPriority.length + 3;
+  if (normalized.includes("ghost")) return rarityPriority.length + 2;
+  if (normalized.includes("secret")) return rarityPriority.length + 1;
+  if (normalized.includes("ultra")) return 4;
+  if (normalized.includes("super")) return 3;
+  if (normalized.includes("rare")) return 2;
+  if (normalized.includes("common")) return 0;
+  return 1;
+}
+
+function getHighestRarityPriority(card: CollectionBinderConsoleProps["cards"][number]) {
+  return Math.max(-1, ...card.printings.map((printing) => getRarityPriority(printing.rarity)));
+}
+
 function formatGermanDateTime(value: string) {
   return new Intl.DateTimeFormat("de-DE", {
     day: "2-digit",
@@ -415,7 +467,7 @@ export function CollectionBinderConsole({
   }, []);
   const [collectionFilters, setCollectionFilters] = useState<CardCatalogFilters>(emptyCardCatalogFilters);
   const [collectionSort, setCollectionSort] =
-    useState<CollectionSortModeValue | "NAME_DESC" | "LEVEL_ASC" | "LEVEL_DESC" | "ATK_ASC" | "ATK_DESC" | "DEF_ASC" | "DEF_DESC" | "TYPE_ASC" | "ATTRIBUTE_ASC" | "NEWEST_SET">("MOST_COPIES");
+    useState<ExtendedCollectionSortMode>("MOST_COPIES");
   const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<CollectionBinderDto | null>(null);
@@ -445,7 +497,7 @@ export function CollectionBinderConsole({
         savedSort === "NEWEST_ACQUIRED" ||
         savedSort === "ALPHABETICAL" ||
         savedSort === "RARITY" ||
-        ["NAME_DESC", "LEVEL_ASC", "LEVEL_DESC", "ATK_ASC", "ATK_DESC", "DEF_ASC", "DEF_DESC", "TYPE_ASC", "ATTRIBUTE_ASC", "NEWEST_SET"].includes(savedSort ?? "")
+        ["NAME_DESC", "LEVEL_ASC", "LEVEL_DESC", "ATK_ASC", "ATK_DESC", "DEF_ASC", "DEF_DESC", "KIND_ASC", "MONSTER_TYPE_ASC", "ATTRIBUTE_ASC", "SET_CODE_ASC", "RARITY_ASC", "NEWEST_SET"].includes(savedSort ?? "")
       ) {
         setCollectionSort(savedSort as typeof collectionSort);
       }
@@ -516,15 +568,16 @@ export function CollectionBinderConsole({
         if (collectionSort === "LEVEL_ASC" || collectionSort === "LEVEL_DESC") return ((left.levelRankLink ?? -1) - (right.levelRankLink ?? -1)) * (collectionSort === "LEVEL_ASC" ? 1 : -1) || left.name.localeCompare(right.name, "de");
         if (collectionSort === "ATK_ASC" || collectionSort === "ATK_DESC") return ((left.atk ?? -1) - (right.atk ?? -1)) * (collectionSort === "ATK_ASC" ? 1 : -1) || left.name.localeCompare(right.name, "de");
         if (collectionSort === "DEF_ASC" || collectionSort === "DEF_DESC") return ((left.def ?? -1) - (right.def ?? -1)) * (collectionSort === "DEF_ASC" ? 1 : -1) || left.name.localeCompare(right.name, "de");
-        if (collectionSort === "TYPE_ASC") return `${left.kind}:${left.monsterType ?? ""}:${left.name}`.localeCompare(`${right.kind}:${right.monsterType ?? ""}:${right.name}`, "de");
+        if (collectionSort === "KIND_ASC") return `${left.kind}:${left.name}`.localeCompare(`${right.kind}:${right.name}`, "de");
+        if (collectionSort === "MONSTER_TYPE_ASC") return `${left.monsterType ?? "ZZZ"}:${left.name}`.localeCompare(`${right.monsterType ?? "ZZZ"}:${right.name}`, "de");
         if (collectionSort === "ATTRIBUTE_ASC") return `${left.attribute ?? "ZZZ"}:${left.name}`.localeCompare(`${right.attribute ?? "ZZZ"}:${right.name}`, "de");
+        if (collectionSort === "SET_CODE_ASC") return `${[...left.printings].map((printing) => printing.setCode ?? "ZZZ").sort()[0] ?? "ZZZ"}:${left.name}`.localeCompare(`${[...right.printings].map((printing) => printing.setCode ?? "ZZZ").sort()[0] ?? "ZZZ"}:${right.name}`, "de");
         if (collectionSort === "NEWEST_SET") return Math.max(...right.printings.map((printing) => printing.releaseDate ? new Date(printing.releaseDate).getTime() : 0)) - Math.max(...left.printings.map((printing) => printing.releaseDate ? new Date(printing.releaseDate).getTime() : 0)) || left.name.localeCompare(right.name, "de");
-        if (collectionSort === "RARITY") {
+        if (collectionSort === "RARITY" || collectionSort === "RARITY_ASC") {
+          const direction = collectionSort === "RARITY" ? -1 : 1;
           return (
-            (right.printings[0]?.rarity ?? "").localeCompare(
-              left.printings[0]?.rarity ?? "",
-              "de",
-            ) || left.name.localeCompare(right.name, "de")
+            (getHighestRarityPriority(left) - getHighestRarityPriority(right)) * direction
+            || left.name.localeCompare(right.name, "de")
           );
         }
         return (
@@ -954,14 +1007,17 @@ export function CollectionBinderConsole({
                   <option value="ATK_DESC">ATK absteigend</option>
                   <option value="DEF_ASC">DEF aufsteigend</option>
                   <option value="DEF_DESC">DEF absteigend</option>
-                  <option value="TYPE_ASC">Kartentyp</option>
+                  <option value="KIND_ASC">Kartentyp</option>
+                  <option value="MONSTER_TYPE_ASC">Monstertyp</option>
                   <option value="ATTRIBUTE_ASC">Eigenschaft</option>
+                  <option value="SET_CODE_ASC">Setcode</option>
                   <option value="NEWEST_SET">Neueste Sets</option>
-                  <option value="RARITY">{getCollectionSortLabel("RARITY")}</option>
+                  <option value="RARITY">Seltenheit · höchste zuerst</option>
+                  <option value="RARITY_ASC">Seltenheit · niedrigste zuerst</option>
                 </select>
               </div>
 
-              <div className="mt-4 grid max-h-[46rem] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8">
                 {filteredCollectionCards.map((card) => (
                   <article key={card.cardId} className="rounded-[8px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.025)] p-2">
                     <button

@@ -1,5 +1,7 @@
 import { DomainError } from "./errors";
 
+export const STANDARD_DISPLAY_SIZE = 24;
+
 export function calculateDisplayCost(options: {
   packPrice: number;
   displaySize: number;
@@ -38,7 +40,10 @@ export function normalizePackEconomy(options: {
   defaultDisplaySize: number;
 }): { packPrice: number; displaySize: number; displayCost: number } {
   const packPrice = Math.max(0, options.packPrice ?? options.defaultPackPrice);
-  const displaySize = Math.max(1, options.displaySize ?? options.defaultDisplaySize);
+  // Regular TCG booster displays always contain 24 packs. Keep the legacy
+  // inputs in the public shape for backwards compatibility, but do not let an
+  // old per-run override produce a mismatching quantity or price anymore.
+  const displaySize = STANDARD_DISPLAY_SIZE;
 
   return {
     packPrice,

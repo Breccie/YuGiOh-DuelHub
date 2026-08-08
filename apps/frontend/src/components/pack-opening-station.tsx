@@ -989,19 +989,28 @@ export function PackOpeningStation({
             <button
               type="button"
               onClick={() => {
+                if (isDisplaySequenceActive && !displaySequenceComplete) {
+                  handlePackCutComplete();
+                  return;
+                }
                 handleOpenPack();
               }}
               disabled={
                 !activeSet.canBuy ||
+                isSubmitting ||
                 openingFlow.requestStatus === "pending" ||
                 isFlowActive ||
                 isPending ||
-                (isDisplaySequenceActive && !displaySequenceComplete)
+                (isDisplaySequenceActive &&
+                  !displaySequenceComplete &&
+                  openingFlow.phase !== "idle")
               }
               className="ui-button-ember min-w-[12.5rem] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting || isPending
                 ? "Pack wird geöffnet..."
+                : isDisplaySequenceActive && !displaySequenceComplete
+                  ? "Pack direkt öffnen"
                 : `Booster öffnen (${packPriceLabel})`}
             </button>
 

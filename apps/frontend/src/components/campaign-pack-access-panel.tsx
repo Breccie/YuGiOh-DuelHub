@@ -125,9 +125,7 @@ export function CampaignPackAccessPanel({
           ? new Date(draft.availableUntil).toISOString()
           : null,
         price: draft.price === "" ? null : Number(draft.price),
-        displaySize: item.kind === "SET" && draft.displaySize !== ""
-          ? Number(draft.displaySize)
-          : null,
+        displaySize: null,
         rewardOnly: draft.rewardOnly,
         reason: draft.reason.trim(),
       });
@@ -217,8 +215,8 @@ export function CampaignPackAccessPanel({
                 </label>
                 {item.kind === "SET" ? (
                   <label>
-                    <span>Display</span>
-                    <input disabled={!canManage} className="ui-input" inputMode="numeric" value={draft.displaySize} onChange={(event) => updateDraft(key, { displaySize: event.target.value })} placeholder="Standard" />
+                    <span>Display (fest)</span>
+                    <input disabled className="ui-input" value="24 Packs" readOnly />
                   </label>
                 ) : null}
                 <label className="campaign-pack-checkbox">

@@ -35,4 +35,19 @@ describe("credit economy", () => {
       displayCost: 2400,
     });
   });
+
+  it("keeps regular displays at 24 packs regardless of legacy overrides", () => {
+    expect(
+      normalizePackEconomy({
+        packPrice: 75,
+        displaySize: 12,
+        defaultPackPrice: 100,
+        defaultDisplaySize: 36,
+      }),
+    ).toEqual({
+      packPrice: 75,
+      displaySize: 24,
+      displayCost: 1800,
+    });
+  });
 });

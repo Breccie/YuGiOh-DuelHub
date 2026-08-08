@@ -1282,7 +1282,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
 }
 
 .reveal-grid--tray {
-  --opening-card-width: clamp(11.34rem, 12.96vw, 12.735rem);
+  --opening-card-width: clamp(10.45rem, 11.92vw, 11.72rem);
   grid-template-columns: repeat(3, minmax(0, var(--opening-card-width)));
   justify-content: center;
   gap: 0.85rem;
@@ -1339,7 +1339,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   z-index: 12;
   top: 46%;
   left: 50%;
-  width: min(13.5rem, calc(100% - 1rem));
+  width: min(12.42rem, calc(100% - 1rem));
   aspect-ratio: 59 / 86;
   transform: translate(-50%, -24%);
   pointer-events: none;
@@ -2019,7 +2019,7 @@ html[data-nav-collapsed="true"] .app-workspace::before {
   }
 
   .reveal-grid--tray {
-    --opening-card-width: min(41.4vw, 11.7rem);
+    --opening-card-width: min(38.1vw, 10.76rem);
     grid-template-columns: repeat(2, minmax(0, var(--opening-card-width)));
     max-width: calc(var(--opening-card-width) * 2 + 0.7rem);
   }

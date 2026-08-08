@@ -9,6 +9,8 @@ import type { DeckLegalitySnapshot } from "@/lib/deck-legality";
 import type { LocalSyncCache } from "@/lib/sync-cache";
 import { getDeckBoxMeta } from "@/lib/deckbox-config";
 
+const STANDARD_DISPLAY_SIZE = 24;
+
 type CachedRun = {
   id?: unknown;
   defaultPackPrice?: unknown;
@@ -260,7 +262,6 @@ export function buildCachedPackSelectionPayload(
   const run = (bootstrap.run ?? {}) as CachedRun;
   const wallet = (bootstrap.wallet ?? {}) as CachedWallet;
   const defaultPackPrice = asNumber(run.defaultPackPrice, 100);
-  const defaultDisplaySize = asNumber(run.defaultDisplaySize, 24);
   const unlockBySetId = new Map(
     bootstrap.catalog.runSetUnlocks.map((unlock) => [unlock.setId, unlock]),
   );
@@ -304,7 +305,7 @@ export function buildCachedPackSelectionPayload(
   const sets = displaySets.map((set) => {
     const unlock = unlockBySetId.get(set.id) ?? null;
     const packPrice = unlock ? unlock.packPrice ?? defaultPackPrice : null;
-    const displaySize = unlock ? unlock.displaySize ?? defaultDisplaySize : null;
+    const displaySize = unlock ? STANDARD_DISPLAY_SIZE : null;
     const openingStats = openingStatsBySetId.get(set.id);
 
     return {

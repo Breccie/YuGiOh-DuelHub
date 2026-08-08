@@ -153,6 +153,10 @@ async function activateStoredRuleVersion(
 ) {
   const config = campaignRuleConfigSchema.parse(version.config);
   const activatedAt = new Date();
+  const previousRun = await db.playGroupRun.findUnique({
+    where: { id: runId },
+    select: { defaultPackPrice: true, defaultDisplaySize: true },
+  });
 
   if (options.supersedeScheduled) {
     await db.campaignRuleVersion.updateMany({
@@ -168,6 +172,26 @@ async function activateStoredRuleVersion(
     where: { id: version.id },
     data: { status: "ACTIVE", activatedAt },
   });
+  if (previousRun) {
+    // Older pack-access records sometimes persisted the then-current campaign
+    // defaults as if they were intentional per-pack overrides. Release those
+    // matching values so a changed campaign default is reflected immediately;
+    // genuinely different individual prices remain untouched.
+    await db.runSetUnlock.updateMany({
+      where: {
+        runId,
+        packPrice: previousRun.defaultPackPrice,
+      },
+      data: { packPrice: null },
+    });
+    await db.runSetUnlock.updateMany({
+      where: {
+        runId,
+        displaySize: previousRun.defaultDisplaySize,
+      },
+      data: { displaySize: null },
+    });
+  }
   await db.playGroupRun.update({
     where: { id: runId },
     data: {

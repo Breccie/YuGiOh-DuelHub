@@ -50,7 +50,7 @@ export function CampaignSelect({
   const [name, setName] = useState("");
   const [startingCredits, setStartingCredits] = useState("2400");
   const [defaultPackPrice, setDefaultPackPrice] = useState("100");
-  const [defaultDisplaySize, setDefaultDisplaySize] = useState("24");
+  const defaultDisplaySize = "24";
   const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState("24");
   const [initialSetUnlockCount, setInitialSetUnlockCount] = useState("5");
   const [setsPerProgressionStep, setSetsPerProgressionStep] = useState("1");
@@ -294,12 +294,12 @@ export function CampaignSelect({
               />
             </label>
             <label className="block">
-              <span className="ui-kicker">Displaygröße</span>
+              <span className="ui-kicker">Displaygröße (fest)</span>
               <input
                 className="ui-input mt-2"
                 inputMode="numeric"
-                value={defaultDisplaySize}
-                onChange={(event) => setDefaultDisplaySize(event.target.value)}
+                value="24"
+                disabled
               />
             </label>
             <label className="block">

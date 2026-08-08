@@ -9,6 +9,8 @@ import type {
   CampaignRuleConfig,
   CampaignRulePreset,
   CampaignRuleVersionDto,
+  CreateRewardGrantRequest,
+  RewardGrantDto,
   RunJoinRequestDto,
   RunMemberDto,
   RunProgressionResponse,
@@ -18,7 +20,7 @@ import { DuelConsoleScaffold } from "@/components/duel-console-scaffold";
 import { CampaignPackAccessPanel } from "@/components/campaign-pack-access-panel";
 import { ImageCropUpload } from "@/components/image-crop-upload";
 import { Panel, StatPill } from "@/components/panel";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { apiPostJson, getApiErrorMessage } from "@/lib/api-client";
 import type { PlayGroupRunDto, ViewerSession } from "@/lib/app-dtos";
 import { campaignRuleClient } from "@/lib/campaign-rule-client";
 import { runClient } from "@/lib/run-client";
@@ -249,7 +251,7 @@ export function CampaignSettingsConsole({
   const [startingCredits, setStartingCredits] = useState(String(activeRun.startingCredits));
   const [creditLimit, setCreditLimit] = useState("");
   const [defaultPackPrice, setDefaultPackPrice] = useState(String(activeRun.defaultPackPrice));
-  const [defaultDisplaySize, setDefaultDisplaySize] = useState(String(activeRun.defaultDisplaySize));
+  const [defaultDisplaySize, setDefaultDisplaySize] = useState("24");
   const [freePacksPerSetUnlock, setFreePacksPerSetUnlock] = useState(
     String(activeRun.freePacksPerSetUnlock),
   );
@@ -290,6 +292,10 @@ export function CampaignSettingsConsole({
   const [progression, setProgression] = useState<RunProgressionResponse | null>(null);
   const [inviteDuelistId, setInviteDuelistId] = useState("");
   const [inviteRole, setInviteRole] = useState<AssignableRunRole>("PLAYER");
+  const [creditRecipientDuelistId, setCreditRecipientDuelistId] = useState("");
+  const [creditGrantAmount, setCreditGrantAmount] = useState("500");
+  const [creditGrantReason, setCreditGrantReason] = useState("Host-Gutschrift");
+  const [grantingCredits, setGrantingCredits] = useState(false);
   const [saving, setSaving] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [actionPending, setActionPending] = useState(false);
@@ -372,7 +378,7 @@ export function CampaignSettingsConsole({
     setStartingCredits(String(config.economy.startingCredits));
     setCreditLimit(config.economy.creditLimit === null ? "" : String(config.economy.creditLimit));
     setDefaultPackPrice(String(config.economy.packPrice));
-    setDefaultDisplaySize(String(config.economy.displaySize));
+    setDefaultDisplaySize("24");
     setFreePacksPerSetUnlock(String(config.progression.freePacksPerSetUnlock));
     setInitialSetUnlockCount(String(config.progression.initialSetUnlockCount));
     setSetsPerProgressionStep(String(config.progression.setsPerStep));
@@ -596,6 +602,45 @@ export function CampaignSettingsConsole({
     }
   }
 
+  async function grantCreditsToMember(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!isManager) {
+      setFeedback("Nur Host oder Organizer können Credits vergeben.");
+      return;
+    }
+
+    const amount = parseInteger(creditGrantAmount);
+    if (!creditRecipientDuelistId || amount === null || amount <= 0 || amount > 999_999) {
+      setFeedback("Bitte wähle einen Spieler und gib 1 bis 999.999 Credits ein.");
+      return;
+    }
+
+    setGrantingCredits(true);
+    setFeedback(null);
+    try {
+      await apiPostJson<RewardGrantDto, CreateRewardGrantRequest>(
+        `/api/v1/runs/${activeRun.id}/rewards`,
+        {
+          recipientDuelistId: creditRecipientDuelistId,
+          amountCredits: amount,
+          packQuantity: 0,
+          reason: creditGrantReason.trim() || "Host-Gutschrift",
+        },
+      );
+      const recipient = members.find(
+        (member) => member.duelistId === creditRecipientDuelistId,
+      );
+      setFeedback(
+        `${amount.toLocaleString("de-DE")} Credits wurden ${recipient?.displayName ?? creditRecipientDuelistId} gutgeschrieben.`,
+      );
+      setCreditGrantAmount("500");
+    } catch (error) {
+      setFeedback(getApiErrorMessage(error, "Credits konnten nicht vergeben werden."));
+    } finally {
+      setGrantingCredits(false);
+    }
+  }
+
   async function saveCampaignSettings(confirmed = false) {
     if (!canManageRules) {
       setFeedback("Nur der Kampagnen-Owner kann Regelversionen ändern.");
@@ -739,20 +784,33 @@ export function CampaignSettingsConsole({
           : null,
         config: nextConfig,
       });
-      const freshRuleVersions = await campaignRuleClient.list(activeRun.id);
-      const activeVersion = getActiveRuleVersion(freshRuleVersions);
-      if (!activeVersion) {
-        throw new Error("Die aktive Regelversion konnte nach dem Speichern nicht bestätigt werden.");
+      // The mutation itself is authoritative. Close the review as soon as it
+      // succeeds; a later refresh failure must not leave a successfully saved
+      // dialog looking stuck.
+      setReviewOpen(false);
+      let freshRuleVersions: CampaignRuleVersionDto[];
+      try {
+        freshRuleVersions = await campaignRuleClient.list(activeRun.id);
+      } catch {
+        freshRuleVersions = [
+          createdVersion,
+          ...ruleVersions.filter((version) => version.id !== createdVersion.id),
+        ];
       }
+      const activeVersion =
+        createdVersion.status === "ACTIVE"
+          ? createdVersion
+          : getActiveRuleVersion(freshRuleVersions);
       setRuleVersions(freshRuleVersions);
-      applyActiveRuleVersion(activeVersion);
+      if (activeVersion) {
+        applyActiveRuleVersion(activeVersion);
+      }
       if (baseRuleVersionId) {
         window.localStorage.removeItem(
           `campaign-rule-draft:${activeRun.id}:${baseRuleVersionId}`,
         );
       }
       setChangeReason("");
-      setReviewOpen(false);
       setFeedback(
         createdVersion.status === "ACTIVE"
           ? `Regelversion ${createdVersion.version} ist jetzt aktiv. Bestehende Wallets wurden nicht verändert.`
@@ -909,6 +967,20 @@ export function CampaignSettingsConsole({
                   ? effectiveAt
                   : "beim nächsten Progressionsschritt"}
             </p>
+            <label className="mt-4 block">
+              <span className="text-sm font-semibold text-[#f0dfcc]">Begründung</span>
+              <input
+                className="ui-input mt-2"
+                value={changeReason}
+                onChange={(event) => setChangeReason(event.target.value)}
+                placeholder="z. B. Packpreise für die nächste Runde angepasst"
+              />
+              {advancedRuleConfig?.audit.requireReasonForChanges && !changeReason.trim() ? (
+                <span className="mt-2 block text-xs text-[#e8a08f]">
+                  Für diese Regeländerung ist eine Begründung erforderlich.
+                </span>
+              ) : null}
+            </label>
             <div className="mt-4 grid gap-2">
               {reviewChanges.length ? (
                 reviewChanges.map((change) => (
@@ -941,7 +1013,11 @@ export function CampaignSettingsConsole({
                 type="button"
                 className="ui-button-primary"
                 onClick={() => void saveCampaignSettings(true)}
-                disabled={saving || reviewChanges.length === 0}
+                disabled={
+                  saving
+                  || reviewChanges.length === 0
+                  || Boolean(advancedRuleConfig?.audit.requireReasonForChanges && !changeReason.trim())
+                }
               >
                 {saving
                   ? "Speichert…"
@@ -1184,13 +1260,14 @@ export function CampaignSettingsConsole({
               />
             </label>
             <label className="block">
-              <span className="text-sm font-semibold text-[#f0dfcc]">Display-Größe</span>
+              <span className="text-sm font-semibold text-[#f0dfcc]">Display-Größe (fest)</span>
               <input
                 className="ui-input mt-2"
                 inputMode="numeric"
-                value={defaultDisplaySize}
-                onChange={(event) => { markPresetAsCustom(); setDefaultDisplaySize(event.target.value); }}
+                value="24"
+                disabled
               />
+              <span className="mt-2 block text-xs text-[#9eacb5]">Reguläre Displays enthalten immer 24 Booster.</span>
             </label>
             <label className="block">
               <span className="text-sm font-semibold text-[#f0dfcc]">Gratispacks je neuem Pack</span>
@@ -1450,6 +1527,56 @@ export function CampaignSettingsConsole({
                 {inviting ? "Lädt ein…" : "Einladen"}
               </button>
             </form>
+
+            {isManager ? (
+              <form
+                className="grid gap-3 rounded-[18px] border border-[rgba(208,170,110,0.18)] bg-[rgba(208,170,110,0.05)] p-4 lg:grid-cols-[minmax(180px,1fr)_160px_minmax(200px,1fr)_auto]"
+                onSubmit={grantCreditsToMember}
+              >
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Credits an Spieler</span>
+                  <select
+                    className="ui-input mt-2"
+                    value={creditRecipientDuelistId}
+                    onChange={(event) => setCreditRecipientDuelistId(event.target.value)}
+                    disabled={grantingCredits}
+                  >
+                    <option value="">Spieler wählen</option>
+                    {members.map((member) => (
+                      <option key={member.id} value={member.duelistId}>
+                        {member.displayName} · {member.duelistId}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Betrag</span>
+                  <input
+                    className="ui-input mt-2"
+                    inputMode="numeric"
+                    value={creditGrantAmount}
+                    onChange={(event) => setCreditGrantAmount(event.target.value)}
+                    disabled={grantingCredits}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-semibold text-[#f0dfcc]">Grund</span>
+                  <input
+                    className="ui-input mt-2"
+                    value={creditGrantReason}
+                    onChange={(event) => setCreditGrantReason(event.target.value)}
+                    disabled={grantingCredits}
+                  />
+                </label>
+                <button
+                  className="ui-button-primary self-end"
+                  type="submit"
+                  disabled={grantingCredits || !creditRecipientDuelistId}
+                >
+                  {grantingCredits ? "Wird gebucht…" : "Credits geben"}
+                </button>
+              </form>
+            ) : null}
 
             <div className="space-y-2">
               {members.length > 0 ? (

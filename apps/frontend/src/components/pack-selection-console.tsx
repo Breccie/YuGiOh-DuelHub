@@ -179,13 +179,22 @@ function formatRewardReason(reason: string | null) {
   }
 
   const parts = reason.split(" | ");
-  const tournamentPart = parts[0] === "TOURNAMENT_REWARD" ? "Turnier" : parts[0];
+  const tournamentPart =
+    parts[0] === "TOURNAMENT_REWARD"
+      ? "Turnier"
+      : parts[0] === "INITIAL_SET_FREE_PACKS"
+        ? "Startpack-Belohnung"
+        : parts[0] === "SET_UNLOCK_FREE_PACKS"
+          ? "Freischaltungs-Belohnung"
+          : parts[0];
   const rankPart = parts.find((part) => part.startsWith("rank:"));
   const note = parts.at(-1);
+  const isInternalNote =
+    note?.startsWith("rank:") || note?.startsWith("CAMPAIGN_START:");
   const labels = [
     tournamentPart,
     rankPart ? `Platz ${rankPart.replace("rank:", "")}` : null,
-    note && !note.startsWith("rank:") && note !== tournamentPart ? note : null,
+    note && !isInternalNote && note !== tournamentPart ? note : null,
   ].filter(Boolean);
 
   return labels.join(" / ");
@@ -279,8 +288,8 @@ function RewardInbox({ activeRunId }: { activeRunId: string | null }) {
           </p>
           <p className="mt-1 text-sm text-[#bda88f]">
             {pendingRewards.length > 0
-              ? `${pendingRewards.length} offene Tournament-Pack-Rewards`
-              : "Keine offenen Tournament-Pack-Rewards"}
+              ? `${pendingRewards.length} offene Pack-Rewards`
+              : "Keine offenen Pack-Rewards"}
           </p>
         </div>
         <Link
@@ -331,7 +340,7 @@ function RewardInbox({ activeRunId }: { activeRunId: string | null }) {
 
         {pendingRewards.length === 0 ? (
           <div className="rounded-[16px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-4 text-sm text-[#bba78e]">
-            Tournament-Pack-Belohnungen erscheinen hier nach dem Turnierabschluss.
+            Gratispacks und Turnierbelohnungen erscheinen hier, sobald sie verfügbar sind.
           </div>
         ) : null}
       </div>
@@ -704,7 +713,9 @@ export function PackSelectionConsole({
     return coreSets.length ? coreSets : orderedSets;
   }, [sets]);
 
-  const currentSetId = selectedSetId ?? timelineSets[0]?.id ?? sets[0]?.id ?? "";
+  const [currentSetId, setCurrentSetId] = useState(
+    selectedSetId ?? timelineSets[0]?.id ?? sets[0]?.id ?? "",
+  );
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
   const [isTimelineDragging, setIsTimelineDragging] = useState(false);
   const [navigatingSetId, setNavigatingSetId] = useState<string | null>(null);
@@ -1171,9 +1182,13 @@ export function PackSelectionConsole({
                             : "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]",
                         )}
                       >
-                        <div
+                        <button
+                          type="button"
+                          onClick={() => setCurrentSetId(set.id)}
+                          aria-pressed={selected}
+                          aria-label={`${set.name} auswählen`}
                           className={classes(
-                            "relative flex h-[150px] items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2",
+                            "relative flex h-[150px] items-center justify-center overflow-hidden rounded-[12px] border border-[rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(17,21,28,0.96),rgba(10,12,16,0.98))] px-1 py-2 transition hover:border-[rgba(211,176,138,0.34)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3b08a]",
                             isTimelineExpanded ? "w-full" : "w-[98px]",
                           )}
                         >
@@ -1193,7 +1208,7 @@ export function PackSelectionConsole({
                               {set.code}
                             </div>
                           )}
-                        </div>
+                        </button>
                         {isTimelineExpanded ? (
                           <div className="mt-2 min-h-[44px] px-1 text-left">
                             <strong className="block text-[0.68rem] uppercase tracking-[0.12em] text-[#dfc3a0]">
